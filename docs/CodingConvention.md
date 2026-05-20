@@ -205,8 +205,8 @@ if (bIsDead)
 
 ### 3-2. 들여쓰기
 
-- **탭(Tab)** 사용, 스페이스 사용 금지
-- 탭 크기: 4칸
+- **스페이스(Space)** 사용, 탭 사용 금지
+- 들여쓰기 크기: 4칸
 
 ---
 
@@ -604,14 +604,27 @@ virtual float ApplyFinalDamage(float DamageAmount, EDamageType DamageType, AActo
 | `BlueprintReadOnly` | Blueprint에서 읽기 전용 |
 
 ```cpp
-UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stats")
+UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Combat|Stats")
 float MaxHealth = 100.f;
 
-UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
 TObjectPtr<UHealthComponent> HealthComponent;
 ```
 
-**Category**: `"대분류|소분류"` 형식으로 작성한다.
+**Category 규칙**: `"PT|대분류|소분류"` 형식으로 작성한다.
+- 최상위는 반드시 프로젝트 접두사 `PT` 로 시작
+- 이후 대분류 → 소분류 순으로 `|` 로 구분
+
+```cpp
+// ✅
+Category = "PT|Combat"
+Category = "PT|Combat|Stats"
+Category = "PT|Components"
+
+// ❌
+Category = "Combat"         // PT 접두사 없음
+Category = "combat|stats"   // 소문자 사용
+```
 
 ---
 
@@ -755,13 +768,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Combat")
     void ActivateSkill(int32 SlotIndex);
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Stats")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Combat|Stats")
     float MaxHealth = 100.f;
 
 protected:
     virtual void InitComponents();
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
     TObjectPtr<UHealthComponent> HealthComponent;
 
 private:
