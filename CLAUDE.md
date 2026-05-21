@@ -38,13 +38,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 모듈
 
-소스는 단일 런타임 모듈 `Pentagram`으로 구성된다 (`Source/Pentagram/`).
+소스는 단일 런타임 모듈 `PT`으로 구성된다 (`Source/PT/`).
 
 ```
-Source/Pentagram/
-├── PentagramCharacter         ← 쿼터뷰 캐릭터 베이스 (SpringArm 카메라 포함)
-├── PentagramGameMode          ← 게임 모드 베이스 (스텁)
-├── PentagramPlayerController  ← 포인트-앤-클릭 이동 + NavMesh 경로 추적
+Source/PT/
+├── PTCharacter                ← 쿼터뷰 캐릭터 베이스 (SpringArm 카메라 포함)
+├── PTGameMode                 ← 게임 모드 베이스 (스텁)
+├── PTPlayerController         ← 포인트-앤-클릭 이동 + NavMesh 경로 추적
 ├── Variant_Strategy/          ← RTS 스타일 전략 게임 변형
 │   ├── StrategyGameMode
 │   ├── StrategyPawn            (카메라 전용 플로팅 폰)
@@ -68,6 +68,23 @@ Source/Pentagram/
         └── TwinStickUI
 ```
 
+### 향후 폴더 구조 (Lyra 기반 도메인별 분리)
+
+현재 `Variant_*` 구조에서 아래 구조로 점진적으로 전환한다. 새 클래스 작성 시 이 구조를 우선 따른다.
+
+```
+Source/PT/
+├── Core/        ← GameModes, System(GameInstance·서브시스템), Settings, Messages
+├── Character/   ← PTCharacter 베이스, Player(Controller·PlayerState), Monster·보스, Animation, Camera, Feedback
+├── Combat/      ← Weapons(무기·발사체), Equipment(장비 장착·스탯)
+├── World/       ← Interaction(상호작용 오브젝트), Physics(커스텀 물리)
+├── Inventory/   ← 아이템 컨테이너·슬롯
+├── Input/       ← EnhancedInput 매핑 컨텍스트
+├── UI/          ← UMG 위젯
+├── Audio/       ← 사운드 매니저·컴포넌트
+└── Dev/         ← Development(디버그·치트), Performance(프로파일링), Tests(자동화 테스트)
+```
+
 ### 주요 의존 모듈 (Build.cs)
 
 `EnhancedInput`, `AIModule`, `NavigationSystem`, `StateTreeModule`, `GameplayStateTreeModule`, `Niagara`, `UMG`, `Slate`
@@ -86,7 +103,7 @@ Source/Pentagram/
 
 ### 입력
 
-EnhancedInput 시스템 사용. 마우스/키보드, 게임패드, 터치(모바일) 세 가지 매핑 컨텍스트를 분리해서 관리한다. `APentagramPlayerController`에서 런타임에 컨텍스트를 전환한다.
+EnhancedInput 시스템 사용. 마우스/키보드, 게임패드, 터치(모바일) 세 가지 매핑 컨텍스트를 분리해서 관리한다. `APTPlayerController`에서 런타임에 컨텍스트를 전환한다.
 
 ### AI
 
@@ -98,13 +115,30 @@ EnhancedInput 시스템 사용. 마우스/키보드, 게임패드, 터치(모바
 
 ### 카메라
 
-`APentagramCharacter` 베이스에 `USpringArmComponent` + `UCameraComponent` 조합. 쿼터뷰 고정 시점을 기본으로 한다.
+`APTCharacter` 베이스에 `USpringArmComponent` + `UCameraComponent` 조합. 쿼터뷰 고정 시점을 기본으로 한다.
 
 ---
 
 ## 개발 규칙
 
 - **기본 언어**: 한국어 (주석, 커밋 메시지, 문서 모두 한국어 우선)
-- 새 게임플레이 클래스는 `Variant_*` 하위 폴더에 추가하고, 베이스 클래스(`APentagramCharacter` 등)를 상속한다.
+- 새 게임플레이 클래스는 `Variant_*` 하위 폴더에 추가하고, 베이스 클래스(`APTCharacter` 등)를 상속한다.
 - Blueprint 구현이 주가 되며 C++은 기반 로직만 제공하는 구조를 유지한다.
 - UPROPERTY/UFUNCTION 카테고리 메타데이터를 항상 명시한다.
+
+---
+
+## 참고 문서 (docs/)
+
+게임플레이 시스템 설계·구현 시 아래 문서를 항상 참고하고, 문서의 설계 의도에 맞게 구현한다.
+
+| 문서 | 내용 |
+|---|---|
+| [docs/CodingConvention.md](docs/CodingConvention.md) | 코딩 컨벤션 — 네이밍·포맷 등 모든 C++ 작성 규칙 |
+| [docs/SYSTEM.md](docs/SYSTEM.md) | 전체 시스템 설계 개요 |
+| [docs/Design/GameMode_Subsystems.md](docs/Design/GameMode_Subsystems.md) | 게임 모드 및 서브시스템 설계 |
+| [docs/Design/Monster_System.md](docs/Design/Monster_System.md) | 몬스터 시스템 설계 |
+| [docs/Design/NPC_System.md](docs/Design/NPC_System.md) | NPC 시스템 설계 |
+| [docs/Design/Player_Skill_System.md](docs/Design/Player_Skill_System.md) | 플레이어 스킬 시스템 설계 |
+| [docs/Design/UI_System.md](docs/Design/UI_System.md) | UI 시스템 설계 |
+| [docs/Design/Item_System.md](docs/Design/Item_System.md) | 아이템 시스템 설계 |
