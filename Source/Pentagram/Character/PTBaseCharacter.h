@@ -2,15 +2,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "PTCharacter.generated.h"
+#include "PTBaseCharacter.generated.h"
 
 UCLASS()
-class PENTAGRAM_API APTCharacter : public ACharacter
+class PENTAGRAM_API APTBaseCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 public:
-	APTCharacter();
+	APTBaseCharacter();
 
 protected:
 	virtual void BeginPlay() override;
