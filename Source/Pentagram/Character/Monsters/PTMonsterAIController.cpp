@@ -1,7 +1,10 @@
 #include "Character/Monsters/PTMonsterAIController.h"
+#include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/Monsters/PTMonsterBlackboardKeys.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 APTMonsterAIController::APTMonsterAIController()
 {
@@ -22,18 +25,49 @@ void APTMonsterAIController::OnPossess(APawn* InPawn)
 {
     Super::OnPossess(InPawn);
 
-    // TODO: APTMonsterCharacter 캐스팅 → RowKey로 DT_Character 조회
-    //       SightConfig->SightRadius                    ← DT.SightRange
-    //       SightConfig->LoseSightRadius                ← DT.ChaseRange
-    //       SightConfig->PeripheralVisionAngleDegrees   ← DT.SightAngle / 2.f
-    //       PerceptionComponent->RequestStimuliListenerUpdate()
+    APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(InPawn);
+    if (!Monster)
+    {
+        return;
+    }
 
-    // TODO: BT 에셋 할당 후 RunBehaviorTree(BehaviorTree) 호출
+    if (SightConfig)
+    {
+        SightConfig->SightRadius = Monster->GetSightRange();
+        SightConfig->LoseSightRadius = Monster->GetChaseRange();
+        SightConfig->PeripheralVisionAngleDegrees = Monster->GetSightAngle() / 2.f;
+    }
+
+    UAIPerceptionComponent* PerceptionComp = GetPerceptionComponent();
+    if (PerceptionComp)
+    {
+        PerceptionComp->RequestStimuliListenerUpdate();
+    }
+
+    if (BehaviorTree)
+    {
+        RunBehaviorTree(BehaviorTree);
+    }
+
+    UBlackboardComponent* BB = GetBlackboardComponent();
+    if (BB)
+    {
+        BB->SetValueAsVector(PTMonsterBlackboardKeys::SpawnLocation, Monster->GetSpawnLocation());
+
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+    }
 }
 
 void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
-    // TODO: Day 5 Blackboard 설정 후 아래 키 갱신 구현
-    //       IsTargetDetected ← Stimulus.WasSuccessfullySensed()
-    //       TargetActor      ← Actor
+    UBlackboardComponent* BB = GetBlackboardComponent();
+    if (!BB)
+    {
+        return;
+    }
+
+    const bool bSensed = Stimulus.WasSuccessfullySensed();
+
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, bSensed);
+    BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, bSensed ? Actor : nullptr);
 }
