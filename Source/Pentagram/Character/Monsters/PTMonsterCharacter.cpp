@@ -1,4 +1,8 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "AIController.h"
+#include "BrainComponent.h"
+#include "Animation/AnimMontage.h"
+#include "Animation/AnimInstance.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -11,38 +15,26 @@ void APTMonsterCharacter::BeginPlay()
 
     SpawnLocation = GetActorLocation();
 
-    // TODO: BaseCharacter 초기화 완료 후 InitializeMonster 호출 위치 배치
+    InitializeMonster();
 }
 
 void APTMonsterCharacter::InitializeMonster()
 {
-    // TODO: 몬스터 데이터 테이블 참조 변수 확인
+    const FPTCharacterRow* Row = CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("InitializeMonster"));
+    if (!Row) return;
 
-    // TODO: RowKey 유효성 확인
+    SightAngle = Row->SightAngle;
+    SightRange = Row->SightRange;
+    ChaseRange = Row->ChaseRange;
+    AttackRange = Row->AttackRange;
+    PatrolRadius = Row->PatrolRadius;
+    MaxChaseDistance = Row->MaxChaseDistance;
+    GoldDropMin = Row->GoldDropMin;
+    GoldDropMax = Row->GoldDropMax;
+    EquipDropRate = Row->EquipDropRate;
+    RewardExp = Row->RewardExp;
 
-    // TODO: RowKey 기반 테이블 행 조회 코드 위치 작성
-
-    // TODO: 조회 결과 nullptr 검사 분기 작성
-
-    // TODO: 부모 공통 초기화 함수 호출 위치 작성
-
-    // TODO: 이동속도 적용 코드 위치 작성
-
-    // TODO: 최대 HP / 현재 HP 반영 코드 위치 작성
-
-    // TODO: 공격력 / 방어력 반영 코드 위치 작성
-
-    // TODO: 몬스터 전용 감지 거리 변수 대입 위치 작성
-
-    // TODO: 몬스터 전용 추적 거리 변수 대입 위치 작성
-
-    // TODO: 몬스터 전용 공격 거리 변수 대입 위치 작성
-
-    // TODO: 드롭 보상 데이터 대입 위치 작성
-
-    // TODO: 보스 여부 분기 코드 위치 작성
-
-    // TODO: 초기 상태 설정 호출 위치 작성
+    SetMonsterState(EMonsterState::Idle);
 }
 
 void APTMonsterCharacter::SetMonsterState(EMonsterState NewState)
@@ -52,5 +44,61 @@ void APTMonsterCharacter::SetMonsterState(EMonsterState NewState)
 
 void APTMonsterCharacter::OnDeath()
 {
+    if (bIsDead)
+    {
+        return;
+    }
+    bIsDead = true;
 
+    Super::OnDeath();
+
+    SetMonsterState(EMonsterState::Dead);
+
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        if (AIC->BrainComponent)
+        {
+            AIC->BrainComponent->StopLogic(TEXT("Monster Dead"));
+        }
+    }
+
+    if (HasAuthority())
+    {
+        SpawnDeathDrops();
+    }
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && DeathMontage)
+    {
+        float MontageLength = AnimInstance->Montage_Play(DeathMontage);
+        if (MontageLength > 0.f)
+        {
+            DestroyDelay = MontageLength;
+        }
+    }
+
+    GetWorldTimerManager().SetTimer(
+        DestroyTimerHandle,
+        this,
+        &APTMonsterCharacter::HandleDestroyAfterDeath,
+        DestroyDelay,
+        false
+    );
+}
+
+void APTMonsterCharacter::SpawnDeathDrops()
+{
+    // 골드 — EconomySubsystem 직접 지급
+    // TODO: PTEconomySubsystem 연동 후 구현
+
+    // 경험치 — LevelSubsystem 직접 지급
+    // TODO: PTPlayerLevelSubsystem 연동 후 구현
+
+    // 장비 — AItemActorBase 스폰
+    // TODO: 아이템 파트 AItemActorBase 구현 완료 후 EquipmentDropClass로 스폰
+}
+
+void APTMonsterCharacter::HandleDestroyAfterDeath()
+{
+    Destroy();
 }
