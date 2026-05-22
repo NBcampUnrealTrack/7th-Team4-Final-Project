@@ -19,8 +19,12 @@ public class Pentagram : ModuleRules
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"Niagara",
-			"UMG",
-			"Slate"
+			"Slate",
+
+            //UI
+            "UMG",
+            "CommonUI",
+            "CommonInput"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });
