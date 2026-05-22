@@ -2,10 +2,13 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "Player/PTBasePlayerState.h"
 
 APTBaseCharacter::APTBaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
+    bReplicates = true;
 }
 
 float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
@@ -14,9 +17,16 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 
     // 데미지 계산
     float FinalDamage = FMath::Max(DamageAmount - BaseDef, 1.f);
-
     //HP 감소
     CurrentHP = FMath::Max(CurrentHP - FinalDamage,0.f);
+
+    //PlayerState에 결과 반영 (플레이어만)
+    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
+    if (PS)
+    {
+        PS->CurrentHP = MaxHP;
+        PS->MaxHP = MaxHP;
+    }
 
     // 죽음
     if (CurrentHP <= 0.f)
@@ -53,6 +63,19 @@ void APTBaseCharacter::BeginPlay()
         MoveSpeed = Row->MoveSpeed;
     }
 }
+
+void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APTBaseCharacter, CurrentHP);
+    DOREPLIFETIME(APTBaseCharacter, MaxHP);
+    DOREPLIFETIME(APTBaseCharacter, BaseDef);
+    DOREPLIFETIME(APTBaseCharacter, BaseAtk);
+    DOREPLIFETIME(APTBaseCharacter, AttackSpeed);
+    DOREPLIFETIME(APTBaseCharacter, MoveSpeed);
+}
+
 void APTBaseCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
