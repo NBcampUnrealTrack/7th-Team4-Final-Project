@@ -15,6 +15,10 @@ class PENTAGRAM_API APTGameState : public AGameStateBase
 {
     GENERATED_BODY()
 
+public:
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+private:
     UPROPERTY(Replicated)
     EGamePhase CurrentPhase;    // 게임 상태 (Waiting, InProgress, GameOver)
 
