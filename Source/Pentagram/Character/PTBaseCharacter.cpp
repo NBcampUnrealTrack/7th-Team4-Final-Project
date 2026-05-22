@@ -62,6 +62,8 @@ void APTBaseCharacter::BeginPlay()
         AttackSpeed = Row->AttackSpeed;
         MoveSpeed = Row->MoveSpeed;
     }
+
+    GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
 }
 
 void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
