@@ -20,4 +20,9 @@ class PENTAGRAM_API APTGameMode : public AGameModeBase
     void RespawnPlayer(APlayerController* PC);  // 리스폰
     void DistributeExp(int32 Amount);           // 경험치 분배
     //void DistributeDrop(Data Drop);    // 드롭 분배
+protected:
+    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|Respawn")
+    float RespawnDelaySeconds = 3.f;
+
+
 };
