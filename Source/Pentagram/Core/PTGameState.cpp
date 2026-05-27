@@ -12,9 +12,3 @@ void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 void APTGameState::OnGamePhaseChanged()
 {
 }
-
-void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-}
