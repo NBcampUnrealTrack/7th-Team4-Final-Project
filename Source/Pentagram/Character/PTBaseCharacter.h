@@ -29,6 +29,10 @@ public:
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
     float MaxHP;       // 최대 체력
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float CurrentMP;   // 현재 마나
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float MaxMP;      // 최대 마나
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
     float BaseDef;     // 방어력
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
     float BaseAtk;     // 공격력

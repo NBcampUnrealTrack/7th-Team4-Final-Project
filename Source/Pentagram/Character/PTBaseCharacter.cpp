@@ -57,6 +57,8 @@ void APTBaseCharacter::BeginPlay()
     {
         MaxHP = Row->MaxHP;
         CurrentHP = Row->MaxHP;
+        MaxMP = Row->MaxMP;
+        CurrentMP = Row->MaxMP;
         BaseDef = Row->BaseDef;
         BaseAtk = Row->BaseAtk;
         AttackSpeed = Row->AttackSpeed;
@@ -72,6 +74,8 @@ void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 
     DOREPLIFETIME(APTBaseCharacter, CurrentHP);
     DOREPLIFETIME(APTBaseCharacter, MaxHP);
+    DOREPLIFETIME(APTBaseCharacter, CurrentMP);
+    DOREPLIFETIME(APTBaseCharacter, MaxMP);
     DOREPLIFETIME(APTBaseCharacter, BaseDef);
     DOREPLIFETIME(APTBaseCharacter, BaseAtk);
     DOREPLIFETIME(APTBaseCharacter, AttackSpeed);
