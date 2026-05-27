@@ -29,7 +29,7 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
     if (PS)
     {
-        PS->CurrentHP = MaxHP;
+        PS->CurrentHP = CurrentHP;
         PS->MaxHP = MaxHP;
     }
 
@@ -68,9 +68,8 @@ void APTBaseCharacter::BeginPlay()
         BaseAtk = Row->BaseAtk;
         AttackSpeed = Row->AttackSpeed;
         MoveSpeed = Row->MoveSpeed;
+        GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
     }
-
-    GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
 }
 
 void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
