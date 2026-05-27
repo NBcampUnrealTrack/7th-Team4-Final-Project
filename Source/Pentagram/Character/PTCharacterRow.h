@@ -29,7 +29,7 @@ struct FPTCharacterRow : public FTableRowBase
     // ── 플레이어 전용 (몬스터 미사용 → 0) ────────────────────────────────
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Player")
-    float MaxMp = 0.f;
+    float MaxMP = 0.f;
 
     // 크리티컬 데미지 배율. 2.0 = 200%. 몬스터 미사용 → 0
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Player")

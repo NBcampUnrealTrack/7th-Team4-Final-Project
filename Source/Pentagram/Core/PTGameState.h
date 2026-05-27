@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -25,6 +25,10 @@ public:
     UFUNCTION(BlueprintPure, Category = "PT|GameState")
     EGamePhase GetCurrentPhase() const { return CurrentPhase; }     //페이즈 가져오기
 
+public:
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+private:
     UPROPERTY(Replicated)
     int32 ElapsedTime= 0;          // 게임 진행 시간
 

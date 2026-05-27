@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "PTGameState.h"
 #include "Net/UnrealNetwork.h"
 
@@ -37,3 +34,4 @@ void APTGameState::OnGamePhaseChanged()
 {
    //OnGamePhaseChangedEvent.Broadcast(CurrentPhase);
 }
+

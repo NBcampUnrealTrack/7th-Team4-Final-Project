@@ -4,11 +4,16 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/PTBasePlayerState.h"
+#include "PGInventoryComponent.h"
+#include "PGEquipmentComponent.h" 
 
 APTBaseCharacter::APTBaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
     bReplicates = true;
+
+    InventoryComponent = CreateDefaultSubobject<UPGInventoryComponent>(TEXT("InventoryComponent")); // 캐릭터의 서브오브젝트로 인벤토리 컴포넌트 생성/장착 
+    EquipmentComponent = CreateDefaultSubobject<UPGEquipmentComponent>(TEXT("EquipmentComponent")); // 캐릭터의 서브오브젝트로 장비창 컴포넌트 생성/장착
 }
 
 float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
@@ -24,7 +29,7 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
     if (PS)
     {
-        PS->CurrentHP = MaxHP;
+        PS->CurrentHP = CurrentHP;
         PS->MaxHP = MaxHP;
     }
 
@@ -57,10 +62,13 @@ void APTBaseCharacter::BeginPlay()
     {
         MaxHP = Row->MaxHP;
         CurrentHP = Row->MaxHP;
+        MaxMP = Row->MaxMP;
+        CurrentMP = Row->MaxMP;
         BaseDef = Row->BaseDef;
         BaseAtk = Row->BaseAtk;
         AttackSpeed = Row->AttackSpeed;
         MoveSpeed = Row->MoveSpeed;
+        GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
     }
 }
 
@@ -70,6 +78,8 @@ void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
 
     DOREPLIFETIME(APTBaseCharacter, CurrentHP);
     DOREPLIFETIME(APTBaseCharacter, MaxHP);
+    DOREPLIFETIME(APTBaseCharacter, CurrentMP);
+    DOREPLIFETIME(APTBaseCharacter, MaxMP);
     DOREPLIFETIME(APTBaseCharacter, BaseDef);
     DOREPLIFETIME(APTBaseCharacter, BaseAtk);
     DOREPLIFETIME(APTBaseCharacter, AttackSpeed);
