@@ -20,10 +20,10 @@ public:
 
     // 서버에서 호출. CurrentPhase 갱신 후 OnRep 경유로 클라이언트에 전파됨.
     UFUNCTION(BlueprintCallable, Category = "PT|GameState")
-    void SetCurrentPhase(EGamePhase NewPhase);
+    void SetCurrentPhase(EGamePhase NewPhase);      //페이즈 설정
 
     UFUNCTION(BlueprintPure, Category = "PT|GameState")
-    EGamePhase GetCurrentPhase() const { return CurrentPhase; }
+    EGamePhase GetCurrentPhase() const { return CurrentPhase; }     //페이즈 가져오기
 
 
     UPROPERTY(Replicated)

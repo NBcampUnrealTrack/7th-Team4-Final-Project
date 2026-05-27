@@ -38,9 +38,3 @@ void APTGameState::OnGamePhaseChanged()
 {
    //OnGamePhaseChangedEvent.Broadcast(CurrentPhase);
 }
-
-void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-}

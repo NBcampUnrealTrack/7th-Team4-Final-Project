@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "PTGameMode.generated.h"
 
+class APTBasePlayerState;
+
 /**
  *
  */
@@ -14,15 +16,28 @@ class PENTAGRAM_API APTGameMode : public AGameModeBase
 {
     GENERATED_BODY()
 
+public:
+    APTGameMode();      //생성자
 
-    void StartGame();                           // 게임 시작
-    void EndGame();                             // 게임 종료
-    void RespawnPlayer(APlayerController* PC);  // 리스폰
-    void DistributeExp(int32 Amount);           // 경험치 분배
+    virtual void PostLogin(APlayerController* NewPlayer) override;      //플레이어 로그인
+    void StartGame();       //스타트 게임
+    void EndGame();         //앤드게임
+    void RespawnPlayer(APlayerController* PlayerController);        //리스폰 플레이어
+    void DistributeExp(int32 ExpAmount);        //exp 분배
     //void DistributeDrop(Data Drop);    // 드롭 분배
+
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|Respawn")
-    float RespawnDelaySeconds = 3.f;
+    float RespawnDelaySeconds = 3.f;        //리스폰 대기 시간
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|PlayerState")
+    float DefaultMaxHP = 100.f;             //일단 맥스 hp
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|PlayerState")
+    float DefaultMaxMP = 100.f;             //일단 맥스 mp
+
+private:
+    void InitializePlayerState(APTBasePlayerState* PlayerState) const;
+    void RestartPlayerWithInitializedState(APlayerController* PlayerController);
 
 };
