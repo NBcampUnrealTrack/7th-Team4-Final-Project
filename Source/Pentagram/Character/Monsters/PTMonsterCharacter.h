@@ -94,4 +94,11 @@ private:
 
     void SpawnDeathDrops();
     void HandleDestroyAfterDeath();
+
+public:
+    void PerformAttack();
+
+protected:
+    UPROPERTY()
+    TSet<AActor*> HitActors;
 };

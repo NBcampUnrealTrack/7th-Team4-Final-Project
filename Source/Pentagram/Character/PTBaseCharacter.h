@@ -44,6 +44,8 @@ public:
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
     float MoveSpeed;   // 이동 속도
 
+    float GetAttackSpeed() const { return AttackSpeed; }
+
 protected:
 	virtual void BeginPlay() override;
 

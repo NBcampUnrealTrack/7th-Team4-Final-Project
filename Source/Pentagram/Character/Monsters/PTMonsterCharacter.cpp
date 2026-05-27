@@ -1,8 +1,13 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/Monsters/PTMonsterAIController.h"
+// #include "Character/Player/PTPlayerCharacter.h"
 #include "AIController.h"
 #include "BrainComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
+#include "DrawDebugHelpers.h"
+#include "Engine/World.h"
+#include "CollisionShape.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -35,6 +40,12 @@ void APTMonsterCharacter::InitializeMonster()
     RewardExp = Row->RewardExp;
 
     SetMonsterState(EMonsterState::Idle);
+
+    if (APTMonsterAIController* AIC = Cast<APTMonsterAIController>(GetController()))
+    {
+        AIC->UpdateSightConfig(SightRange, ChaseRange, SightAngle);
+        AIC->UpdateMonsterBlackboard(this);
+    }
 }
 
 void APTMonsterCharacter::SetMonsterState(EMonsterState NewState)
@@ -101,4 +112,52 @@ void APTMonsterCharacter::SpawnDeathDrops()
 void APTMonsterCharacter::HandleDestroyAfterDeath()
 {
     Destroy();
+}
+
+void APTMonsterCharacter::PerformAttack()
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    HitActors.Empty();
+
+    const FVector TraceStart = GetActorLocation();
+    const FVector TraceEnd = TraceStart;
+    const float TraceRadius = AttackRange;
+
+    TArray<FHitResult> HitResults;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
+    const bool bHit = GetWorld()->SweepMultiByChannel(
+        HitResults, TraceStart, TraceEnd,
+        FQuat::Identity, ECC_Pawn,
+        FCollisionShape::MakeSphere(TraceRadius), Params
+    );
+
+    DrawDebugSphere(GetWorld(), TraceStart, TraceRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.f);
+
+    for (const FHitResult& Hit : HitResults)
+    {
+        AActor* HitActor = Hit.GetActor();
+        if (!IsValid(HitActor))
+        {
+            continue;
+        }
+
+        if (HitActors.Contains(HitActor))
+        {
+            continue;
+        }
+
+        HitActors.Add(HitActor);
+
+        // TODO 플레이어 캐릭터 합치면 주석 풀어주면 됨
+        /*if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
+        {
+            Player->ApplyDamage(BaseAtk, this);
+        }*/
+    }
 }

@@ -13,12 +13,47 @@ APTMonsterAIController::APTMonsterAIController()
 
     SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
     SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-    SightConfig->DetectionByAffiliation.bDetectNeutrals = false;
+    SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
     SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
 
     Perception->ConfigureSense(*SightConfig);
     Perception->SetDominantSense(SightConfig->GetSenseImplementation());
     Perception->OnTargetPerceptionUpdated.AddDynamic(this, &APTMonsterAIController::OnTargetPerceptionUpdated);
+}
+
+void APTMonsterAIController::UpdateSightConfig(float InSightRange, float InLoseSightRange, float InSightAngle)
+{
+    if (!SightConfig)
+    {
+        return;
+    }
+
+    SightConfig->SightRadius = InSightRange;
+    SightConfig->LoseSightRadius = InLoseSightRange;
+    SightConfig->PeripheralVisionAngleDegrees = InSightAngle / 2.f;
+
+    if (UAIPerceptionComponent* PerceptionComp = GetPerceptionComponent())
+    {
+        PerceptionComp->ConfigureSense(*SightConfig);
+        PerceptionComp->RequestStimuliListenerUpdate();
+    }
+}
+
+void APTMonsterAIController::UpdateMonsterBlackboard(APTMonsterCharacter* Monster)
+{
+    if (!Monster)
+    {
+        return;
+    }
+
+    UBlackboardComponent* BB = GetBlackboardComponent();
+    if (!BB)
+    {
+        return;
+    }
+
+    BB->SetValueAsVector(PTMonsterBlackboardKeys::SpawnLocation, Monster->GetSpawnLocation());
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
 }
 
 void APTMonsterAIController::OnPossess(APawn* InPawn)
@@ -31,30 +66,9 @@ void APTMonsterAIController::OnPossess(APawn* InPawn)
         return;
     }
 
-    if (SightConfig)
-    {
-        SightConfig->SightRadius = Monster->GetSightRange();
-        SightConfig->LoseSightRadius = Monster->GetChaseRange();
-        SightConfig->PeripheralVisionAngleDegrees = Monster->GetSightAngle() / 2.f;
-    }
-
-    UAIPerceptionComponent* PerceptionComp = GetPerceptionComponent();
-    if (PerceptionComp)
-    {
-        PerceptionComp->RequestStimuliListenerUpdate();
-    }
-
     if (BehaviorTree)
     {
         RunBehaviorTree(BehaviorTree);
-    }
-
-    UBlackboardComponent* BB = GetBlackboardComponent();
-    if (BB)
-    {
-        BB->SetValueAsVector(PTMonsterBlackboardKeys::SpawnLocation, Monster->GetSpawnLocation());
-
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
     }
 }
 
@@ -66,8 +80,9 @@ void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulu
         return;
     }
 
-    const bool bSensed = Stimulus.WasSuccessfullySensed();
-
-    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, bSensed);
-    BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, bSensed ? Actor : nullptr);
+    if (Stimulus.WasSuccessfullySensed())
+    {
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
+        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
+    }
 }
