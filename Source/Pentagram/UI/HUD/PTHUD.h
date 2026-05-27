@@ -7,7 +7,7 @@
 #include "PTHUD.generated.h"
 
 class UPTPrimaryLayout;
-class UPTActivatableWidgetBase;
+class UPTHUDWidget;
 UCLASS()
 class PENTAGRAM_API APTHUD : public AHUD
 {
@@ -24,7 +24,7 @@ protected:
 
     /** 게임 시작 시 자동으로 GameLayer에 푸시할 기본 HUD 위젯 (예: WBP_PT_PlayerHUD) */
     UPROPERTY(EditDefaultsOnly, Category = "PT|UI|HUD")
-    TSubclassOf<UPTActivatableWidgetBase> InitialHUDWidgetClass;
+    TSubclassOf<UPTHUDWidget> InitialHUDWidgetClass;
 
     /** 생성된 레이아웃 추적 */
     UPROPERTY(Transient)

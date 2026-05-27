@@ -1,13 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "PTHUD.h"
-#include "UI/Widget/PTPrimaryLayout.h"
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Widget/PTActivatableWidgetBase.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/Screens/PTHUDWidget.h"
+#include "UI/Screens/LayOut/PTPrimaryLayout.h"
 
 void APTHUD::BeginPlay()
 {
@@ -17,38 +16,21 @@ void APTHUD::BeginPlay()
     if (!PC) return;
 
     ULocalPlayer* LP = PC->GetLocalPlayer();
-    if (!LP) return;
+    if (!LP || !MainLayoutClass) return;
 
-    // 1) PrimaryLayout 생성 & 화면 추가
-    if (MainLayoutClass)
-    {
-        MainLayoutWidget = CreateWidget<UPTPrimaryLayout>(PC, MainLayoutClass);
-        if (MainLayoutWidget)
-        {
-            MainLayoutWidget->AddToPlayerScreen(0);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[PTUI] APTHUD: CreateWidget(MainLayoutClass) failed"));
-            return;
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] APTHUD: MainLayoutClass not set in BP"));
-        return;
-    }
+    // 1. 베이스 레이아웃 생성 및 화면 추가
+    MainLayoutWidget = CreateWidget<UPTPrimaryLayout>(PC, MainLayoutClass);
+    if (!MainLayoutWidget) return;
 
-    // 2) 매니저에 PrimaryLayout 등록
+    MainLayoutWidget->AddToPlayerScreen(0);
+
+    // 2. UI 매니저에 레이아웃 등록
     UPTUIManagerSubsystem* UIManager = LP->GetSubsystem<UPTUIManagerSubsystem>();
-    if (!UIManager)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] APTHUD: UIManagerSubsystem not found"));
-        return;
-    }
+    if (!UIManager) return;
+
     UIManager->RegisterPrimaryLayout(MainLayoutWidget);
 
-    // 3) 초기 HUD 위젯이 지정되어 있으면 GameLayer에 푸시
+    // 3. 기본 HUD 위젯 출력
     if (InitialHUDWidgetClass)
     {
         UIManager->PushWidget(InitialHUDWidgetClass, EPTUILayer::HUD);
@@ -57,6 +39,7 @@ void APTHUD::BeginPlay()
 
 void APTHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    // 레이아웃 제거 및 초기화
     if (MainLayoutWidget)
     {
         MainLayoutWidget->RemoveFromParent();

@@ -3,14 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "CommonUserWidget.h"
 #include "PTSkillSlotWidget.generated.h"
 
 /**
  *
  */
 UCLASS()
-class PENTAGRAM_API UPTSkillSlotWidget : public UUserWidget
+class PENTAGRAM_API UPTSkillSlotWidget : public UCommonUserWidget
 {
     GENERATED_BODY()
 };
