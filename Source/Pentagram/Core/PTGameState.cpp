@@ -12,3 +12,4 @@ void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 void APTGameState::OnGamePhaseChanged()
 {
 }
+
