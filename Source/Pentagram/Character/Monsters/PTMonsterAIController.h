@@ -8,6 +8,7 @@
 class UAIPerceptionComponent;
 class UAISenseConfig_Sight;
 class UBehaviorTree;
+class APTMonsterCharacter;
 
 UCLASS()
 class PENTAGRAM_API APTMonsterAIController : public AAIController
@@ -16,6 +17,9 @@ class PENTAGRAM_API APTMonsterAIController : public AAIController
 
 public:
     APTMonsterAIController();
+
+    void UpdateSightConfig(float InSightRange, float InLoseSightRange, float InSightAngle);
+    void UpdateMonsterBlackboard(APTMonsterCharacter* Monster);
 
 protected:
     virtual void OnPossess(APawn* InPawn) override;
