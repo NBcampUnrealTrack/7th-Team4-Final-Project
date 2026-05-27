@@ -4,11 +4,16 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/PTBasePlayerState.h"
+#include "PGInventoryComponent.h"
+#include "PGEquipmentComponent.h" 
 
 APTBaseCharacter::APTBaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
     bReplicates = true;
+
+    InventoryComponent = CreateDefaultSubobject<UPGInventoryComponent>(TEXT("InventoryComponent")); // 캐릭터의 서브오브젝트로 인벤토리 컴포넌트 생성/장착 
+    EquipmentComponent = CreateDefaultSubobject<UPGEquipmentComponent>(TEXT("EquipmentComponent")); // 캐릭터의 서브오브젝트로 장비창 컴포넌트 생성/장착
 }
 
 float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
