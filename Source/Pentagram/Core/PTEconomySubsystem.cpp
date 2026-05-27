@@ -10,22 +10,25 @@ void UPTEconomySubsystem::AddGold(int32 Amount)
         return;
     }
 
-
+    CurrentGold += Amount;
 }
 
-void UPTEconomySubsystem::SpendGold(int32 Amount)
+bool UPTEconomySubsystem::SpendGold(int32 Amount)
 {
     if (Amount <= 0)
     {
-        return;
+        return false;
     }
-    /*if (//현재 골드 < Amount)
+    if (CurrentGold < Amount)
     {
-        return;
-    }*/
+        return false;
+    }
+
+    CurrentGold -= Amount;
+    return true;
 }
 
-int32 UPTEconomySubsystem::GetGold()
+int32 UPTEconomySubsystem::GetGold() const
 {
-    return 0;  //현재 골드로 나중에 변경
+    return CurrentGold;
 }

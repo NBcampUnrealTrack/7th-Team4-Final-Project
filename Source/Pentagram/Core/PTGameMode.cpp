@@ -5,6 +5,7 @@
 
 #include "Character/Player/PTBasePlayerState.h"
 #include "PTGameState.h"
+#include "PTPlayerLevelSubsystem.h"
 #include "TimerManager.h"
 
 APTGameMode::APTGameMode()
@@ -82,13 +83,20 @@ void APTGameMode::DistributeExp(int32 ExpAmount)
     {
         return;
     }
+
     UGameInstance* GameInstance = GetGameInstance();
     if (GameInstance == nullptr)
     {
         return;
     }
 
+    UPTPlayerLevelSubsystem* PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
+    if (PlayerLevelSubsystem == nullptr)
+    {
+        return;
+    }
 
+    PlayerLevelSubsystem->AddExp(ExpAmount);
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const

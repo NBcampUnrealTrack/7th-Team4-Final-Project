@@ -14,7 +14,11 @@ class PENTAGRAM_API UPTEconomySubsystem : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
 
+public:
     void AddGold(int32 Amount);
-    void SpendGold(int32 Amount);
-    int32 GetGold();
+    bool SpendGold(int32 Amount);
+    int32 GetGold() const;
+
+private:
+    int32 CurrentGold = 0;
 };

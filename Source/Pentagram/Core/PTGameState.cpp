@@ -33,7 +33,6 @@ void APTGameState::OnRep_CurrentPhase()
     OnGamePhaseChanged();
 }
 
-
 void APTGameState::OnGamePhaseChanged()
 {
    //OnGamePhaseChangedEvent.Broadcast(CurrentPhase);

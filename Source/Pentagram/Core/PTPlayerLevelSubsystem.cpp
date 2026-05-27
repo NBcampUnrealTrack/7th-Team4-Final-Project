@@ -10,24 +10,31 @@ void UPTPlayerLevelSubsystem::AddExp(int32 ExpAmount)
         return;
     }
 
+    CurrentExp += ExpAmount;
+
+    while (CurrentExp >= ExpToNextLevel)
+    {
+        CurrentExp -= ExpToNextLevel;
+        LevelUp();
+    }
 }
 
 void UPTPlayerLevelSubsystem::LevelUp()
 {
-
+    ++CurrentLevel;
 }
 
-int32 UPTPlayerLevelSubsystem::GetLevel()
+int32 UPTPlayerLevelSubsystem::GetLevel() const
 {
-    return 0;  // 현재 레벨하면 됨.
+    return CurrentLevel;
 }
 
-int32 UPTPlayerLevelSubsystem::GetExp()
+int32 UPTPlayerLevelSubsystem::GetExp() const
 {
-    return 0;   //현재 exp하면 됨.
+    return CurrentExp;
 }
 
 void UPTPlayerLevelSubsystem::ApplyDeathPenalty()
 {
-        //데스페널티 만들면 됨.
+    CurrentExp = FMath::Max(CurrentExp - DeathPenaltyExp, 0);
 }
