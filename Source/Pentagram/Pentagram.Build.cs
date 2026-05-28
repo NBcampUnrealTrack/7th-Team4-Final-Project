@@ -20,6 +20,7 @@ public class Pentagram : ModuleRules
 			"GameplayStateTreeModule",
 			"Niagara",
 			"Slate",
+            "GameplayTags",
 
             //UI
             "UMG",

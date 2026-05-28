@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
+//#include  "UI/Data/PTDelegates.h"
 #include "PTUIManagerSubsystem.generated.h"
 
 UENUM(BlueprintType)
@@ -15,7 +16,7 @@ enum class EPTUILayer : uint8
 };
 
 class UPTPrimaryLayout;
-class UPTActivatableWidgetBase;
+class UPTHUDWidget;
 class UCommonActivatableWidget;
 
 UCLASS()
@@ -35,11 +36,11 @@ public:
 
     /** 지정 레이어의 스택에 위젯을 푸시. 스택이라 같은 레이어에 여러 개 쌓이고 LIFO로 동작. */
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
-    UPTActivatableWidgetBase* PushWidget(TSubclassOf<UPTActivatableWidgetBase> WidgetClass, EPTUILayer Layer);
+    UPTHUDWidget* PushWidget(TSubclassOf<UPTHUDWidget> WidgetClass, EPTUILayer Layer);
 
     /** 위젯을 스택에서 제거(Deactivate → 자동 pop). */
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
-    void RemoveWidget(UPTActivatableWidgetBase* WidgetToRemove);
+    void RemoveWidget(UPTHUDWidget* WidgetToRemove);
 
     /** 디버그/조회용. */
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
@@ -47,4 +48,6 @@ public:
 private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
+
+
 };

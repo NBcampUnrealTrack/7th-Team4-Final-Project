@@ -1,7 +1,8 @@
 ﻿
+
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Widget/PTPrimaryLayout.h"
-#include "UI/Widget/PTActivatableWidgetBase.h"
+#include "UI/Screens/PTHUDWidget.h"
+#include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
 UPTUIManagerSubsystem::UPTUIManagerSubsystem()
@@ -15,62 +16,35 @@ void UPTUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTUIManagerSubsystem::Deinitialize()
 {
+    // 참조 안전 해제
     PrimaryLayout.Reset();
     Super::Deinitialize();
 }
 
 void UPTUIManagerSubsystem::RegisterPrimaryLayout(UPTPrimaryLayout* InLayout)
 {
-    if (!InLayout)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] RegisterPrimaryLayout: InLayout is null"));
-        return;
-    }
+    if (!InLayout) return;
+
+    // 베이스 레이아웃 등록
     PrimaryLayout = InLayout;
-    UE_LOG(LogTemp, Log, TEXT("[PTUI] PrimaryLayout registered"));
 }
 
-UPTActivatableWidgetBase* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UPTActivatableWidgetBase> WidgetClass, EPTUILayer Layer)
+UPTHUDWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UPTHUDWidget> WidgetClass, EPTUILayer Layer)
 {
-    if (!WidgetClass)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] PushWidget: WidgetClass is null"));
-        return nullptr;
-    }
-
-    if (!PrimaryLayout.IsValid())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] PushWidget: PrimaryLayout not registered. Call RegisterPrimaryLayout first (from APTHUD)."));
-        return nullptr;
-    }
+    if (!WidgetClass || !PrimaryLayout.IsValid()) return nullptr;
 
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
-    if (!Stack)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] PushWidget: no stack for layer %d"), static_cast<int32>(Layer));
-        return nullptr;
-    }
+    if (!Stack) return nullptr;
 
-    // CommonUI 스택에 push — 위젯 생성/추가/활성화/입력 라우팅 모두 자동 처리
+    // CommonUI 스택에 위젯 추가 (포커스 자동 전환)
     UCommonActivatableWidget* Added = Stack->AddWidget(WidgetClass);
-    UPTActivatableWidgetBase* Result = Cast<UPTActivatableWidgetBase>(Added);
-
-    if (!Result)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[PTUI] PushWidget: AddWidget returned null or wrong type for %s"), *WidgetClass->GetName());
-        return nullptr;
-    }
-
-    UE_LOG(LogTemp, Log, TEXT("[PTUI] Pushed %s on layer %d"),
-        *WidgetClass->GetName(), static_cast<int32>(Layer));
-
-    return Result;
+    return Cast<UPTHUDWidget>(Added);
 }
 
-void UPTUIManagerSubsystem::RemoveWidget(UPTActivatableWidgetBase* WidgetToRemove)
+void UPTUIManagerSubsystem::RemoveWidget(UPTHUDWidget* WidgetToRemove)
 {
     if (!WidgetToRemove) return;
 
-    // CommonActivatableWidget은 DeactivateWidget으로 스택에서 자동 pop
+    // 위젯 종료 (스택 및 화면에서 자동 제거)
     WidgetToRemove->DeactivateWidget();
 }
