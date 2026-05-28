@@ -10,7 +10,7 @@ void UPTManaBarWidget::NativeConstruct()
 
     if (PB_Bar)
     {
-        PB_Bar->SetBarFillType(EProgressBarFillType::TopToBottom);
+        PB_Bar->SetBarFillType(EProgressBarFillType::BottomToTop);
     }
 }
 void UPTManaBarWidget::HandleManaChanged(float Current, float Max)
