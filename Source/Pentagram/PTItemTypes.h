@@ -5,7 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "PGItemTypes.generated.h" // 반드시 파일명.generated.h 형식이어야 합니다.
+#include "PTItemTypes.generated.h" // 반드시 파일명.generated.h 형식이어야 합니다.
 
 
 // 아이템 대분류
@@ -79,8 +79,19 @@ struct FInventorySlot
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     int32 Quantity;
 
+
     // 빈 슬롯인지 확인하는 "헬퍼 함수" 
     bool IsEmpty() const { return Quantity <= 0 || ItemData.Item_ID.IsNone(); }
 
     FInventorySlot() : Quantity(0) {}
+
+
+    // 아이템의 3D 외형 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    TSoftObjectPtr<UStaticMesh> ItemMeshAsset;
+
+    // UI에 표시될 2D 아이콘 이미지 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    TSoftObjectPtr<UTexture2D> ItemIconAsset;
+
 };

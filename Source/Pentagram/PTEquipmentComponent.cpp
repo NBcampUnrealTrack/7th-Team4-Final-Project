@@ -1,8 +1,8 @@
 
-#include "PGEquipmentComponent.h"
+#include "PTEquipmentComponent.h"
 
 // Sets default values for this component's properties
-UPGEquipmentComponent::UPGEquipmentComponent()
+UPTEquipmentComponent::UPTEquipmentComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
@@ -17,14 +17,14 @@ UPGEquipmentComponent::UPGEquipmentComponent()
 
 
 
-void UPGEquipmentComponent::BeginPlay()
+void UPTEquipmentComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
 }
 
 
-bool UPGEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOldItem) // 장착 로직 
+bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOldItem) // 장착 로직 
 {
     // 장비 카테고리가 아니면 예외 처리
     if (NewItem.Item_Category != EItemCategory::Equipment) return false;
@@ -67,7 +67,7 @@ bool UPGEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
     return true;
 }
 
-bool UPGEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutUnequippedItem) // 해제 로직
+bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutUnequippedItem) // 해제 로직
 {
     FEquipmentSlot* TargetSlot = (SlotType == EEquipSlotType::Weapon) ? &EquippedWeapon : &EquippedChest;
 
@@ -87,7 +87,7 @@ bool UPGEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
     return true;
 }
 
-void UPGEquipmentComponent::UpdateTotalBonusStats()
+void UPTEquipmentComponent::UpdateTotalBonusStats()
 {
     // 스탯 초기화 후 처음부터 다시 계산 (데이터 동기화 안정성/버그방지 확보)
     TotalBonusStr = 0;

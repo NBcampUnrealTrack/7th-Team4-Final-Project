@@ -1,11 +1,11 @@
 
-#include "PGDropItemActorBase.h"
+#include "PTDropItemActorBase.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h" 
 
 
 // Sets default values
-APGDropItemActorBase::APGDropItemActorBase()
+APTDropItemActorBase::APTDropItemActorBase()
 { 
 	PrimaryActorTick.bCanEverTick = false;
 
@@ -22,14 +22,14 @@ APGDropItemActorBase::APGDropItemActorBase()
 }
 
 
-void APGDropItemActorBase::BeginPlay()
+void APTDropItemActorBase::BeginPlay()
 {
 	Super::BeginPlay();
     InitializeItemData(); 
 }
 
 
-void APGDropItemActorBase::InitializeItemData()
+void APTDropItemActorBase::InitializeItemData()
 {
     if (ItemRowHandle.DataTable != nullptr && !ItemRowHandle.RowName.IsNone())
     {
