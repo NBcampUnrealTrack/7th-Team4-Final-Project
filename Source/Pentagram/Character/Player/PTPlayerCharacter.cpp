@@ -46,6 +46,16 @@ void APTPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
+    if (HasAuthority())
+    {
+        GetWorldTimerManager().SetTimer(
+            HPRegenTimerHandle,
+            this,
+            &APTPlayerCharacter::RegenHP,
+            5.f,
+            true
+            );
+    }
 }
 
 void APTPlayerCharacter::PlayAttackMontage()
@@ -57,6 +67,20 @@ void APTPlayerCharacter::PlayAttackMontage()
 
     PlayAnimMontage(AttackMontages[ComboIndex]);
     ComboIndex++;
+}
+
+void APTPlayerCharacter::RegenHP()
+{
+    if (!HasAuthority()) return;
+
+    float RegenAmount = MaxHP * 0.01f;
+    CurrentHP = FMath::Min(CurrentHP + RegenAmount, MaxHP);
+
+    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
+    if (PS)
+    {
+        PS->CurrentHP = CurrentHP;
+    }
 }
 
 void APTPlayerCharacter::MoveAction(const FInputActionValue& Value)
@@ -88,20 +112,34 @@ void APTPlayerCharacter::AttackAction(const FInputActionValue& Value)
     PlayAttackMontage();
 }
 
-void APTPlayerCharacter::OnDeath()
-{
-    Super::OnDeath();
-}
-
 void APTPlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
     if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
     {
-    EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerCharacter::MoveAction);
-    EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Triggered, this, &APTPlayerCharacter::AttackAction);
+        EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerCharacter::MoveAction);
+        EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Triggered, this, &APTPlayerCharacter::AttackAction);
     }
+}
+
+void APTPlayerCharacter::OnDeath()
+{
+    Super::OnDeath();
+
+    if (!HasAuthority()) return;
+
+    GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
+
+    // 호승님이 경험치 차감 구현 후에 API연동
+
+    if (DeathMontage)
+    {
+        PlayAnimMontage(DeathMontage);
+        //나중에 재생 시간을 애니메이션에 맞춰야 할 수도
+    }
+
+    OnPlayerDied.Broadcast();
 }
 
 void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

@@ -28,6 +28,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Attack;
 
+    UPROPERTY(EditAnywhere, Category = "Anim")
+    TObjectPtr<UAnimMontage> DeathMontage;
+
 #pragma region 일반 공격 관련
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
@@ -42,14 +45,20 @@ public:
     void PlayAttackMontage();
 #pragma endregion
 
+    void RegenHP();                  //체력 재생
+    FTimerHandle HPRegenTimerHandle; // 체력 재생 타이머
+
     void MoveAction(const FInputActionValue& Value);
     void AttackAction(const FInputActionValue& Value);
+    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-    virtual void OnDeath() override;
+    virtual void OnDeath() override;                    //플레이어 죽음
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);  // 델리게이트
+    UPROPERTY(BlueprintAssignable)
+    FOnPlayerDied OnPlayerDied;
 
     virtual void PossessedBy(AController* NewController) override;
     virtual void BeginPlay() override;
-    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
