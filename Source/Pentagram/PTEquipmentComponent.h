@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "PGItemTypes.h" 
-#include "PGEquipmentComponent.generated.h"
+#include "PTItemTypes.h" 
+#include "PTEquipmentComponent.generated.h"
 
 UENUM(BlueprintType)
 enum class EEquipSlotType : uint8  // 장비 슬롯 타입
@@ -33,12 +33,12 @@ struct FEquipmentSlot // 장비 슬롯 구조체
 };
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class PENTAGRAM_API UPGEquipmentComponent : public UActorComponent // 장비창 컴포넌트 클래스 
+class PENTAGRAM_API UPTEquipmentComponent : public UActorComponent // 장비창 컴포넌트 클래스 
 {
 	GENERATED_BODY()
 
 public:	
-	UPGEquipmentComponent(); 
+	UPTEquipmentComponent(); 
 
 protected:
 	virtual void BeginPlay() override;

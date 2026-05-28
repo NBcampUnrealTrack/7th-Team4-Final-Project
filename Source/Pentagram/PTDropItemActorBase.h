@@ -4,19 +4,24 @@
 
 #include "CoreMinimal.h" 
 #include "GameFramework/Actor.h" 
-#include "PGItemTypes.h" 
-#include "PGDropItemActorBase.generated.h" 
+#include "PTItemTypes.h" 
+#include "PTDropItemActorBase.generated.h" 
 
 class USphereComponent;
 class UStaticMeshComponent; 
 
 UCLASS() 
-class PENTAGRAM_API APGDropItemActorBase : public AActor
+class PENTAGRAM_API APTDropItemActorBase : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
-	APGDropItemActorBase();
+	APTDropItemActorBase();
+
+    // [추가] 외부(캐릭터 등)에서 이 아이템의 데이터를 안전하게 읽어갈 수 있도록 Getter 함수를 제공합니다.
+    // FORCEINLINE을 붙여서 성능을 높이고, const를 붙여 데이터 오염을 방지하는 정석적인 구조입니다.
+    UFUNCTION(BlueprintCallable, Category = "Item Data")
+    FORCEINLINE FItemData GetItemData() const { return InstanceItemData; }
 
 protected:
 	virtual void BeginPlay() override;
