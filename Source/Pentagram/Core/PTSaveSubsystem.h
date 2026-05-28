@@ -12,9 +12,9 @@ struct FPTSaveData
 {
     GENERATED_BODY()
 
-    int32 Gold;
-    int32 Level;
-    int32 Exp;
+    int32 Gold =0;
+    int32 Level = 1;
+    int32 Exp = 0;;
     //TArray<FInventoryItem> Inventory;
     //TArray<FEquipSlot> Equipment;
     //TArray<FSkillSlot> SkillSlots;
@@ -28,6 +28,6 @@ class PENTAGRAM_API UPTSaveSubsystem : public UGameInstanceSubsystem
 
     FPTSaveData SaveData; // save 데이터
 
-    void SaveGame();
-    void LoadGame();
+    void SaveGame();    //세이브
+    void LoadGame();    //로드
 };

@@ -5,13 +5,30 @@
 
 void UPTEconomySubsystem::AddGold(int32 Amount)
 {
+    if (Amount <= 0)
+    {
+        return;
+    }
+
+    CurrentGold += Amount;
 }
 
-void UPTEconomySubsystem::SpendGold(int32 Amount)
+bool UPTEconomySubsystem::SpendGold(int32 Amount)
 {
+    if (Amount <= 0)
+    {
+        return false;
+    }
+    if (CurrentGold < Amount)
+    {
+        return false;
+    }
+
+    CurrentGold -= Amount;
+    return true;
 }
 
-int32 UPTEconomySubsystem::GetGold()
+int32 UPTEconomySubsystem::GetGold() const
 {
-    return 0;
+    return CurrentGold;
 }

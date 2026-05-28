@@ -5,8 +5,20 @@
 
 void UPTSaveSubsystem::SaveGame()
 {
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
 }
 
 void UPTSaveSubsystem::LoadGame()
 {
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+
 }

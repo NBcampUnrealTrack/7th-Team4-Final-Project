@@ -3,25 +3,38 @@
 
 #include "PTPlayerLevelSubsystem.h"
 
-void UPTPlayerLevelSubsystem::AddExp(int32 Amount)
+void UPTPlayerLevelSubsystem::AddExp(int32 ExpAmount)
 {
+    if (ExpAmount <= 0)
+    {
+        return;
+    }
+
+    CurrentExp += ExpAmount;
+
+    while (CurrentExp >= ExpToNextLevel)
+    {
+        CurrentExp -= ExpToNextLevel;
+        LevelUp();
+    }
 }
 
 void UPTPlayerLevelSubsystem::LevelUp()
 {
+    ++CurrentLevel;
 }
 
-int32 UPTPlayerLevelSubsystem::GetLevel()
+int32 UPTPlayerLevelSubsystem::GetLevel() const
 {
-    return 0;
+    return CurrentLevel;
 }
 
-int32 UPTPlayerLevelSubsystem::GetExp()
+int32 UPTPlayerLevelSubsystem::GetExp() const
 {
-    return 0;
+    return CurrentExp;
 }
 
 void UPTPlayerLevelSubsystem::ApplyDeathPenalty()
 {
-
+    CurrentExp = FMath::Max(CurrentExp - DeathPenaltyExp, 0);
 }
