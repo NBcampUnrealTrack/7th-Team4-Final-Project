@@ -56,7 +56,7 @@ void APTGameMode::RespawnPlayer(APlayerController* PlayerController)
 
     if (RespawnDelaySeconds <= 0.f)
     {
-        RestartPlayerWithInitializedState(PlayerController);
+        RestartPlayer(PlayerController);
         return;
     }
 
@@ -70,7 +70,7 @@ void APTGameMode::RespawnPlayer(APlayerController* PlayerController)
                 return;
             }
 
-            RestartPlayerWithInitializedState(StoredPlayerController);
+            RestartPlayer(StoredPlayerController);
         });
 
     FTimerHandle RespawnTimerHandle;
@@ -96,7 +96,22 @@ void APTGameMode::DistributeExp(int32 ExpAmount)
         return;
     }
 
-    PlayerLevelSubsystem->AddExp(ExpAmount);
+    APTGameState* PTGameState = GetGameState<APTGameState>();
+    if (PTGameState == nullptr)
+    {
+        return;
+    }
+
+    for (APlayerState* PlayerState : PTGameState->PlayerArray)
+    {
+        APTBasePlayerState* PTPlayerState = Cast<APTBasePlayerState>(PlayerState);
+        if (PTPlayerState == nullptr)
+        {
+            continue;
+        }
+
+        PlayerLevelSubsystem->AddExp(PTPlayerState, ExpAmount);
+    }
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
@@ -106,19 +121,8 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
         return;
     }
 
-    PlayerState->MaxHP = DefaultMaxHP;
-    PlayerState->CurrentHP = DefaultMaxHP;
-    PlayerState->MaxMP = DefaultMaxMP;
-    PlayerState->CurrentMP = DefaultMaxMP;
-}
-
-void APTGameMode::RestartPlayerWithInitializedState(APlayerController* PlayerController)
-{
-    if (PlayerController == nullptr)
-    {
-        return;
-    }
-
-    InitializePlayerState(PlayerController->GetPlayerState<APTBasePlayerState>());
-    RestartPlayer(PlayerController);
+    PlayerState->PlayerLevel = FMath::Max(PlayerState->PlayerLevel, 1);
+    PlayerState->CurrentExp = FMath::Max(PlayerState->CurrentExp, 0);
+    PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
+    PlayerState->CurrentGold = FMath::Max(PlayerState->CurrentGold, 0);
 }

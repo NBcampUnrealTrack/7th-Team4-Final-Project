@@ -30,14 +30,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|Respawn")
     float RespawnDelaySeconds = 3.f;        //리스폰 대기 시간
 
-    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|PlayerState")
-    float DefaultMaxHP = 100.f;             //일단 맥스 hp
-
-    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|PlayerState")
-    float DefaultMaxMP = 100.f;             //일단 맥스 mp
-
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
-    void RestartPlayerWithInitializedState(APlayerController* PlayerController);
 
 };
