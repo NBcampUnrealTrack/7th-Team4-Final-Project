@@ -7,6 +7,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PTInventoryComponent.h"
+
 
 APTPlayerCharacter::APTPlayerCharacter()
 {
@@ -26,6 +28,9 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->bUsePawnControlRotation = false;
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
+
+    InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
+
 }
 
 void APTPlayerCharacter::PossessedBy(AController* NewController)

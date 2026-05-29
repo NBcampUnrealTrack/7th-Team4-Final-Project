@@ -5,8 +5,6 @@
 #include "Character/PTCharacterRow.h"
 #include "PTBaseCharacter.generated.h"
 
-class UPTInventoryComponent; // 인벤토리 컴포넌트 유무
-class UPTEquipmentComponent; // 장비창 컴포넌트 유무 
 
 UCLASS()
 class PENTAGRAM_API APTBaseCharacter : public ACharacter
@@ -55,17 +53,5 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-    FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; } // Getter 함수 사용 : 블루프린트나 타 클래스에서 캐릭터의 인벤토리에 접근 가능
-    FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }  // Getter 함수 사용 : 블루프린트나 타 클래스에서 캐릭터의 장비창에 접근 가능
-
-protected:
-    void Input_MouseLeftClick(); // 탑뷰 마우스 좌클릭 상호작용 함수 선언 
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true")) // 인벤토리 컴포넌트 추가
-    UPTInventoryComponent* InventoryComponent; 
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true")) // 장비창 컴포넌트 추가
-    UPTEquipmentComponent* EquipmentComponent; 
 
 }; 

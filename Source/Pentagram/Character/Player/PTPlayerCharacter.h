@@ -5,6 +5,8 @@
 #include "InputActionValue.h"
 #include "PTPlayerCharacter.generated.h"
 
+class UPTInventoryComponent; 
+
 UCLASS()
 class PENTAGRAM_API APTPlayerCharacter : public APTBaseCharacter
 {
@@ -18,6 +20,14 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     TObjectPtr<class UCameraComponent> CameraComp;
+
+    // 캐릭터가 직접 소유할 인벤토리 컴포넌트 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<UPTInventoryComponent> InventoryComponent;
+
+    // Getter } 외부(컨트롤러나 다른 클래스)에서 이 인벤토리를 안전하게 꺼내 쓸 수 있도록 함.  
+    FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
 
     /*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
     TObjectPtr<USkillComponent> SkillComp;*/ //이동부터 우선 구현 후, 나중에 구현
