@@ -19,14 +19,17 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     TObjectPtr<class UCameraComponent> CameraComp;
 
-    /*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
-    TObjectPtr<USkillComponent> SkillComp;*/ //이동부터 우선 구현 후, 나중에 구현
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
+    TObjectPtr<class UPTSkillComponent> SkillComp;
+
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<class UInputMappingContext> IMC_Default;
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<class UInputAction> IA_Move;
 
     UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<UInputAction> IA_Attack;
+    TObjectPtr<class UInputAction> IA_Attack;
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
@@ -45,11 +48,19 @@ public:
     void PlayAttackMontage();
 #pragma endregion
 
+    //서버에서 스킬이 호출
+    UFUNCTION(Server, Reliable)
+    void Server_UseSkill(FName SkillID);
+
     void RegenHP();                  //체력 재생
     FTimerHandle HPRegenTimerHandle; // 체력 재생 타이머
 
     void MoveAction(const FInputActionValue& Value);
     void AttackAction(const FInputActionValue& Value);
+    void SkillAction1(const FInputActionValue& Value);
+    void SkillAction2(const FInputActionValue& Value);
+    void SkillAction3(const FInputActionValue& Value);
+    void SkillAction4(const FInputActionValue& Value);
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
     virtual void OnDeath() override;                    //플레이어 죽음
