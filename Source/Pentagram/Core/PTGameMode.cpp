@@ -6,6 +6,7 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "PTGameState.h"
 #include "PTPlayerLevelSubsystem.h"
+#include "Engine/World.h"
 #include "TimerManager.h"
 
 APTGameMode::APTGameMode()
@@ -112,6 +113,36 @@ void APTGameMode::DistributeExp(int32 ExpAmount)
 
         PlayerLevelSubsystem->AddExp(PTPlayerState, ExpAmount);
     }
+}
+
+AActor* APTGameMode::SpawnDropItem(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation) const
+{
+    if (!HasAuthority() || DropItemClass == nullptr)
+    {
+        return nullptr;
+    }
+
+    UWorld* World = GetWorld();
+
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    return World->SpawnActor<AActor>(
+        DropItemClass,
+        DropLocation,
+        FRotator::ZeroRotator,
+        SpawnParameters);
+}
+
+AActor* APTGameMode::SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation, float DropRate) const
+{
+    const float ClampedDropRate = FMath::Clamp(DropRate, 0.f, 1.f);
+    if (ClampedDropRate <= 0.f || FMath::FRand() > ClampedDropRate)
+    {
+        return nullptr;
+    }
+
+    return SpawnDropItem(DropItemClass, DropLocation);
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
