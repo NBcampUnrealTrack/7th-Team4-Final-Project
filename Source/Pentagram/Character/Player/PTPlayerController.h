@@ -13,8 +13,9 @@ class PENTAGRAM_API APTPlayerController : public APlayerController
 public:
     APTPlayerController();
 
-    UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputMappingContext> IMC_Default;
+   /* UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<class UInputMappingContext> IMC_Default;*/
 
     virtual void BeginPlay() override;
+    virtual void AcknowledgePossession(class APawn* P) override;
 };
