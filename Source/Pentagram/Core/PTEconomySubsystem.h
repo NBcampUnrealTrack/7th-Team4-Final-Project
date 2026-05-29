@@ -6,6 +6,8 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PTEconomySubsystem.generated.h"
 
+class APTBasePlayerState;
+
 /**
  *
  */
@@ -15,10 +17,8 @@ class PENTAGRAM_API UPTEconomySubsystem : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
-    void AddGold(int32 Amount);
-    bool SpendGold(int32 Amount);
-    int32 GetGold() const;
-
-private:
-    int32 CurrentGold = 0;
+    void AddGold(APTBasePlayerState* PlayerState, int32 Amount);
+    bool SpendGold(APTBasePlayerState* PlayerState, int32 Amount);
+    int32 GetGold(const APTBasePlayerState* PlayerState) const;
+    bool CanAfford(const APTBasePlayerState* PlayerState, int32 Amount) const;
 };

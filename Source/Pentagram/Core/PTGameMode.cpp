@@ -6,6 +6,7 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "PTGameState.h"
 #include "PTPlayerLevelSubsystem.h"
+#include "Engine/World.h"
 #include "TimerManager.h"
 
 APTGameMode::APTGameMode()
@@ -56,7 +57,7 @@ void APTGameMode::RespawnPlayer(APlayerController* PlayerController)
 
     if (RespawnDelaySeconds <= 0.f)
     {
-        RestartPlayerWithInitializedState(PlayerController);
+        RestartPlayer(PlayerController);
         return;
     }
 
@@ -70,7 +71,7 @@ void APTGameMode::RespawnPlayer(APlayerController* PlayerController)
                 return;
             }
 
-            RestartPlayerWithInitializedState(StoredPlayerController);
+            RestartPlayer(StoredPlayerController);
         });
 
     FTimerHandle RespawnTimerHandle;
@@ -96,7 +97,52 @@ void APTGameMode::DistributeExp(int32 ExpAmount)
         return;
     }
 
-    PlayerLevelSubsystem->AddExp(ExpAmount);
+    APTGameState* PTGameState = GetGameState<APTGameState>();
+    if (PTGameState == nullptr)
+    {
+        return;
+    }
+
+    for (APlayerState* PlayerState : PTGameState->PlayerArray)
+    {
+        APTBasePlayerState* PTPlayerState = Cast<APTBasePlayerState>(PlayerState);
+        if (PTPlayerState == nullptr)
+        {
+            continue;
+        }
+
+        PlayerLevelSubsystem->AddExp(PTPlayerState, ExpAmount);
+    }
+}
+
+AActor* APTGameMode::SpawnDropItem(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation) const
+{
+    if (!HasAuthority() || DropItemClass == nullptr)
+    {
+        return nullptr;
+    }
+
+    UWorld* World = GetWorld();
+
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    return World->SpawnActor<AActor>(
+        DropItemClass,
+        DropLocation,
+        FRotator::ZeroRotator,
+        SpawnParameters);
+}
+
+AActor* APTGameMode::SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation, float DropRate) const
+{
+    const float ClampedDropRate = FMath::Clamp(DropRate, 0.f, 1.f);
+    if (ClampedDropRate <= 0.f || FMath::FRand() > ClampedDropRate)
+    {
+        return nullptr;
+    }
+
+    return SpawnDropItem(DropItemClass, DropLocation);
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
@@ -106,19 +152,8 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
         return;
     }
 
-    PlayerState->MaxHP = DefaultMaxHP;
-    PlayerState->CurrentHP = DefaultMaxHP;
-    PlayerState->MaxMP = DefaultMaxMP;
-    PlayerState->CurrentMP = DefaultMaxMP;
-}
-
-void APTGameMode::RestartPlayerWithInitializedState(APlayerController* PlayerController)
-{
-    if (PlayerController == nullptr)
-    {
-        return;
-    }
-
-    InitializePlayerState(PlayerController->GetPlayerState<APTBasePlayerState>());
-    RestartPlayer(PlayerController);
+    PlayerState->PlayerLevel = FMath::Max(PlayerState->PlayerLevel, 1);
+    PlayerState->CurrentExp = FMath::Max(PlayerState->CurrentExp, 0);
+    PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
+    PlayerState->CurrentGold = FMath::Max(PlayerState->CurrentGold, 0);
 }
