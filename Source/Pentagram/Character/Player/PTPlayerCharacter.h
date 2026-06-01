@@ -22,9 +22,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
     TObjectPtr<class UPTSkillComponent> SkillComp;
 
-    UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputMappingContext> IMC_Default;
-
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
 

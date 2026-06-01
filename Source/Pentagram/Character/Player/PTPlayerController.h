@@ -14,8 +14,8 @@ class PENTAGRAM_API APTPlayerController : public APlayerController
 public:
     APTPlayerController();
 
-   /* UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputMappingContext> IMC_Default;*/
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<class UInputMappingContext> IMC_Default;
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<class UInputAction> IA_Move;
