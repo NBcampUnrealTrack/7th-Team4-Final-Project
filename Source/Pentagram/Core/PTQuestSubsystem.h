@@ -21,9 +21,19 @@ public:
     const FPTQuestDataRow* GetQuestData(FName QuestID) const;
     bool HasQuestData(FName QuestID) const;
 
+    bool AcceptQuest(FName QuestID);
+    bool HasAcceptedQuest(FName QuestID) const;
+    const FPTQuestProgress* GetQuestProgress(FName QuestID) const;
+    TArray<FPTQuestProgress> GetAcceptedQuestProgresses() const;
+    void SetAcceptedQuestProgresses(const TArray<FPTQuestProgress>& InQuestProgresses);
+    void ClearAcceptedQuestProgresses();
+
 private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;
 
     TMap<FName, FPTQuestDataRow> QuestDataMap;
+    TMap<FName, FPTQuestProgress> AcceptedQuestProgressMap;
+
+    FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;
 };

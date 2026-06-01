@@ -3,12 +3,20 @@
 
 #include "PTSaveSubsystem.h"
 
+#include "PTQuestSubsystem.h"
+
 void UPTSaveSubsystem::SaveGame()
 {
     UGameInstance* GameInstance = GetGameInstance();
     if (GameInstance == nullptr)
     {
         return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        SaveData.AcceptedQuests = QuestSubsystem->GetAcceptedQuestProgresses();
     }
 }
 
@@ -20,5 +28,9 @@ void UPTSaveSubsystem::LoadGame()
         return;
     }
 
-
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->SetAcceptedQuestProgresses(SaveData.AcceptedQuests);
+    }
 }
