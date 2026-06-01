@@ -28,6 +28,22 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Attack;
 
+    //스킬
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_Skill1;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_Skill2;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_Skill3;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_Skill4;
+
+
+    void OnSkill1(const FInputActionValue& Value);
+    void OnSkill2(const FInputActionValue& Value);
+    void OnSkill3(const FInputActionValue& Value);
+    void OnSkill4(const FInputActionValue& Value);
+
 protected:
     void PlayAttackMontage();
     virtual void BeginPlay() override;

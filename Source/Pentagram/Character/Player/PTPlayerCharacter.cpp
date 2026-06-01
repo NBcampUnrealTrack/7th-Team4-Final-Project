@@ -78,7 +78,10 @@ void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
 {
     if (!HasAuthority()) return;
 
-    SkillComp->TryActivateSkill(SkillID);
+    if (SkillComp)
+    {
+        SkillComp->TryActivateSkill(SkillID);
+    }
 }
 
 void APTPlayerCharacter::RegenHP()
