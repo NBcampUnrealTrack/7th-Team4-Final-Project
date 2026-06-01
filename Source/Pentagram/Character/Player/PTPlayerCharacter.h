@@ -19,8 +19,11 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     TObjectPtr<class UCameraComponent> CameraComp;
 
-    /*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
-    TObjectPtr<USkillComponent> SkillComp;*/ //이동부터 우선 구현 후, 나중에 구현
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
+    TObjectPtr<class UPTSkillComponent> SkillComp;
+
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<class UInputMappingContext> IMC_Default;
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
@@ -35,6 +38,10 @@ public:
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
 #pragma endregion
+
+    //서버에서 스킬이 호출
+    UFUNCTION(Server, Reliable)
+    void Server_UseSkill(FName SkillID);
 
     void RegenHP();                  //체력 재생
     FTimerHandle HPRegenTimerHandle; // 체력 재생 타이머
