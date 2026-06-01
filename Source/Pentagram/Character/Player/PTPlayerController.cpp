@@ -1,9 +1,12 @@
 #include "Character/Player/PTPlayerController.h"
 
+#include "CommonActivatableWidget.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
+#include "UI/Screens/LayOut/PTPrimaryLayout.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -21,7 +24,29 @@ void APTPlayerController::BeginPlay()
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
     InputMode.SetHideCursorDuringCapture(false);
     SetInputMode(InputMode);
+
     UE_LOG(LogTemp, Warning, TEXT("SetInputMode Called"));
+
+    AddUIInputMapping();
+
+    if (PrimaryLayoutClass)
+    {
+        PrimaryLayout = CreateWidget<UPTPrimaryLayout>(this, PrimaryLayoutClass);
+        if (PrimaryLayout)
+        {
+            PrimaryLayout->AddToPlayerScreen(0);
+            if (ULocalPlayer* LP = GetLocalPlayer())
+            {
+                if (UPTUIManagerSubsystem* UIMgr = LP->GetSubsystem<UPTUIManagerSubsystem>())
+                {
+                    UIMgr->RegisterPrimaryLayout(PrimaryLayout);
+                    PushInitialHUD();
+                }
+            }
+        }
+    }
+
+
 }
 
 void APTPlayerController::AcknowledgePossession(APawn* P)
@@ -52,7 +77,8 @@ void APTPlayerController::SetupInputComponent()
     Super::SetupInputComponent();
     UE_LOG(LogTemp, Warning, TEXT("Controller SetupInputComponent Called"));
 
-    if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
+    UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
+    if (!EnhancedInput)
     {
         UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
         if (IA_Move)
@@ -65,11 +91,17 @@ void APTPlayerController::SetupInputComponent()
             UE_LOG(LogTemp, Warning, TEXT("IA_Attack Binding"));
             EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Started, this, &APTPlayerController::OnLeftClick);
         }
+        if (IA_Inventory)
+        {
+            EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
+        }
         else
         {
             UE_LOG(LogTemp, Warning, TEXT("IA_Move is null"));
         }
     }
+
+    AddUIInputMapping();
 }
 
 void APTPlayerController::PlayAttackMontage()
@@ -114,4 +146,95 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         return;
     }
     PlayAttackMontage();
+}
+
+void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    RemoveUIInputMapping();
+    Super::EndPlay(EndPlayReason);
+}
+
+void APTPlayerController::OnInventoryPressed()
+{
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP)
+    {
+        return;
+    }
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI || !InventoryClass)
+    {
+        return;
+    }
+
+    UI->ToggleInventory(InventoryClass);
+}
+
+void APTPlayerController::PushInitialHUD()
+{
+    if (!InitialHUDClass)
+    {
+        return;
+    }
+
+    if (ULocalPlayer* LP = GetLocalPlayer())
+    {
+        if (UPTUIManagerSubsystem* UIMgr = LP->GetSubsystem<UPTUIManagerSubsystem>())
+        {
+            UIMgr->PushWidget(InitialHUDClass, EPTUILayer::HUD);
+        }
+    }
+}
+
+void APTPlayerController::AddUIInputMapping()
+{
+    if (bUIInputMappingAdded || !IMC_UI)
+    {
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    if (!LocalPlayer)
+    {
+        return;
+    }
+
+    UEnhancedInputLocalPlayerSubsystem* InputSubsystem =
+        ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
+    if (!InputSubsystem)
+    {
+        UE_LOG(LogTemp, Error, TEXT("EnhancedInputLocalPlayerSubsystem not found."));
+        return;
+    }
+
+    InputSubsystem->AddMappingContext(IMC_UI, 100);
+    bUIInputMappingAdded = true;
+
+    UE_LOG(LogTemp, Warning, TEXT("UI Input Mapping Added: %s / Priority=100"), *IMC_UI->GetName());
+
+}
+
+void APTPlayerController::RemoveUIInputMapping()
+{
+    if (!bUIInputMappingAdded || !IMC_UI)
+    {
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    if (!LocalPlayer)
+    {
+        return;
+    }
+
+    UEnhancedInputLocalPlayerSubsystem* InputSubsystem =
+        ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
+    if (!InputSubsystem)
+    {
+        return;
+    }
+
+    InputSubsystem->RemoveMappingContext(IMC_UI);
+    bUIInputMappingAdded = false;
 }
