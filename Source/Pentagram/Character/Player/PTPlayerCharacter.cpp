@@ -74,25 +74,6 @@ void APTPlayerCharacter::BeginPlay()
     }
 }
 
-void APTPlayerCharacter::PlayAttackMontage()
-{
-    if (!AttackMontages.IsValidIndex(ComboIndex)) return;
-
-    bIsAttacking = true;
-    bCanCombo = false;
-
-    PlayAnimMontage(AttackMontages[ComboIndex]);
-    ComboIndex++;
-}
-
-void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
-{
-    if (SkillComp)
-    {
-        SkillComp->TryActivateSkill(SkillID);
-    }
-}
-
 void APTPlayerCharacter::RegenHP()
 {
     if (!HasAuthority()) return;
@@ -104,109 +85,6 @@ void APTPlayerCharacter::RegenHP()
     if (PS)
     {
         PS->CurrentHP = CurrentHP;
-    }
-}
-
-void APTPlayerCharacter::MoveAction(const FInputActionValue& Value)
-{
-    UE_LOG(LogTemp, Warning, TEXT("MoveAction Called"));
-
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (!PC)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("PC is null"));
-        return;
-    }
-
-    FHitResult HitResult;
-    PC->GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-
-    UE_LOG(LogTemp, Warning, TEXT("HitResult: %s"), HitResult.bBlockingHit ? TEXT("Hit") : TEXT("No Hit"));
-
-    if (HitResult.bBlockingHit)
-    {
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, HitResult.Location);
-    }
-}
-
-void APTPlayerCharacter::AttackAction(const FInputActionValue& Value)
-{
-    if (bIsAttacking)
-    {
-        if (bCanCombo)
-        {
-            bCanCombo = false;
-            PlayAttackMontage();
-        }
-        return;
-    }
-
-    PlayAttackMontage();
-}
-
-void APTPlayerCharacter::SkillAction1(const FInputActionValue& Value)
-{
-    Server_UseSkill(SkillComp->GetSkillAtSlot(0));
-}
-
-void APTPlayerCharacter::SkillAction2(const FInputActionValue& Value)
-{
-    Server_UseSkill(SkillComp->GetSkillAtSlot(1));
-}
-
-void APTPlayerCharacter::SkillAction3(const FInputActionValue& Value)
-{
-    Server_UseSkill(SkillComp->GetSkillAtSlot(2));
-}
-
-void APTPlayerCharacter::SkillAction4(const FInputActionValue& Value)
-{
-    Server_UseSkill(SkillComp->GetSkillAtSlot(3));
-}
-
-void APTPlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-    UE_LOG(LogTemp, Warning, TEXT("SetupPlayerInputComponent Called"));
-
-    if (!IMC_Default)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("IMC_Default is null"));
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("IMC_Default is valid"));
-    }
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (PC)
-    {
-        if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
-            ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
-        {
-            Subsystem->AddMappingContext(IMC_Default, 0);
-            UE_LOG(LogTemp, Warning, TEXT("IMC Added Successfully"));
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("PC is null in SetupInput"));
-    }
-
-    if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-    {
-        if (IA_Move)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("IA_Move Binding"));
-            EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerCharacter::MoveAction);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("IA_Move is null in binding"));
-        }
     }
 }
 
