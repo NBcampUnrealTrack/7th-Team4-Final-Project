@@ -74,6 +74,13 @@ void APTPlayerCharacter::BeginPlay()
     }
 }
 
+void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
+{
+    if (!HasAuthority()) return;
+
+    SkillComp->TryActivateSkill(SkillID);
+}
+
 void APTPlayerCharacter::RegenHP()
 {
     if (!HasAuthority()) return;
@@ -111,6 +118,4 @@ void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(APTPlayerCharacter,MaxMP);
-    DOREPLIFETIME(APTPlayerCharacter,CurrentMP);
 }
