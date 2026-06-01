@@ -6,6 +6,11 @@
 #include "PTPlayerController.generated.h"
 
 
+class UCommonActivatableWidget;
+class UInputAction;
+class UInputMappingContext;
+class UPTPrimaryLayout;
+
 UCLASS()
 class PENTAGRAM_API APTPlayerController : public APlayerController
 {
@@ -14,8 +19,8 @@ class PENTAGRAM_API APTPlayerController : public APlayerController
 public:
     APTPlayerController();
 
-   /* UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputMappingContext> IMC_Default;*/
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<class UInputMappingContext> IMC_Default;
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<class UInputAction> IA_Move;
@@ -32,4 +37,40 @@ protected:
 private:
     void OnRightClick(const FInputActionValue& Value);
     void OnLeftClick(const FInputActionValue& Value);
+
+
+    //UI
+
+public:
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputMappingContext> IMC_UI;
+
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_Inventory;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> InitialHUDClass;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> InventoryClass;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UPTPrimaryLayout> PrimaryLayoutClass;
+
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+    void OnInventoryPressed();
+    void PushInitialHUD();
+
+    UPROPERTY(EditAnywhere, Category = "Input")
+    FKey InventoryFallbackKey = EKeys::I;
+
+private:
+    void AddUIInputMapping();
+    void RemoveUIInputMapping();
+
+    UPROPERTY()
+    TObjectPtr<UPTPrimaryLayout> PrimaryLayout;
+
+    bool bUIInputMappingAdded = false;
 };
