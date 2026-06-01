@@ -6,6 +6,7 @@
 
 struct FPTAttackTaskMemory
 {
+    FTimerHandle HitTimer;
     FTimerHandle CooldownTimer;
 };
 

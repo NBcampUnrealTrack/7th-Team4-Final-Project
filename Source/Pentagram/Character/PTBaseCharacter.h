@@ -52,8 +52,6 @@ protected:
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
-	virtual void Tick(float DeltaTime) override;
-
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; } // Getter 함수 사용 : 블루프린트나 타 클래스에서 캐릭터의 인벤토리에 접근 가능

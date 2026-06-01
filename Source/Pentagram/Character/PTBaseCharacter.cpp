@@ -88,12 +88,6 @@ void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
     DOREPLIFETIME(APTBaseCharacter, MoveSpeed);
 }
 
-void APTBaseCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
-
 
 // =========================================================================
 // 입력 연동 및 상호작용 구현
