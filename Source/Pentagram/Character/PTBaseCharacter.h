@@ -5,8 +5,6 @@
 #include "Character/PTCharacterRow.h"
 #include "PTBaseCharacter.generated.h"
 
-class UPTInventoryComponent; // 인벤토리 컴포넌트 유무
-class UPTEquipmentComponent; // 장비창 컴포넌트 유무
 
 UCLASS()
 class PENTAGRAM_API APTBaseCharacter : public ACharacter
