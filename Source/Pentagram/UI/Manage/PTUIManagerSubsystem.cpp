@@ -1,7 +1,7 @@
 ﻿
 
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Screens/PTHUDWidget.h"
+#include "UI/Screens/Main/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
@@ -24,27 +24,70 @@ void UPTUIManagerSubsystem::Deinitialize()
 void UPTUIManagerSubsystem::RegisterPrimaryLayout(UPTPrimaryLayout* InLayout)
 {
     if (!InLayout) return;
-
+    UE_LOG(LogTemp, Warning, TEXT(">> Register: Subsystem=%p, InLayout=%p"), this, InLayout);
     // 베이스 레이아웃 등록
     PrimaryLayout = InLayout;
 }
 
-UPTHUDWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UPTHUDWidget> WidgetClass, EPTUILayer Layer)
+UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonActivatableWidget> WidgetClass,
+    EPTUILayer Layer)
 {
-    if (!WidgetClass || !PrimaryLayout.IsValid()) return nullptr;
+    if (!WidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PushWidget: WidgetClass가 null"));
+        return nullptr;
+    }
+    if(!PrimaryLayout.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PushWidget: PrimaryLayout.가 null"));
+        return nullptr;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT(">> PushWidget: Layer=%d, Subsystem=%p, PrimaryLayout=%p"),
+          (int32)Layer, this, PrimaryLayout.Get());
 
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
-    if (!Stack) return nullptr;
-
-    // CommonUI 스택에 위젯 추가 (포커스 자동 전환)
-    UCommonActivatableWidget* Added = Stack->AddWidget(WidgetClass);
-    return Cast<UPTHUDWidget>(Added);
+    if (!Stack)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PushWidget: Stack가 null"));
+        return nullptr;
+    }
+    return Stack->AddWidget(WidgetClass);
 }
 
-void UPTUIManagerSubsystem::RemoveWidget(UPTHUDWidget* WidgetToRemove)
+
+
+void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemove)
 {
     if (!WidgetToRemove) return;
 
     // 위젯 종료 (스택 및 화면에서 자동 제거)
     WidgetToRemove->DeactivateWidget();
+}
+
+void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
+{
+    // 1. 인벤토리가 이미 유효하게 떠 있는 경우 (닫기)
+    if (InventoryInstance && InventoryInstance->IsActivated())
+    {
+        InventoryInstance->DeactivateWidget();
+        // 참고: DeactivateWidget이 호출되면 Common UI 스택이
+        // 자동으로 위젯을 관리하므로 여기서 즉시 nullptr을 넣지 마세요.
+        return;
+    }
+
+    // 2. 인벤토리가 없거나, 닫혀 있는 경우 (열기)
+    // 인벤토리가 닫혀있다면(IsValid()가 false이거나 Deactivated 상태) 새로 Push
+    InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
+
+    // [중요] 생성된 후 바로 활성화해주어야 Common UI가 입력을 받습니다.
+    if (InventoryInstance)
+    {
+        InventoryInstance->ActivateWidget();
+        UE_LOG(LogTemp, Warning, TEXT(">> 인벤토리 활성화 완료!"));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT(">> 인벤토리 Push 실패!"));
+    }
 }

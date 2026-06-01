@@ -1,0 +1,28 @@
+﻿#include "PTInventoryWidget.h"
+#include "Input/CommonUIInputTypes.h"
+
+void UPTInventoryWidget::NativeOnInitialized()
+{
+    Super::NativeOnInitialized();
+}
+
+TOptional<FUIInputConfig> UPTInventoryWidget::GetDesiredInputConfig() const
+{
+    return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
+}
+
+void UPTInventoryWidget::NativeOnActivated()
+{
+    Super::NativeOnActivated();
+}
+
+void UPTInventoryWidget::NativeOnDeactivated()
+{
+    Super::NativeOnDeactivated();
+}
+
+bool UPTInventoryWidget::NativeOnHandleBackAction()
+{
+    DeactivateWidget(); // ESC/B로 닫기
+    return true;
+}
