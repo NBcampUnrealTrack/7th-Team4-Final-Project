@@ -58,17 +58,6 @@ void APTPlayerCharacter::BeginPlay()
     }
 }
 
-void APTPlayerCharacter::PlayAttackMontage()
-{
-    if (!AttackMontages.IsValidIndex(ComboIndex)) return;
-
-    bIsAttacking = true;
-    bCanCombo = false;
-
-    PlayAnimMontage(AttackMontages[ComboIndex]);
-    ComboIndex++;
-}
-
 void APTPlayerCharacter::RegenHP()
 {
     if (!HasAuthority()) return;
@@ -80,46 +69,6 @@ void APTPlayerCharacter::RegenHP()
     if (PS)
     {
         PS->CurrentHP = CurrentHP;
-    }
-}
-
-void APTPlayerCharacter::MoveAction(const FInputActionValue& Value)
-{
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (!PC) return;
-
-    FHitResult HitResult;
-    PC->GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-
-    if (HitResult.bBlockingHit)
-    {
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, HitResult.Location);
-    }
-}
-
-void APTPlayerCharacter::AttackAction(const FInputActionValue& Value)
-{
-    if (bIsAttacking)
-    {
-        if (bCanCombo)
-        {
-            bCanCombo = false;
-            PlayAttackMontage();
-        }
-        return;
-    }
-
-    PlayAttackMontage();
-}
-
-void APTPlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-    if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-    {
-        EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerCharacter::MoveAction);
-        EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Triggered, this, &APTPlayerCharacter::AttackAction);
     }
 }
 
