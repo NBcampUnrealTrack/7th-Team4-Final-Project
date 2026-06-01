@@ -8,6 +8,9 @@
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Skill/PTSkillComponent.h"
+#include "Item/PTDropItemActorBase.h"
+#include "PTInventoryComponent.h"
+
 
 APTPlayerController::APTPlayerController()
 {
@@ -161,6 +164,37 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
+    // 마우스 밑에 있는 오브젝트 스캔
+    FHitResult HitResult;
+    if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
+    {
+        // 그 오브젝트가 드롭 아이템 액터인가 
+        APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
+        if (TargetItem)
+        {
+            // 캐릭터와 아이템 간의 평면(2D) 거리 확인
+            float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
+            if (Distance2D <= 100.0f) // 1미터 이내 범위 판정
+            {
+                // 캐릭터의 인벤토리 컴포넌트를 가져와 아이템 집어넣기
+                if (PlayerCharacter->GetInventoryComponent() &&
+                    PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
+                {
+                    TargetItem->Destroy(); // 월드에서 아이템에셋 삭제 
+                    UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
+
+                    return; // 아이템을 주웠으므로 공격 로직을 타지 않도록 리턴 
+                }
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
+                return; // 거리가 멀어 못 줍는 상태여도 헛공격이 나가지 않도록 잠금 
+            }
+        }
+    }
+
+    // 아이템 상호작용이 일어나지 않았다면 콤보 공격 연출 실행 
     if (PlayerCharacter->bIsAttacking)
     {
         if (PlayerCharacter->bCanCombo)

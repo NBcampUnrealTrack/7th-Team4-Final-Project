@@ -9,6 +9,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PTInventoryComponent.h" 
+#include "PTEquipmentComponent.h" 
+
 
 APTPlayerCharacter::APTPlayerCharacter()
 {
@@ -28,6 +31,9 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->bUsePawnControlRotation = false;
 
     SkillComp = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+
+    InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
+    EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
 }
