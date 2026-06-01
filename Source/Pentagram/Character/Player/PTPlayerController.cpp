@@ -7,10 +7,11 @@
 #include "PTPlayerCharacter.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
+#include "Skill/PTSkillComponent.h"
 
 APTPlayerController::APTPlayerController()
 {
-    PrimaryActorTick.bCanEverTick = false;
+    PrimaryActorTick.bCanEverTick = true;
     bShowMouseCursor = true;
     DefaultMouseCursor = EMouseCursor::Default;
 }
@@ -78,7 +79,7 @@ void APTPlayerController::SetupInputComponent()
     UE_LOG(LogTemp, Warning, TEXT("Controller SetupInputComponent Called"));
 
     UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
-    if (!EnhancedInput)
+    if (EnhancedInput)
     {
         UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
         if (IA_Move)
@@ -102,6 +103,30 @@ void APTPlayerController::SetupInputComponent()
     }
 
     AddUIInputMapping();
+}
+
+void APTPlayerController::OnSkill1(const FInputActionValue& Value)
+{
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
+}
+
+void APTPlayerController::OnSkill2(const FInputActionValue& Value)
+{
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
+}
+
+void APTPlayerController::OnSkill3(const FInputActionValue& Value)
+{
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
+}
+
+void APTPlayerController::OnSkill4(const FInputActionValue& Value)
+{
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
 }
 
 void APTPlayerController::PlayAttackMontage()

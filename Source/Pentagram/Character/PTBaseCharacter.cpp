@@ -7,7 +7,7 @@
 
 APTBaseCharacter::APTBaseCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
     bReplicates = true;
 }
 
