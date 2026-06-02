@@ -7,16 +7,25 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PTSaveSubsystem.generated.h"
 
+class APTBasePlayerState;
 
 USTRUCT(BlueprintType)
 struct FPTSaveData
 {
     GENERATED_BODY()
 
-    int32 Gold =0;
+    UPROPERTY()
+    int32 Gold = 0;
+
+    UPROPERTY()
     int32 Level = 1;
-    int32 Exp = 0;;
+
+    UPROPERTY()
+    int32 Exp = 0;
+
+    UPROPERTY()
     TArray<FPTQuestProgress> AcceptedQuests;
+
     //TArray<FInventoryItem> Inventory;
     //TArray<FEquipSlot> Equipment;
     //TArray<FSkillSlot> SkillSlots;
@@ -28,8 +37,21 @@ class PENTAGRAM_API UPTSaveSubsystem : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
 
-    FPTSaveData SaveData; // save 데이터
+public:
+    void SaveGame();
+    void SaveGame(const APTBasePlayerState* PlayerState);
+    void LoadGame();
+    void LoadGame(APTBasePlayerState* PlayerState);
+    bool HasSaveData() const;
+    void DeleteSaveData();
+    const FPTSaveData& GetSaveData() const { return SaveData; }
 
-    void SaveGame();    //세이브
-    void LoadGame();    //로드
+private:
+    void PlayerStateSaveData(const APTBasePlayerState* PlayerState);
+    void QuestSaveData();
+    void PlayerStateLoadData(APTBasePlayerState* PlayerState) const;
+    void QuestLoadData() const;
+
+    FPTSaveData SaveData; // save 데이터
+    bool bHasSaveData = false;
 };

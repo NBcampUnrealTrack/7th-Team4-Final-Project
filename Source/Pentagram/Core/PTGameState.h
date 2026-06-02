@@ -37,5 +37,5 @@ protected:
     void OnGamePhaseChanged();  // 상태 변경 시 UI 이벤트 브로드캐스트
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentPhase)
-    EGamePhase CurrentPhase = EGamePhase::Waiting;    // 게임 상태 (Waiting, InProgress, GameOver)
+    EGamePhase CurrentPhase = EGamePhase::Waiting;    // 게임 상태 (Waiting, Playing, BossFight, GameClear, GameOver)
 };
