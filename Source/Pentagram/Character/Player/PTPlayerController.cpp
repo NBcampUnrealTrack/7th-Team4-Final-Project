@@ -99,9 +99,10 @@ void APTPlayerController::SetupInputComponent()
         {
             EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
         }
-        else
+        if (IA_Interact) 
         {
-            UE_LOG(LogTemp, Warning, TEXT("IA_Move is null"));
+            UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
+            EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
         }
     }
 
@@ -205,6 +206,18 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         return;
     }
     PlayAttackMontage();
+}
+
+void APTPlayerController::OnInteractPressed() // F 상호작용 구현부 
+{ 
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    if (PlayerCharacter)
+    {
+        // 캐릭터에게 주변 스캔 및 상호작용 처리를 위임합니다. 
+        // (다음 작업 때 PTPlayerCharacter 클래스 내부에 TryInteract() 함수를 구현해 주면 연동됩니다)
+        PlayerCharacter->TryInteract();
+        UE_LOG(LogTemp, Log, TEXT("컨트롤러: F키 입력 감지 -> 캐릭터에게 상호작용 명령 전달"));
+    }
 }
 
 void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
