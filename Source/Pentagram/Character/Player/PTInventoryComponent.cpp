@@ -1,15 +1,17 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "PTInventoryComponent.h"
 #include "Character/PTBaseCharacter.h" // 캐릭터 내부 HP 변수에 접근
 
+#include "Net/UnrealNetwork.h" 
 
-// Sets default values for this component's properties
+
+
 UPTInventoryComponent::UPTInventoryComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
+    // 네트워크 리플리케이트 활성화 
+    SetIsReplicatedByDefault(true);
 }
 
 
@@ -17,12 +19,29 @@ void UPTInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-    // 게임 시작 시 30칸의 빈 슬롯을 미리 확보. 
-    InventorySlots.Init(FInventorySlot(), MaxSlotCount); 
+    // [네트워크 최적화] 슬롯 초기화는 '서버'에서만 수행해도 리플리케이션을 통해 클라이언트에 전달되게 함. 
+    if (GetOwner()->HasAuthority())
+    {
+        // 게임 시작 시 30칸의 빈 슬롯을 미리 확보. 
+        InventorySlots.Init(FInventorySlot(), MaxSlotCount); 
+    }
 }
+
+// 변수 리플리케이트 규칙 정의 
+void UPTInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps); 
+
+    // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동으로 동기화(복제)시킴. 
+    DOREPLIFETIME(UPTInventoryComponent, InventorySlots);
+}
+
 
 bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count)
 {
+    // [멀티플레이어 보안] 아이템 획득(추가) 연산은 무조건 '서버'에서만 수행되어야 합니다. 
+    if (!GetOwner()->HasAuthority()) return false;
+
     // 유효하지 않은 데이터나 수량 방어 코드
     if (NewItemData.Item_ID.IsNone() || Count <= 0) return false; 
 
@@ -116,10 +135,26 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
     {
         UE_LOG(LogTemp, Warning, TEXT("소비 아이템이 아닙니다."));
         return false;
-    } 
+    }
+
+    // [멀티플레이어 핵심 분기] 
+    // 클라이언트가 UI에서 우클릭 등으로 이 함수를 호출한 경우, 직접 개수를 깎으면 데이터 변조 위험이 있으므로 결정권을 서버한테 넘기는 방식 
+    if (!GetOwner()->HasAuthority()) 
+    {
+        // 클라이언트가 서버에게 안전하게 "나 몇 번 슬롯 물약 쓰겠다" 라고 무전(RPC)을 보내고 리턴. 
+        Server_UsePotion(SlotIndex); 
+        return true;
+    }
 
     // 소비 아이템 개수 차감 
     InventorySlots[SlotIndex].Quantity--;
+
+    // 수량이 0이하가 되었다면 완전히 빈 슬롯으로 비워주기 위한 초기화 처리
+    if (InventorySlots[SlotIndex].Quantity <= 0)
+    {
+        InventorySlots[SlotIndex] = FInventorySlot();
+    }
+
     UE_LOG(LogTemp, Log, TEXT("%s 아이템 사용. 남은 수량: %d개"), 
         *InventorySlots[SlotIndex].ItemData.Item_Name.ToString(), InventorySlots[SlotIndex].Quantity);
 
@@ -136,9 +171,29 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
     return true;
 }
 
+// Server RPC 실제 실행부 
+void UPTInventoryComponent::Server_UsePotion_Implementation(int32 SlotIndex)
+{
+    // 서버 권한으로 진입했으므로 UsePotion 함수를 다시 호출해 서버 데이터를 공식 차감하고 타이머를 켭니다.
+    UsePotion(SlotIndex);
+}
+
+// Server RPC 검증부 (잘못된 요청이나 핵유저 방지 필터) 
+bool UPTInventoryComponent::Server_UsePotion_Validate(int32 SlotIndex)
+{
+    // 음수 인덱스나 가방 크기를 초과하는 기괴한 슬롯 패킷 차단
+    if (SlotIndex < 0 || SlotIndex >= MaxSlotCount)
+    {
+        return false; // 패킷 변조로 판단하고 해당 유저 접속을 강제 종료시킬 수 있음
+    }
+    return true;
+}
 
 void UPTInventoryComponent::ExecutePotionHealing() // 포션 회복  
 {
+    // 이 코드를 실행하는게 서버가 아니라면 함수를 즉시 리턴 
+    if (!GetOwner()->HasAuthority()) return; 
+
     // 이 컴포넌트를 들고 있는 주인(캐릭터) 가져오기
     APTBaseCharacter* OwnerCharacter = Cast<APTBaseCharacter>(GetOwner());
     if (!OwnerCharacter)

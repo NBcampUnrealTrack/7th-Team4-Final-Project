@@ -28,6 +28,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Attack;
 
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<class UInputAction> IA_Interact;
+
     //스킬
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill1;
@@ -53,7 +56,7 @@ protected:
 private:
     void OnRightClick(const FInputActionValue& Value);
     void OnLeftClick(const FInputActionValue& Value);
-
+    void OnInteractPressed(); 
 
     //UI
 
