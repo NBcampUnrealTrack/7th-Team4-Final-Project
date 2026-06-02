@@ -76,7 +76,6 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
 
     if (UWorld* World = OwnerComp.GetWorld())
     {
-        World->GetTimerManager().ClearTimer(Memory->HitTimer);
         World->GetTimerManager().ClearTimer(Memory->CooldownTimer);
     }
 
