@@ -9,7 +9,7 @@
 
 class UProgressBar;
 class UTextBlock;
-
+class APTBasePlayerState;
 
 UCLASS()
 class PENTAGRAM_API UPTStatBarWidget : public UCommonUserWidget
@@ -25,6 +25,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|StatBar")
     void SetValueInstant(float Current, float Max);
 
+    void SetupPlayerState(class APTBasePlayerState* PS);
+
+    virtual void NativeDestruct() override;
+
 protected:
     virtual void NativeConstruct() override;
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
@@ -33,6 +37,8 @@ protected:
     UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|StatBar")
     void OnDisplayValueUpdated(float InDisplayCurrent, float InMaxValue, float Percent);
 
+    virtual void BindToPlayerState(class APTBasePlayerState* PS) {}
+    virtual void UnbindFromPlayerState(class APTBasePlayerState* PS) {}
 protected:
     /** UMG에서 BindWidget. ProgressBar 이름을 PB_Bar로 통일. */
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -57,6 +63,8 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "PT|UI|StatBar")
     float DisplayCurrent = 0.f;
 
+    UPROPERTY()
+    TWeakObjectPtr<APTBasePlayerState> BoundPS;
 private:
     void ApplyDisplay();
 };

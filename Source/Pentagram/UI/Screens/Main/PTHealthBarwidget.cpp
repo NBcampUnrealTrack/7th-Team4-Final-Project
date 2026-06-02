@@ -2,6 +2,7 @@
 
 #include "UI/Screens/Main/PTHealthBarwidget.h"
 #include "Components/ProgressBar.h"
+#include "Character/Player/PTBasePlayerState.h"
 
 void UPTHealthBarwidget::NativeConstruct()
 {
@@ -16,4 +17,13 @@ void UPTHealthBarwidget::NativeConstruct()
 void UPTHealthBarwidget::HandleHealthChanged(float Current, float Max)
 {
     SetValue(Current, Max);
+}
+
+void UPTHealthBarwidget::BindToPlayerState(APTBasePlayerState* PS)
+{
+    PS->OnHealthChanged.AddUniqueDynamic(this, &UPTHealthBarwidget::HandleHealthChanged);
+}
+void UPTHealthBarwidget::UnbindFromPlayerState(APTBasePlayerState* PS)
+{
+    PS->OnHealthChanged.RemoveDynamic(this, &UPTHealthBarwidget::HandleHealthChanged);
 }
