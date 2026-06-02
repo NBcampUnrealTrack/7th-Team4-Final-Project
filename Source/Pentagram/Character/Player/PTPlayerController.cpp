@@ -181,10 +181,9 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     }
 
     // 마우스 밑에 있는 오브젝트 스캔
-    FHitResult HitResult;
     if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
     {
-        // 그 오브젝트가 드롭 아이템 액터인가 
+        // 그 오브젝트가 드롭 아이템 액터인가
         APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
         if (TargetItem)
         {
@@ -196,21 +195,21 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
                 if (PlayerCharacter->GetInventoryComponent() &&
                     PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
                 {
-                    TargetItem->Destroy(); // 월드에서 아이템에셋 삭제 
+                    TargetItem->Destroy(); // 월드에서 아이템에셋 삭제
                     UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
 
-                    return; // 아이템을 주웠으므로 공격 로직을 타지 않도록 리턴 
+                    return; // 아이템을 주웠으므로 공격 로직을 타지 않도록 리턴
                 }
             }
             else
             {
                 UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
-                return; // 거리가 멀어 못 줍는 상태여도 헛공격이 나가지 않도록 잠금 
+                return; // 거리가 멀어 못 줍는 상태여도 헛공격이 나가지 않도록 잠금
             }
         }
     }
 
-    // 아이템 상호작용이 일어나지 않았다면 콤보 공격 연출 실행 
+    // 아이템 상호작용이 일어나지 않았다면 콤보 공격 연출 실행
     if (PlayerCharacter->bIsAttacking)
     {
         if (PlayerCharacter->bCanCombo)
