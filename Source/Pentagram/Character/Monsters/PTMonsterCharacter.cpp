@@ -8,13 +8,27 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "CollisionShape.h"
-#include "Core/PTEconomySubsystem.h"
 #include "Core/PTPlayerLevelSubsystem.h"
+#include "Character/Player/PTBasePlayerState.h"
+#include "GameFramework/PlayerController.h"
+#include "Item/PTGoldPickup.h"
 #include "Net/UnrealNetwork.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
     PrimaryActorTick.bCanEverTick = false;
+}
+
+float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
+{
+    if (DamageAmount > 0.f)
+    {
+        RegisterDamageContributor(Attacker);
+    }
+
+    const float FinalDamage = Super::ApplyDamage(DamageAmount, Attacker);
+
+    return FinalDamage;
 }
 
 void APTMonsterCharacter::BeginPlay()
@@ -101,6 +115,8 @@ void APTMonsterCharacter::OnDeath()
 
     if (HasAuthority())
     {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] OnDeath — GiveExp + SpawnDrops 시작"), *GetName());
+        GiveExpToContributors();
         SpawnDeathDrops();
         GetWorldTimerManager().SetTimer(
             DestroyTimerHandle,
@@ -112,7 +128,35 @@ void APTMonsterCharacter::OnDeath()
     }
 }
 
-void APTMonsterCharacter::SpawnDeathDrops()
+void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
+{
+    if (!DamageCauser)
+    {
+        return;
+    }
+
+    APawn* Pawn = Cast<APawn>(DamageCauser);
+    if (!Pawn)
+    {
+        return;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+    if (!PC)
+    {
+        return;
+    }
+
+    APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    ExpContributors.Add(PS);
+}
+
+void APTMonsterCharacter::GiveExpToContributors()
 {
     UGameInstance* GI = GetGameInstance();
     if (!GI)
@@ -120,26 +164,68 @@ void APTMonsterCharacter::SpawnDeathDrops()
         return;
     }
 
-    if (UPTEconomySubsystem* EconomySys = GI->GetSubsystem<UPTEconomySubsystem>())
+    UPTPlayerLevelSubsystem* LevelSys = GI->GetSubsystem<UPTPlayerLevelSubsystem>();
+    if (!LevelSys)
     {
-        const int32 Gold = FMath::RandRange(GoldDropMin, GoldDropMax);
-        EconomySys->AddGold(Gold);
+        return;
     }
 
-    if (UPTPlayerLevelSubsystem* LevelSys = GI->GetSubsystem<UPTPlayerLevelSubsystem>())
+    for (const TWeakObjectPtr<APTBasePlayerState>& WeakPS : ExpContributors)
     {
-        LevelSys->AddExp(RewardExp);
+        APTBasePlayerState* PS = WeakPS.Get();
+        if (!IsValid(PS))
+        {
+            continue;
+        }
+
+        LevelSys->AddExp(PS, RewardExp);
     }
 
+    ExpContributors.Empty();
+}
+
+void APTMonsterCharacter::SpawnDeathDrops()
+{
     UWorld* World = GetWorld();
     if (!World)
     {
         return;
     }
 
+    const FVector DropLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+
+    UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnDeathDrops 호출"), *GetName());
+
+    if (GoldPickupClass)
+    {
+        APTGoldPickup* GoldActor = World->SpawnActorDeferred<APTGoldPickup>(GoldPickupClass, FTransform(DropLocation));
+        if (GoldActor)
+        {
+            const int32 SafeMin = FMath::Min(GoldDropMin, GoldDropMax);
+            const int32 SafeMax = FMath::Max(GoldDropMin, GoldDropMax);
+
+#if !UE_BUILD_SHIPPING
+            if (GoldDropMin > GoldDropMax)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[%s] GoldDropMin(%d) > GoldDropMax(%d) - DT 확인 필요"), *GetName(), GoldDropMin, GoldDropMax);
+            }
+#endif
+            const int32 Amount = FMath::RandRange(SafeMin, SafeMax);
+
+            UE_LOG(LogTemp, Warning, TEXT("[%s] 골드 Pickup 스폰 — 금액: %d"), *GetName(), Amount);
+
+            GoldActor->SetGoldAmount(Amount);
+            GoldActor->FinishSpawning(FTransform(DropLocation));
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[%s] GoldPickupClass 미설정 — 골드 드랍 스킵"), *GetName());
+    }
+
     if (EquipmentDropClass && FMath::FRand() <= EquipDropRate)
     {
-        const FVector DropLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
+        UE_LOG(LogTemp, Warning, TEXT("[%s] 장비 드랍 스폰"), *GetName());
         World->SpawnActor<AActor>(
             EquipmentDropClass,
             DropLocation,
@@ -185,8 +271,6 @@ void APTMonsterCharacter::PerformAttack()
     {
         return;
     }
-
-    HitActors.Empty();
 
     const FVector TraceStart = GetActorLocation();
     const FVector TraceEnd = TraceStart;
