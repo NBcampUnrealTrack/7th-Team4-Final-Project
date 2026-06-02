@@ -1,3 +1,4 @@
+// PTPlayerCharacter.cpp 
 #include "Character/Player/PTPlayerCharacter.h"
 
 #include "EnhancedInputComponent.h"
@@ -84,18 +85,26 @@ void APTPlayerCharacter::BeginPlay()
             &APTPlayerCharacter::RegenHP,
             5.f,
             true
-            );
+        );
     }
 }
 
+void APTPlayerCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+}
+
 // 클라이언트/서버 공용 상호작용 시도 함수
-// 클라이언트가 Line Trace를 쏴서 상호작용 대상을 감지 
 void APTPlayerCharacter::TryInteract()
 {
-    // 공격 중이거나 죽었을 때는 상호작용 차단 
-    if (bIsAttacking || CurrentHP <= 0) return; 
+    // 공격 중일 때는 차단
+    if (bIsAttacking) return;
 
-    // 1. 레이저(Line Trace) 시작점과 끝점 계산 (캐릭터 위치에서 정면으로 200cm = 2미터)
+    // 💡 [안전 보강] PlayerState의 체력 장부를 검사하여 사망 시 차단 처리
+    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
+    if (PS && PS->CurrentHP <= 0) return;
+
+    // 1. 레이저(Line Trace) 시작점과 끝점 계산
     FVector StartLoc = GetActorLocation();
     FVector ForwardVec = GetActorForwardVector();
     FVector EndLoc = StartLoc + (ForwardVec * 200.0f);
@@ -104,10 +113,10 @@ void APTPlayerCharacter::TryInteract()
     FCollisionQueryParams QueryParams;
     QueryParams.AddIgnoredActor(this); // 본인 제외
 
-    // 2. 레이저 발사 (ECC_Visibility 채널을 이용해 충돌 스캔)
+    // 2. ECC_Visibility 채널 충돌 스캔
     bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLoc, EndLoc, ECC_Visibility, QueryParams);
 
-    // 디버그용 붉은 레이저 그리기 (테스트용 붉은 선 2초간 유지, 완료 후 주석 처리 가능) 
+    // 디버그용 붉은 레이저 그리기
     DrawDebugLine(GetWorld(), StartLoc, EndLoc, FColor::Red, false, 2.0f, 0, 2.0f);
 
     if (bHit && HitResult.GetActor())
@@ -115,31 +124,28 @@ void APTPlayerCharacter::TryInteract()
         AActor* HitActor = HitResult.GetActor();
         UE_LOG(LogTemp, Log, TEXT("[상호작용 감지] 조준 대상: %s"), *HitActor->GetName());
 
-        // [멀티플레이어 핵심 분기] 
-        // 내 컴퓨터가 클라이언트라면 서버에게 "이 액터랑 상호작용 하겠다" 무전(RPC)을 쏩니다.
         if (!HasAuthority())
         {
             Server_TryInteract(HitActor);
         }
         else
         {
-            // 내가 이미 서버라면 직접 RPC 구현부를 즉시 실행. 
             Server_TryInteract_Implementation(HitActor);
         }
     }
 }
 
-// 상호작용 Server RPC 구현부 (오직 서버 컴퓨터에서만 실행됨)
+// 상호작용 Server RPC 구현부
 void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
 {
     if (!TargetActor) return;
 
-    // 거리 2차 검증 (클라이언트가 핵을 써서 멀리서 F키를 누른 건지 장부 체크)
+    // 거리 2차 검증 (핵 방지용 보안 장부 체크)
     float Distance = FVector::Dist(GetActorLocation(), TargetActor->GetActorLocation());
-    if (Distance > 250.0f) // 오차 범위를 감안해 조금 넉넉하게 2.5미터 제한
+    if (Distance > 250.0f)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[서버 보안 경고] 유저가 너무 먼 곳의 오브젝트와 상호작용을 시도함. (거리: %f)"), Distance);
-        return; 
+        UE_LOG(LogTemp, Warning, TEXT("[서버 보안 경고] 유저가 너무 먼 곳과 상호작용을 시도함. (거리: %f)"), Distance);
+        return;
     }
 
     // 인터페이스 장착 여부 확인 및 최종 실행 명령 
@@ -148,19 +154,13 @@ void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
         UE_LOG(LogTemp, Log, TEXT("[서버 최종 승인] 인터페이스 실행 성공"));
         IPTInteractableInterface::Execute_Interact(TargetActor, this);
     }
-
 }
 
 bool APTPlayerCharacter::Server_TryInteract_Validate(AActor* TargetActor)
 {
-    // 타겟 액터가 존재하지 않는 찌꺼기 패킷이면 차단
     if (!TargetActor) return false;
     return true;
-void APTPlayerCharacter::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
-
-}
+} 
 
 void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
 {
@@ -194,12 +194,9 @@ void APTPlayerCharacter::OnDeath()
 
     GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
 
-    // 호승님이 경험치 차감 구현 후에 API연동
-
     if (DeathMontage)
     {
         PlayAnimMontage(DeathMontage);
-        //나중에 재생 시간을 애니메이션에 맞춰야 할 수도
     }
 
     OnPlayerDied.Broadcast();
@@ -208,5 +205,4 @@ void APTPlayerCharacter::OnDeath()
 void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
 }
