@@ -10,6 +10,8 @@
 /**
  *
  */
+class APTBasePlayerState;
+
 UCLASS()
 class PENTAGRAM_API UPTManaBarWidget : public UPTStatBarWidget
 {
@@ -21,4 +23,7 @@ public:
 
 protected:
     virtual void NativeConstruct() override;
+
+    virtual void BindToPlayerState(APTBasePlayerState* PS) override;
+    virtual void UnbindFromPlayerState(APTBasePlayerState* PS) override;
 };

@@ -34,6 +34,16 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "Skill")
     TArray<FName> SkillSlots;
 
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);
+
+    //델리게이트의 인스턴스
+    UPROPERTY(BlueprintAssignable)
+    FPTOnSkillCooldownEnd OnSkillCooldownEnd;
+
+    // 슬롯의 남은 쿨다운 시간을 반환
+    UFUNCTION(BlueprintCallable)
+    float GetCooldownRemaining(int32 SlotIndex) const;
+
 protected:
     virtual void BeginPlay() override;
 

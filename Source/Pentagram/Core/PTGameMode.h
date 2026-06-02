@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "PTGameTypes.h"
 #include "PTGameMode.generated.h"
 
 class APTBasePlayerState;
@@ -20,8 +21,11 @@ public:
     APTGameMode();      //생성자
 
     virtual void PostLogin(APlayerController* NewPlayer) override;      //플레이어 로그인
+    void SetGamePhase(EGamePhase NewPhase);     //게임 상태 설정
     void StartGame();       //스타트 게임
     void EndGame();         //앤드게임
+    void OnBossDefeated();  //보스 처치
+    void OnAllPlayersDead(); //플레이어 전원 사망
     void RespawnPlayer(APlayerController* PlayerController);        //리스폰 플레이어
     void DistributeExp(int32 ExpAmount);        //exp 분배
     AActor* SpawnDropItem(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation) const;

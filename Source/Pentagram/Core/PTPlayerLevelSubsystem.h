@@ -8,6 +8,9 @@
 
 class APTBasePlayerState;
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPTNativeOnExpChanged, APTBasePlayerState*, int32);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPTNativeOnLevelUp, APTBasePlayerState*, int32);
+
 /**
  *
  */
@@ -22,6 +25,10 @@ public:
     int32 GetExp(const APTBasePlayerState* PlayerState) const;            // 현재 경험치 조회
     int32 GetRequiredExp(const APTBasePlayerState* PlayerState) const;     // 다음 레벨 필요 경험치 조회
     void ApplyDeathPenalty(APTBasePlayerState* PlayerState);       // 사망 패널티
+    void SetProgress(APTBasePlayerState* PlayerState, int32 NewLevel, int32 NewExp);
+
+    FPTNativeOnExpChanged OnExpChanged;
+    FPTNativeOnLevelUp OnLevelUp;
 
 private:
     void LevelUp(APTBasePlayerState* PlayerState);                  // 레벨업 처리

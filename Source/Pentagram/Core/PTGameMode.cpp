@@ -27,25 +27,35 @@ void APTGameMode::PostLogin(APlayerController* NewPlayer)
     InitializePlayerState(NewPlayer->GetPlayerState<APTBasePlayerState>());
 }
 
-void APTGameMode::StartGame()
+void APTGameMode::SetGamePhase(EGamePhase NewPhase)
 {
     APTGameState* PTGameState = GetGameState<APTGameState>();
     if (PTGameState == nullptr)
     {
         return;
     }
-    PTGameState->SetCurrentPhase(EGamePhase::InProgress);
+
+    PTGameState->SetCurrentPhase(NewPhase);
+}
+
+void APTGameMode::StartGame()
+{
+    SetGamePhase(EGamePhase::Playing);
 }
 
 void APTGameMode::EndGame()
 {
-    APTGameState* PTGameState = GetGameState<APTGameState>();
-    if (PTGameState == nullptr)
-    {
-        return;
-    }
+    SetGamePhase(EGamePhase::GameOver);
+}
 
-    PTGameState->SetCurrentPhase(EGamePhase::GameOver);
+void APTGameMode::OnBossDefeated()
+{
+    SetGamePhase(EGamePhase::GameClear);
+}
+
+void APTGameMode::OnAllPlayersDead()
+{
+    SetGamePhase(EGamePhase::GameOver);
 }
 
 void APTGameMode::RespawnPlayer(APlayerController* PlayerController)

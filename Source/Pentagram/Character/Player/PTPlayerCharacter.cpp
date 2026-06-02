@@ -2,6 +2,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Skill/PTSkillComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
@@ -41,6 +42,8 @@ APTPlayerCharacter::APTPlayerCharacter()
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
+    GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
+    bUseControllerRotationYaw = false;
 }
 
 void APTPlayerCharacter::PossessedBy(AController* NewController)
@@ -153,6 +156,10 @@ bool APTPlayerCharacter::Server_TryInteract_Validate(AActor* TargetActor)
     // 타겟 액터가 존재하지 않는 찌꺼기 패킷이면 차단
     if (!TargetActor) return false;
     return true;
+void APTPlayerCharacter::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
 }
 
 void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)

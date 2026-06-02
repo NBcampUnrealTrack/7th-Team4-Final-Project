@@ -1,4 +1,5 @@
 #include "Character/NPC/PTNPCCharacter.h"
+#include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -8,11 +9,14 @@ APTNPCCharacter::APTNPCCharacter()
     PrimaryActorTick.bCanEverTick = false;
     bReplicates = true;
 
+    SceneRootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRootComponent"));
+    SetRootComponent(SceneRootComponent);
+
     MeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComponent"));
-    SetRootComponent(MeshComponent);
+    MeshComponent->SetupAttachment(SceneRootComponent);
 
     InteractionRangeSphere = CreateDefaultSubobject<USphereComponent>(TEXT("InteractionRangeSphere"));
-    InteractionRangeSphere->SetupAttachment(MeshComponent);
+    InteractionRangeSphere->SetupAttachment(SceneRootComponent);
     InteractionRangeSphere->SetSphereRadius(InteractionRadius);
     InteractionRangeSphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 }

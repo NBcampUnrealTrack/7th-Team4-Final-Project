@@ -49,8 +49,6 @@ void APTPlayerController::BeginPlay()
             }
         }
     }
-
-
 }
 
 void APTPlayerController::AcknowledgePossession(APawn* P)
@@ -147,13 +145,16 @@ void APTPlayerController::PlayAttackMontage()
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
-    UE_LOG(LogTemp, Warning, TEXT("OnRightClick Called"));
-
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
     if (HitResult.bBlockingHit)
     {
+        if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+        {
+            if (PC->bIsAttacking) return;
+        }
+
         UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location);
     }
 }
@@ -165,11 +166,25 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
-    // 마우스 밑에 있는 오브젝트 스캔
+    StopMovement();
+
+    // 공격 중이고 콤보 입력 불가 상태면 회전 및 공격 무시
+    if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
+
     FHitResult HitResult;
+    GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+    if (HitResult.bBlockingHit)
+    {
+        FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
+        Direction.Z = 0.f;
+        FRotator NewRotation = Direction.Rotation();
+        PlayerCharacter->SetActorRotation(NewRotation);
+    }
+
+    // 마우스 밑에 있는 오브젝트 스캔
     if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
     {
-        // 그 오브젝트가 드롭 아이템 액터인가 
+        // 그 오브젝트가 드롭 아이템 액터인가
         APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
         if (TargetItem)
         {
@@ -181,21 +196,21 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
                 if (PlayerCharacter->GetInventoryComponent() &&
                     PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
                 {
-                    TargetItem->Destroy(); // 월드에서 아이템에셋 삭제 
+                    TargetItem->Destroy(); // 월드에서 아이템에셋 삭제
                     UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
 
-                    return; // 아이템을 주웠으므로 공격 로직을 타지 않도록 리턴 
+                    return; // 아이템을 주웠으므로 공격 로직을 타지 않도록 리턴
                 }
             }
             else
             {
                 UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
-                return; // 거리가 멀어 못 줍는 상태여도 헛공격이 나가지 않도록 잠금 
+                return; // 거리가 멀어 못 줍는 상태여도 헛공격이 나가지 않도록 잠금
             }
         }
     }
 
-    // 아이템 상호작용이 일어나지 않았다면 콤보 공격 연출 실행 
+    // 아이템 상호작용이 일어나지 않았다면 콤보 공격 연출 실행
     if (PlayerCharacter->bIsAttacking)
     {
         if (PlayerCharacter->bCanCombo)

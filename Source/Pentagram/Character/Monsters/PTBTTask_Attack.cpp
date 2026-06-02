@@ -33,29 +33,37 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
         return EBTNodeResult::Failed;
     }
 
+    UWorld* World = OwnerComp.GetWorld();
+    if (!World)
+    {
+        return EBTNodeResult::Failed;
+    }
+
     BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, false);
     Monster->SetMonsterState(EMonsterState::Attack);
-    Monster->PerformAttack();
 
-    const float AttackDuration = Monster->GetAttackSpeed() > 0.f ? (1.f / Monster->GetAttackSpeed()) : 1.f;
+    const float AttackDuration = Monster->StartAttack();
 
+    TWeakObjectPtr<UPTBTTask_Attack>       WeakThis(this);
     TWeakObjectPtr<UBehaviorTreeComponent> WeakOwnerComp(&OwnerComp);
-    TWeakObjectPtr<UBlackboardComponent> WeakBlackboard(BB);
+    TWeakObjectPtr<UBlackboardComponent>   WeakBlackboard(BB);
 
-    OwnerComp.GetWorld()->GetTimerManager().SetTimer(
+    World->GetTimerManager().SetTimer(
         Memory->CooldownTimer,
         FTimerDelegate::CreateWeakLambda(
             this,
-            [this, WeakOwnerComp, WeakBlackboard]()
+            [WeakThis, WeakOwnerComp, WeakBlackboard]()
             {
-                if (WeakBlackboard.IsValid())
+                if (!WeakThis.IsValid() || !WeakOwnerComp.IsValid() || !WeakBlackboard.IsValid())
                 {
-                    WeakBlackboard->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+                    return;
                 }
-                if (WeakOwnerComp.IsValid())
-                {
-                    FinishLatentTask(*WeakOwnerComp.Get(), EBTNodeResult::Succeeded);
-                }
+
+                UBehaviorTreeComponent* OwnerCompPtr  = WeakOwnerComp.Get();
+                UBlackboardComponent*   BlackboardPtr = WeakBlackboard.Get();
+
+                BlackboardPtr->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+                WeakThis->FinishLatentTask(*OwnerCompPtr, EBTNodeResult::Succeeded);
             }),
         AttackDuration, false);
 
@@ -69,6 +77,14 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
     if (UWorld* World = OwnerComp.GetWorld())
     {
         World->GetTimerManager().ClearTimer(Memory->CooldownTimer);
+    }
+
+    if (AAIController* AIC = OwnerComp.GetAIOwner())
+    {
+        if (APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn()))
+        {
+            Monster->StopAttack();
+        }
     }
 
     if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())

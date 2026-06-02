@@ -12,13 +12,27 @@ void UAN_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* 
     if (!OwnerPlayer) return;
     if (!OwnerPlayer->HasAuthority()) return;
 
+    FVector ForwardOffset = OwnerPlayer->GetActorForwardVector() * 150.f;
+    FVector HeightOffset = FVector(0.f, 0.f, 50.f);
+    FVector SphereCenter = OwnerPlayer->GetActorLocation() + ForwardOffset + HeightOffset;
+
+    DrawDebugSphere(
+    OwnerPlayer->GetWorld(),
+    SphereCenter,
+    150.f,          // SphereOverlapActors와 동일한 반경
+    16,             // 세그먼트 수
+    FColor::Red,
+    false,          // 지속 여부
+    1.f             // 표시 시간(초)
+    );
+
     TArray<AActor*> HitActors;
     TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
     ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
 
     UKismetSystemLibrary::SphereOverlapActors(
         OwnerPlayer->GetWorld(),
-        OwnerPlayer->GetActorLocation(),
+        SphereCenter,
         150.f,
         ObjectTypes,
         nullptr,

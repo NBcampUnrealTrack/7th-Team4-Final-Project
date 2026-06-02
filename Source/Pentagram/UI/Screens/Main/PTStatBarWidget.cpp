@@ -3,6 +3,7 @@
 #include "PTStatBarWidget.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Character/Player/PTBasePlayerState.h"
 
 void UPTStatBarWidget::NativeConstruct()
 {
@@ -74,4 +75,25 @@ void UPTStatBarWidget::ApplyDisplay()
 
     // 블루프린트 이벤트 호출
     OnDisplayValueUpdated(DisplayCurrent, MaxValue, Percent);
+}
+void UPTStatBarWidget::SetupPlayerState(APTBasePlayerState* PS)
+{
+    if (!PS || BoundPS.Get() == PS) return;
+
+    if (APTBasePlayerState* Old = BoundPS.Get())
+    {
+        UnbindFromPlayerState(Old);
+    }
+    BoundPS = PS;
+    BindToPlayerState(PS);
+}
+
+void UPTStatBarWidget::NativeDestruct()
+{
+    if (APTBasePlayerState* PS = BoundPS.Get())
+    {
+        UnbindFromPlayerState(PS);
+    }
+    BoundPS = nullptr;
+    Super::NativeDestruct();
 }

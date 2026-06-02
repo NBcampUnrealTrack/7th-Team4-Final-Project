@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTBasePlayerState.generated.h"
 
 UCLASS()
@@ -35,6 +36,23 @@ public:
     UPROPERTY(ReplicatedUsing = OnRep_RequiredExp, VisibleAnywhere, Category = "PT|PlayerState|Progress")
     int32 RequiredExp = 100;
 
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnHealthChanged OnHealthChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnManaChanged OnManaChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnLevelChanged OnLevelChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnExpChanged OnExpChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnGoldChanged OnGoldChanged;
+
+    UFUNCTION(BlueprintCallable, Category = "PT|Delegates")
+    void BroadcastAllStats();
 protected:
 
     UFUNCTION()
