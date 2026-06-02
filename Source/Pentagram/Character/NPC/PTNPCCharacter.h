@@ -6,6 +6,7 @@
 
 class USphereComponent;
 class USkeletalMeshComponent;
+class USceneComponent;
 class APlayerController;
 
 UENUM(BlueprintType)
@@ -69,6 +70,9 @@ protected:
     UFUNCTION()
     void OnInteractionRangeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
         UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
+    TObjectPtr<USceneComponent> SceneRootComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
     TObjectPtr<USkeletalMeshComponent> MeshComponent;
