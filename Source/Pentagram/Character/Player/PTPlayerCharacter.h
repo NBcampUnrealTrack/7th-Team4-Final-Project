@@ -5,6 +5,9 @@
 #include "InputActionValue.h"
 #include "PTPlayerCharacter.generated.h"
 
+class UPTInventoryComponent; // 인벤토리 컴포넌트 유무
+class UPTEquipmentComponent; // 장비창 컴포넌트 유무
+
 UCLASS()
 class PENTAGRAM_API APTPlayerCharacter : public APTBaseCharacter
 {
@@ -22,13 +25,17 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
     TObjectPtr<class UPTSkillComponent> SkillComp;
 
-    UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputMappingContext> IMC_Default;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<UPTInventoryComponent> InventoryComponent; 
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<UPTEquipmentComponent> EquipmentComponent; 
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
 
 #pragma region 일반 공격 관련
+
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     int32 ComboIndex = 0;       // 현재 콤보 단계 (연속 공격 단계)
     UPROPERTY(VisibleAnywhere, Category = "Attack")
@@ -37,6 +44,7 @@ public:
     bool bIsAttacking = false;   // 공격하는중인지
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
+
 #pragma endregion
 
     //서버에서 스킬이 호출
@@ -53,7 +61,11 @@ public:
 
     virtual void PossessedBy(AController* NewController) override;
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+    FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; } // 인벤토리 컴포넌트 접근자
+    FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; } // 장비창 컴포넌트 접근자
 
 };

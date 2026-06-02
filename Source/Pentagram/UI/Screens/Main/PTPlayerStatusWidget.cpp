@@ -77,7 +77,7 @@ void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
     UnbindFromCharacter();
     BoundCharacter = InCharacter;
 
-    if (HealthBar)
+   /* if (HealthBar)
     {
         InCharacter->OnHealthChanged.AddDynamic(HealthBar, &UPTHealthBarwidget::HandleHealthChanged);
     }
@@ -93,7 +93,7 @@ void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
 
     if (HealthBar) HealthBar->SetValueInstant(InCharacter->GetHealth(), InCharacter->GetMaxHealth());
     if (ManaBar)   ManaBar->SetValueInstant(InCharacter->GetMana(),     InCharacter->GetMaxMana());
-    if (ExpBar)    ExpBar->SetValueInstant(InCharacter->GetExp(),       InCharacter->GetRequiredExp());
+    if (ExpBar)    ExpBar->SetValueInstant(InCharacter->GetExp(),       InCharacter->GetRequiredExp()); */
 }
 
 void UPTPlayerStatusWidget::UnbindFromCharacter()
@@ -107,7 +107,7 @@ void UPTPlayerStatusWidget::UnbindFromCharacter()
     APTBaseCharacter* C = BoundCharacter.Get();
 
     // [TODO] 캐릭터 파트 완성 시 주석 해제: 스탯 변경 이벤트 연결 해제
-    if (HealthBar)
+   /* if (HealthBar)
     {
         C->OnHealthChanged.RemoveDynamic(HealthBar, &UPTHealthBarwidget::HandleHealthChanged);
     }
@@ -119,7 +119,7 @@ void UPTPlayerStatusWidget::UnbindFromCharacter()
     {
         C->OnExpChanged.RemoveDynamic(ExpBar, &UPTExpBarWidget::HandleExpChanged);
         C->OnLevelChanged.RemoveDynamic(ExpBar, &UPTExpBarWidget::HandleLevelChanged);
-    }
+    } */
 
     // 참조 초기화
     BoundCharacter.Reset();

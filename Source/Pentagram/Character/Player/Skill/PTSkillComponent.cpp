@@ -87,5 +87,12 @@ void UPTSkillComponent::OnCooldownEnd(int32 SlotIndex)
     // UI 쿨다운 종료 델리게이트 발행 (나중에 연동)
 }
 
+float UPTSkillComponent::GetCooldownRemaining(int32 SlotIndex) const
+{
+    if (!bIsCooldown[SlotIndex]) return 0.f;
+
+    return GetWorld()->GetTimerManager().GetTimerRemaining(CooldownTimers[SlotIndex]);
+    //쿨다운이 끝났을 때 발행하는 델리게이트
+}
 
 
