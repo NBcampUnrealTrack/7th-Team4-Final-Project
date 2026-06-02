@@ -49,8 +49,6 @@ void APTPlayerController::BeginPlay()
             }
         }
     }
-
-
 }
 
 void APTPlayerController::AcknowledgePossession(APawn* P)
@@ -146,13 +144,16 @@ void APTPlayerController::PlayAttackMontage()
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
-    UE_LOG(LogTemp, Warning, TEXT("OnRightClick Called"));
-
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
     if (HitResult.bBlockingHit)
     {
+        if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+        {
+            if (PC->bIsAttacking) return;
+        }
+
         UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location);
     }
 }
@@ -163,6 +164,21 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
+
+    StopMovement();
+
+    // 공격 중이고 콤보 입력 불가 상태면 회전 및 공격 무시
+    if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
+
+    FHitResult HitResult;
+    GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+    if (HitResult.bBlockingHit)
+    {
+        FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
+        Direction.Z = 0.f;
+        FRotator NewRotation = Direction.Rotation();
+        PlayerCharacter->SetActorRotation(NewRotation);
+    }
 
     // 마우스 밑에 있는 오브젝트 스캔
     FHitResult HitResult;

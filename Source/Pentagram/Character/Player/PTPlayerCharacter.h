@@ -35,6 +35,7 @@ public:
     TObjectPtr<UAnimMontage> DeathMontage;
 
 #pragma region 일반 공격 관련
+
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     int32 ComboIndex = 0;       // 현재 콤보 단계 (연속 공격 단계)
     UPROPERTY(VisibleAnywhere, Category = "Attack")
@@ -43,6 +44,7 @@ public:
     bool bIsAttacking = false;   // 공격하는중인지
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
+
 #pragma endregion
 
     //서버에서 스킬이 호출
@@ -59,6 +61,7 @@ public:
 
     virtual void PossessedBy(AController* NewController) override;
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
