@@ -12,7 +12,7 @@ void UPTEconomySubsystem::AddGold(APTBasePlayerState* PlayerState, int32 Amount)
         return;
     }
 
-    PlayerState->CurrentGold += Amount;
+    SetGold(PlayerState, PlayerState->CurrentGold + Amount);
 }
 
 bool UPTEconomySubsystem::SpendGold(APTBasePlayerState* PlayerState, int32 Amount)
@@ -22,8 +22,25 @@ bool UPTEconomySubsystem::SpendGold(APTBasePlayerState* PlayerState, int32 Amoun
         return false;
     }
 
-    PlayerState->CurrentGold -= Amount;
+    SetGold(PlayerState, PlayerState->CurrentGold - Amount);
     return true;
+}
+
+void UPTEconomySubsystem::SetGold(APTBasePlayerState* PlayerState, int32 Amount)
+{
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    const int32 NewGold = FMath::Max(Amount, 0);
+    if (PlayerState->CurrentGold == NewGold)
+    {
+        return;
+    }
+
+    PlayerState->CurrentGold = NewGold;
+    OnGoldChanged.Broadcast(PlayerState, PlayerState->CurrentGold);
 }
 
 int32 UPTEconomySubsystem::GetGold(const APTBasePlayerState* PlayerState) const

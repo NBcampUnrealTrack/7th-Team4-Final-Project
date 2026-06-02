@@ -67,6 +67,7 @@ bool UPTQuestSubsystem::AcceptQuest(FName QuestID)
     }
 
     AcceptedQuestProgressMap.Add(QuestID, MakeQuestProgress(*QuestData));
+    OnQuestAccepted.Broadcast(QuestID);
     return true;
 }
 
@@ -83,6 +84,99 @@ const FPTQuestProgress* UPTQuestSubsystem::GetQuestProgress(FName QuestID) const
     }
 
     return AcceptedQuestProgressMap.Find(QuestID);
+}
+
+bool UPTQuestSubsystem::UpdateQuestProgress(EPTQuestConditionType ConditionType, FName TargetID, int32 Amount)
+{
+    if (ConditionType == EPTQuestConditionType::None || Amount <= 0)
+    {
+        return false;
+    }
+
+    bool bUpdatedAnyQuest = false;
+
+    for (auto& AcceptedQuest : AcceptedQuestProgressMap)
+    {
+        FPTQuestProgress& QuestProgress = AcceptedQuest.Value;
+        if (QuestProgress.State != EPTQuestProgressState::InProgress)
+        {
+            continue;
+        }
+
+        bool bUpdatedQuest = false;
+        for (FPTQuestConditionProgress& ConditionProgress : QuestProgress.Conditions)
+        {
+            const bool bMatchesType = ConditionProgress.ConditionType == ConditionType;
+            const bool bMatchesTarget = ConditionProgress.TargetID.IsNone() || ConditionProgress.TargetID == TargetID;
+            const bool bAlreadyComplete = ConditionProgress.CurrentCount >= ConditionProgress.RequiredCount;
+            if (!bMatchesType || !bMatchesTarget || bAlreadyComplete)
+            {
+                continue;
+            }
+
+            ConditionProgress.CurrentCount = FMath::Min(
+                ConditionProgress.CurrentCount + Amount,
+                ConditionProgress.RequiredCount);
+            bUpdatedQuest = true;
+        }
+
+        if (!bUpdatedQuest)
+        {
+            continue;
+        }
+
+        if (AreConditionsCompleted(QuestProgress))
+        {
+            QuestProgress.State = EPTQuestProgressState::Completed;
+            OnQuestCompleted.Broadcast(QuestProgress.QuestID);
+        }
+
+        OnQuestProgressChanged.Broadcast(QuestProgress.QuestID, QuestProgress);
+        bUpdatedAnyQuest = true;
+    }
+
+    return bUpdatedAnyQuest;
+}
+
+bool UPTQuestSubsystem::CompleteQuest(FName QuestID)
+{
+    FPTQuestProgress* QuestProgress = AcceptedQuestProgressMap.Find(QuestID);
+    if (QuestProgress == nullptr || QuestProgress->State != EPTQuestProgressState::InProgress)
+    {
+        return false;
+    }
+
+    QuestProgress->State = EPTQuestProgressState::Completed;
+    OnQuestCompleted.Broadcast(QuestID);
+    OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
+    return true;
+}
+
+bool UPTQuestSubsystem::RewardQuest(FName QuestID)
+{
+    FPTQuestProgress* QuestProgress = AcceptedQuestProgressMap.Find(QuestID);
+    if (QuestProgress == nullptr || QuestProgress->State != EPTQuestProgressState::Completed)
+    {
+        return false;
+    }
+
+    QuestProgress->State = EPTQuestProgressState::Rewarded;
+    OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
+    return true;
+}
+
+bool UPTQuestSubsystem::IsQuestCompleted(FName QuestID) const
+{
+    const FPTQuestProgress* QuestProgress = GetQuestProgress(QuestID);
+    return QuestProgress != nullptr &&
+        (QuestProgress->State == EPTQuestProgressState::Completed ||
+            QuestProgress->State == EPTQuestProgressState::Rewarded);
+}
+
+bool UPTQuestSubsystem::IsQuestRewarded(FName QuestID) const
+{
+    const FPTQuestProgress* QuestProgress = GetQuestProgress(QuestID);
+    return QuestProgress != nullptr && QuestProgress->State == EPTQuestProgressState::Rewarded;
 }
 
 TArray<FPTQuestProgress> UPTQuestSubsystem::GetAcceptedQuestProgresses() const
@@ -130,4 +224,22 @@ FPTQuestProgress UPTQuestSubsystem::MakeQuestProgress(const FPTQuestDataRow& Que
     }
 
     return QuestProgress;
+}
+
+bool UPTQuestSubsystem::AreConditionsCompleted(const FPTQuestProgress& QuestProgress) const
+{
+    if (QuestProgress.Conditions.IsEmpty())
+    {
+        return false;
+    }
+
+    for (const FPTQuestConditionProgress& ConditionProgress : QuestProgress.Conditions)
+    {
+        if (ConditionProgress.CurrentCount < ConditionProgress.RequiredCount)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
