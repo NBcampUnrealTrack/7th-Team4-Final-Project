@@ -28,9 +28,9 @@ void APTMonsterAIController::UpdateSightConfig(float InSightRange, float InLoseS
         return;
     }
 
-    SightConfig->SightRadius = InSightRange;
-    SightConfig->LoseSightRadius = InLoseSightRange;
-    SightConfig->PeripheralVisionAngleDegrees = InSightAngle / 2.f;
+    SightConfig->SightRadius = FMath::Max(0.f, InSightRange);
+    SightConfig->LoseSightRadius = FMath::Max(0.f, InLoseSightRange);
+    SightConfig->PeripheralVisionAngleDegrees = FMath::Clamp(InSightAngle / 2.f, 0.f, 180.f);
 
     if (UAIPerceptionComponent* PerceptionComp = GetPerceptionComponent())
     {

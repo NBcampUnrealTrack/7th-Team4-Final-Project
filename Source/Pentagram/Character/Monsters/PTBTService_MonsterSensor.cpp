@@ -40,17 +40,30 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
         return;
     }
 
-    const float DistToTarget  = FVector::Dist(Monster->GetActorLocation(), Target->GetActorLocation());
-    const float DistFromSpawn = FVector::Dist(Monster->GetActorLocation(), Monster->GetSpawnLocation());
+    const FVector MonsterLocation = Monster->GetActorLocation();
+    const float DistToTargetSq  = FVector::DistSquared(MonsterLocation, Target->GetActorLocation());
+    const float DistFromSpawnSq = FVector::DistSquared(MonsterLocation, Monster->GetSpawnLocation());
 
-    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, DistToTarget <= Monster->GetAttackRange());
+#if !UE_BUILD_SHIPPING
+    UE_LOG(LogTemp, Warning, TEXT("[Sensor] Dist: %.1f / AttackRange: %.1f / InRange: %s"),
+        FMath::Sqrt(DistToTargetSq),
+        Monster->GetAttackRange(),
+        (FMath::Sqrt(DistToTargetSq) <= Monster->GetAttackRange()) ? TEXT("TRUE") : TEXT("false"));
+#endif
 
-    const bool bOutOfChase = DistToTarget > Monster->GetChaseRange() || DistFromSpawn > Monster->GetMaxChaseDistance();
+    const float AttackRangeSq = FMath::Square(Monster->GetAttackRange());
+    const float ChaseRangeSq  = FMath::Square(Monster->GetChaseRange());
+    const float MaxChaseSq    = FMath::Square(Monster->GetMaxChaseDistance());
+
+    const bool bOutOfChase = (DistToTargetSq > ChaseRangeSq || DistFromSpawnSq > MaxChaseSq);
 
     if (bOutOfChase)
     {
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
         BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
+        return;
     }
+
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, DistToTargetSq <= AttackRangeSq);
 }
