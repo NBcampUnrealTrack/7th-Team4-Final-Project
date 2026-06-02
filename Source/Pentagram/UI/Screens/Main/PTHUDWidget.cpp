@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "UI/Screens/PTHUDWidget.h"
+#include "UI/Screens/Main/PTHUDWidget.h"
 #include "Input/CommonUIInputTypes.h"
 
 UPTHUDWidget::UPTHUDWidget(const FObjectInitializer& ObjectInitializer)
@@ -13,7 +13,7 @@ UPTHUDWidget::UPTHUDWidget(const FObjectInitializer& ObjectInitializer)
 
 TOptional<FUIInputConfig> UPTHUDWidget::GetDesiredInputConfig() const
 {
-    return FUIInputConfig(ECommonInputMode::Game, EMouseCaptureMode::CapturePermanently);
+    return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
 }
 
 void UPTHUDWidget::NativeOnActivated()

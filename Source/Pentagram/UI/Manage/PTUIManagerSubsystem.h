@@ -36,11 +36,11 @@ public:
 
     /** 지정 레이어의 스택에 위젯을 푸시. 스택이라 같은 레이어에 여러 개 쌓이고 LIFO로 동작. */
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
-    UPTHUDWidget* PushWidget(TSubclassOf<UPTHUDWidget> WidgetClass, EPTUILayer Layer);
+    UCommonActivatableWidget* PushWidget(TSubclassOf<UCommonActivatableWidget> WidgetClass, EPTUILayer Layer);
 
     /** 위젯을 스택에서 제거(Deactivate → 자동 pop). */
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
-    void RemoveWidget(UPTHUDWidget* WidgetToRemove);
+    void RemoveWidget(UCommonActivatableWidget* WidgetToRemove);
 
     /** 디버그/조회용. */
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
@@ -49,5 +49,13 @@ private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
 
+protected:
+    /** 현재 열린 인벤토리 핸들 (토글용). */
+    UPROPERTY(Transient)
+    TObjectPtr<UCommonActivatableWidget> InventoryInstance;
 
+public:
+    /** 인벤토리 열기/닫기 토글. 컨트롤러에서 클래스 넘김. */
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass);
 };

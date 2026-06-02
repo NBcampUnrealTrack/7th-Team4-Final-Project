@@ -19,20 +19,16 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     TObjectPtr<class UCameraComponent> CameraComp;
 
-    /*UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
-    TObjectPtr<USkillComponent> SkillComp;*/ //이동부터 우선 구현 후, 나중에 구현
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
+    TObjectPtr<class UPTSkillComponent> SkillComp;
 
     UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<class UInputAction> IA_Move;
-
-    UPROPERTY(EditAnywhere, Category = "Input")
-    TObjectPtr<UInputAction> IA_Attack;
+    TObjectPtr<class UInputMappingContext> IMC_Default;
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
 
 #pragma region 일반 공격 관련
-
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     int32 ComboIndex = 0;       // 현재 콤보 단계 (연속 공격 단계)
     UPROPERTY(VisibleAnywhere, Category = "Attack")
@@ -41,16 +37,14 @@ public:
     bool bIsAttacking = false;   // 공격하는중인지
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
-
-    void PlayAttackMontage();
 #pragma endregion
+
+    //서버에서 스킬이 호출
+    UFUNCTION(Server, Reliable)
+    void Server_UseSkill(FName SkillID);
 
     void RegenHP();                  //체력 재생
     FTimerHandle HPRegenTimerHandle; // 체력 재생 타이머
-
-    void MoveAction(const FInputActionValue& Value);
-    void AttackAction(const FInputActionValue& Value);
-    virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
     virtual void OnDeath() override;                    //플레이어 죽음
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);  // 델리게이트

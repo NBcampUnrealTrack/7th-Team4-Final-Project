@@ -1,7 +1,9 @@
 #include "Character/Player/PTPlayerCharacter.h"
 
 #include "EnhancedInputComponent.h"
-#include "PTBasePlayerState.h"
+#include "EnhancedInputSubsystems.h"
+#include "Character/Player/PTBasePlayerState.h"
+#include "Skill/PTSkillComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -25,12 +27,15 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
     CameraComp->bUsePawnControlRotation = false;
 
+    SkillComp = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+
     GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 void APTPlayerCharacter::PossessedBy(AController* NewController)
 {
     Super::PossessedBy(NewController);
+    UE_LOG(LogTemp, Warning, TEXT("PossessedBy Called"));
 
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
     if (PS)
@@ -45,6 +50,17 @@ void APTPlayerCharacter::PossessedBy(AController* NewController)
 void APTPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
+    UE_LOG(LogTemp, Warning, TEXT("PlayerCharacter BeginPlay Called"));
+
+    AController* CT = GetController();
+    if (CT)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Controller: %s"), *CT->GetClass()->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Controller is null"));
+    }
 
     if (HasAuthority())
     {
@@ -58,17 +74,6 @@ void APTPlayerCharacter::BeginPlay()
     }
 }
 
-void APTPlayerCharacter::PlayAttackMontage()
-{
-    if (!AttackMontages.IsValidIndex(ComboIndex)) return;
-
-    bIsAttacking = true;
-    bCanCombo = false;
-
-    PlayAnimMontage(AttackMontages[ComboIndex]);
-    ComboIndex++;
-}
-
 void APTPlayerCharacter::RegenHP()
 {
     if (!HasAuthority()) return;
@@ -80,46 +85,6 @@ void APTPlayerCharacter::RegenHP()
     if (PS)
     {
         PS->CurrentHP = CurrentHP;
-    }
-}
-
-void APTPlayerCharacter::MoveAction(const FInputActionValue& Value)
-{
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    if (!PC) return;
-
-    FHitResult HitResult;
-    PC->GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-
-    if (HitResult.bBlockingHit)
-    {
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(PC, HitResult.Location);
-    }
-}
-
-void APTPlayerCharacter::AttackAction(const FInputActionValue& Value)
-{
-    if (bIsAttacking)
-    {
-        if (bCanCombo)
-        {
-            bCanCombo = false;
-            PlayAttackMontage();
-        }
-        return;
-    }
-
-    PlayAttackMontage();
-}
-
-void APTPlayerCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-    if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
-    {
-        EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerCharacter::MoveAction);
-        EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Triggered, this, &APTPlayerCharacter::AttackAction);
     }
 }
 
