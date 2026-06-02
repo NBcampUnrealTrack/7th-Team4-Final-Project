@@ -5,6 +5,9 @@
 #include "InputActionValue.h"
 #include "PTPlayerCharacter.generated.h"
 
+class UPTInventoryComponent; // 인벤토리 컴포넌트 유무
+class UPTEquipmentComponent; // 장비창 컴포넌트 유무
+
 UCLASS()
 class PENTAGRAM_API APTPlayerCharacter : public APTBaseCharacter
 {
@@ -21,6 +24,12 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
     TObjectPtr<class UPTSkillComponent> SkillComp;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<UPTInventoryComponent> InventoryComponent; 
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
+    TObjectPtr<UPTEquipmentComponent> EquipmentComponent; 
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
@@ -55,5 +64,8 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+    FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; } // 인벤토리 컴포넌트 접근자
+    FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; } // 장비창 컴포넌트 접근자
 
 };

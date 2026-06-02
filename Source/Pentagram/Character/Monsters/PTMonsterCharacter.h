@@ -17,11 +17,10 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Monster")
-    bool bIsBoss = false;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentState, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     EMonsterState CurrentState = EMonsterState::Idle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
@@ -36,6 +35,7 @@ public:
 
 protected:
     virtual void OnDeath() override;
+    virtual float GetAttackDamage() const;
 
 public:
     float   GetSightAngle()         const { return SightAngle; }
@@ -44,8 +44,9 @@ public:
     float   GetAttackRange()        const { return AttackRange; }
     float   GetPatrolRadius()       const { return PatrolRadius; }
     float   GetMaxChaseDistance()   const { return MaxChaseDistance; }
-    bool    IsBoss()                const { return bIsBoss; }
-    FVector GetSpawnLocation()      const{ return SpawnLocation; }
+    FVector GetSpawnLocation()      const { return SpawnLocation; }
+    EMonsterState GetCurrentState() const { return CurrentState; }
+    bool    IsDead()                const { return CurrentState == EMonsterState::Dead; }
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
@@ -79,11 +80,6 @@ private:
     int32 RewardExp = 0;
 
 private:
-    bool bIsDead = false;
-
-    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Animation")
-    TObjectPtr<UAnimMontage> DeathMontage;
-
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
     TSubclassOf<AActor> EquipmentDropClass;
 
@@ -94,11 +90,24 @@ private:
 
     void SpawnDeathDrops();
     void HandleDestroyAfterDeath();
+    void PlayDeathMontage();
 
 public:
     void PerformAttack();
 
+    virtual float StartAttack();
+    virtual void StopAttack();
+
+    UFUNCTION()
+    void OnRep_CurrentState();
+
 protected:
     UPROPERTY()
     TSet<AActor*> HitActors;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Animation")
+    TObjectPtr<UAnimMontage> AttackMontage;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Animation")
+    TObjectPtr<UAnimMontage> DeathMontage;
 };
