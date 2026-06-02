@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTPlayerStatusWidget.generated.h"
 
 
 class UPTHealthBarwidget;
 class UPTManaBarWidget;
 class UPTExpBarWidget;
+class APTPlayerCharacter;
 class APTBaseCharacter;     // ← 팀원의 캐릭터 클래스. 실제 이름이 다르면 변경
 class APlayerController;
 class APawn;

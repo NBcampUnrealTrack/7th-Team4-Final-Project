@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "PTQuestDataRow.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PTSaveSubsystem.generated.h"
 
@@ -15,6 +16,7 @@ struct FPTSaveData
     int32 Gold =0;
     int32 Level = 1;
     int32 Exp = 0;;
+    TArray<FPTQuestProgress> AcceptedQuests;
     //TArray<FInventoryItem> Inventory;
     //TArray<FEquipSlot> Equipment;
     //TArray<FSkillSlot> SkillSlots;

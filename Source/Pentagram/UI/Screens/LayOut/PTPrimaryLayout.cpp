@@ -6,6 +6,11 @@
 
 UCommonActivatableWidgetStack* UPTPrimaryLayout::GetLayerStack(EPTUILayer Layer) const
 {
+    UE_LOG(LogTemp, Warning, TEXT("GetLayerStack 호출: Layer=%d / GameLayer=%s, MenuLayer=%s, ModalLayer=%s"),
+        (int32)Layer,
+        GameLayer ? TEXT("OK") : TEXT("NULL"),
+        MenuLayer ? TEXT("OK") : TEXT("NULL"),
+        ModalLayer ? TEXT("OK") : TEXT("NULL"));
     switch (Layer)
     {
     case EPTUILayer::HUD:      return GameLayer;

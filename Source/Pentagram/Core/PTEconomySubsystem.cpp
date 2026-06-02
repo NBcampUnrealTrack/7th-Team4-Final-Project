@@ -3,32 +3,45 @@
 
 #include "PTEconomySubsystem.h"
 
-void UPTEconomySubsystem::AddGold(int32 Amount)
+#include "Character/Player/PTBasePlayerState.h"
+
+void UPTEconomySubsystem::AddGold(APTBasePlayerState* PlayerState, int32 Amount)
 {
-    if (Amount <= 0)
+    if (PlayerState == nullptr || Amount <= 0)
     {
         return;
     }
 
-    CurrentGold += Amount;
+    PlayerState->CurrentGold += Amount;
 }
 
-bool UPTEconomySubsystem::SpendGold(int32 Amount)
+bool UPTEconomySubsystem::SpendGold(APTBasePlayerState* PlayerState, int32 Amount)
 {
-    if (Amount <= 0)
-    {
-        return false;
-    }
-    if (CurrentGold < Amount)
+    if (!CanAfford(PlayerState, Amount))
     {
         return false;
     }
 
-    CurrentGold -= Amount;
+    PlayerState->CurrentGold -= Amount;
     return true;
 }
 
-int32 UPTEconomySubsystem::GetGold() const
+int32 UPTEconomySubsystem::GetGold(const APTBasePlayerState* PlayerState) const
 {
-    return CurrentGold;
+    if (PlayerState == nullptr)
+    {
+        return 0;
+    }
+
+    return PlayerState->CurrentGold;
+}
+
+bool UPTEconomySubsystem::CanAfford(const APTBasePlayerState* PlayerState, int32 Amount) const
+{
+    if (PlayerState == nullptr || Amount <= 0)
+    {
+        return false;
+    }
+
+    return PlayerState->CurrentGold >= Amount;
 }

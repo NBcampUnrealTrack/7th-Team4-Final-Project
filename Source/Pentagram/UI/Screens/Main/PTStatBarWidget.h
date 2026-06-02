@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTStatBarWidget.generated.h"
 
 class UProgressBar;

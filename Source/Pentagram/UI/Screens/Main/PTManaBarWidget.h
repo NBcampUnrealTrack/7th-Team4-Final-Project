@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "PTStatBarWidget.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTManaBarWidget.generated.h"
 
 /**

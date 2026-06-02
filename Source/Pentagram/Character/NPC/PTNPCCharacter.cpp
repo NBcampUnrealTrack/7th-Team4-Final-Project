@@ -33,13 +33,23 @@ void APTNPCCharacter::Interact(APlayerController* InstigatorController)
     }
 
     SetNPCState(ENPCState::Talking);
-    OnDialogueStarted(InstigatorController);
+    OnDialogueStarted.Broadcast(InstigatorController);
+}
+
+void APTNPCCharacter::ServerInteract_Implementation(APlayerController* InstigatorController)
+{
+
+}
+
+FName APTNPCCharacter::GetQuestID() const
+{
+    return QuestID;
 }
 
 void APTNPCCharacter::EndDialogue()
 {
     SetNPCState(ENPCState::Idle);
-    OnDialogueEnded();
+    OnDialogueEnded.Broadcast();
 }
 
 void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -48,7 +58,7 @@ void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* Overla
     APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
     if (PC)
     {
-        OnPlayerEnterRange(PC);
+        OnPlayerEnterRange.Broadcast(PC);
     }
 }
 
@@ -58,7 +68,7 @@ void APTNPCCharacter::OnInteractionRangeEndOverlap(UPrimitiveComponent* Overlapp
     APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
     if (PC)
     {
-        OnPlayerExitRange(PC);
+        OnPlayerExitRange.Broadcast(PC);
     }
 }
 

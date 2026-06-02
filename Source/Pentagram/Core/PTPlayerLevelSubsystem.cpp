@@ -3,38 +3,81 @@
 
 #include "PTPlayerLevelSubsystem.h"
 
-void UPTPlayerLevelSubsystem::AddExp(int32 ExpAmount)
+#include "Character/Player/PTBasePlayerState.h"
+
+void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpAmount)
 {
-    if (ExpAmount <= 0)
+    if (PlayerState == nullptr || ExpAmount <= 0)
     {
         return;
     }
 
-    CurrentExp += ExpAmount;
-
-    while (CurrentExp >= ExpToNextLevel)
+    if (PlayerState->RequiredExp <= 0)
     {
-        CurrentExp -= ExpToNextLevel;
-        LevelUp();
+        PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
+    }
+
+    PlayerState->CurrentExp += ExpAmount;
+
+    while (PlayerState->CurrentExp >= PlayerState->RequiredExp)
+    {
+        PlayerState->CurrentExp -= PlayerState->RequiredExp;
+        LevelUp(PlayerState);
     }
 }
 
-void UPTPlayerLevelSubsystem::LevelUp()
+void UPTPlayerLevelSubsystem::LevelUp(APTBasePlayerState* PlayerState)
 {
-    ++CurrentLevel;
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    ++PlayerState->PlayerLevel;
+    PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
 }
 
-int32 UPTPlayerLevelSubsystem::GetLevel() const
+int32 UPTPlayerLevelSubsystem::GetLevel(const APTBasePlayerState* PlayerState) const
 {
-    return CurrentLevel;
+    if (PlayerState == nullptr)
+    {
+        return 0;
+    }
+
+    return PlayerState->PlayerLevel;
 }
 
-int32 UPTPlayerLevelSubsystem::GetExp() const
+int32 UPTPlayerLevelSubsystem::GetExp(const APTBasePlayerState* PlayerState) const
 {
-    return CurrentExp;
+    if (PlayerState == nullptr)
+    {
+        return 0;
+    }
+
+    return PlayerState->CurrentExp;
 }
 
-void UPTPlayerLevelSubsystem::ApplyDeathPenalty()
+int32 UPTPlayerLevelSubsystem::GetRequiredExp(const APTBasePlayerState* PlayerState) const
 {
-    CurrentExp = FMath::Max(CurrentExp - DeathPenaltyExp, 0);
+    if (PlayerState == nullptr)
+    {
+        return 0;
+    }
+
+    return PlayerState->RequiredExp;
+}
+
+void UPTPlayerLevelSubsystem::ApplyDeathPenalty(APTBasePlayerState* PlayerState)
+{
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    PlayerState->CurrentExp = FMath::Max(PlayerState->CurrentExp - DeathPenaltyExp, 0);
+}
+
+int32 UPTPlayerLevelSubsystem::CalculateRequiredExp(int32 PlayerLevel) const
+{
+    return FMath::Max(PlayerLevel, 1) * 100;
 }

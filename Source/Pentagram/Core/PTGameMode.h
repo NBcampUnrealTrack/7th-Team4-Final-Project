@@ -24,20 +24,14 @@ public:
     void EndGame();         //앤드게임
     void RespawnPlayer(APlayerController* PlayerController);        //리스폰 플레이어
     void DistributeExp(int32 ExpAmount);        //exp 분배
-    //void DistributeDrop(Data Drop);    // 드롭 분배
+    AActor* SpawnDropItem(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation) const;
+    AActor* SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation, float DropRate) const;
 
 protected:
-    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|Respawn")
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;        //리스폰 대기 시간
-
-    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|PlayerState")
-    float DefaultMaxHP = 100.f;             //일단 맥스 hp
-
-    UPROPERTY(EditDefaultsOnly, Category = "PT|GameMode|PlayerState")
-    float DefaultMaxMP = 100.f;             //일단 맥스 mp
 
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
-    void RestartPlayerWithInitializedState(APlayerController* PlayerController);
 
 };

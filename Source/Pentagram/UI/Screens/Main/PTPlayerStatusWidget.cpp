@@ -6,6 +6,7 @@
 #include "PTExpBarWidget.h"
 #include "PTManaBarWidget.h"
 #include "Character/PTBaseCharacter.h"
+#include "Character/Player/PTPlayerCharacter.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 
@@ -76,24 +77,23 @@ void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
     UnbindFromCharacter();
     BoundCharacter = InCharacter;
 
-    // [TODO] 캐릭터 파트 완성 시 주석 해제: 스탯 변경 이벤트 연결 및 초기 UI 셋팅
-    // if (HealthBar)
-    // {
-    //     InCharacter->OnHealthChanged.AddDynamic(HealthBar, &UPTHealthbarwidget::HandleHealthChanged);
-    // }
-    // if (ManaBar)
-    // {
-    //     InCharacter->OnManaChanged.AddDynamic(ManaBar, &UPTManaBarWidget::HandleManaChanged);
-    // }
-    // if (ExpBar)
-    // {
-    //     InCharacter->OnExpChanged.AddDynamic(ExpBar, &UPTExpBarWidget::HandleExpChanged);
-    //     InCharacter->OnLevelChanged.AddDynamic(ExpBar, &UPTExpBarWidget::HandleLevelChanged);
-    // }
+   /* if (HealthBar)
+    {
+        InCharacter->OnHealthChanged.AddDynamic(HealthBar, &UPTHealthBarwidget::HandleHealthChanged);
+    }
+    if (ManaBar)
+    {
+        InCharacter->OnManaChanged.AddDynamic(ManaBar, &UPTManaBarWidget::HandleManaChanged);
+    }
+    if (ExpBar)
+    {
+        InCharacter->OnExpChanged.AddDynamic(ExpBar, &UPTExpBarWidget::HandleExpChanged);
+        InCharacter->OnLevelChanged.AddDynamic(ExpBar, &UPTExpBarWidget::HandleLevelChanged);
+    }
 
-    // if (HealthBar) HealthBar->SetValueInstant(InCharacter->GetHealth(), InCharacter->GetMaxHealth());
-    // if (ManaBar)   ManaBar->SetValueInstant(InCharacter->GetMana(),     InCharacter->GetMaxMana());
-    // if (ExpBar)    ExpBar->SetValueInstant(InCharacter->GetExp(),       InCharacter->GetRequiredExp());
+    if (HealthBar) HealthBar->SetValueInstant(InCharacter->GetHealth(), InCharacter->GetMaxHealth());
+    if (ManaBar)   ManaBar->SetValueInstant(InCharacter->GetMana(),     InCharacter->GetMaxMana());
+    if (ExpBar)    ExpBar->SetValueInstant(InCharacter->GetExp(),       InCharacter->GetRequiredExp()); */
 }
 
 void UPTPlayerStatusWidget::UnbindFromCharacter()
@@ -107,19 +107,19 @@ void UPTPlayerStatusWidget::UnbindFromCharacter()
     APTBaseCharacter* C = BoundCharacter.Get();
 
     // [TODO] 캐릭터 파트 완성 시 주석 해제: 스탯 변경 이벤트 연결 해제
-    // if (HealthBar)
-    // {
-    //     C->OnHealthChanged.RemoveDynamic(HealthBar, &UPTHealthBarWidget::HandleHealthChanged);
-    // }
-    // if (ManaBar)
-    // {
-    //     C->OnManaChanged.RemoveDynamic(ManaBar, &UPTManaBarWidget::HandleManaChanged);
-    // }
-    // if (ExpBar)
-    // {
-    //     C->OnExpChanged.RemoveDynamic(ExpBar, &UPTExpBarWidget::HandleExpChanged);
-    //     C->OnLevelChanged.RemoveDynamic(ExpBar, &UPTExpBarWidget::HandleLevelChanged);
-    // }
+   /* if (HealthBar)
+    {
+        C->OnHealthChanged.RemoveDynamic(HealthBar, &UPTHealthBarwidget::HandleHealthChanged);
+    }
+    if (ManaBar)
+    {
+        C->OnManaChanged.RemoveDynamic(ManaBar, &UPTManaBarWidget::HandleManaChanged);
+    }
+    if (ExpBar)
+    {
+        C->OnExpChanged.RemoveDynamic(ExpBar, &UPTExpBarWidget::HandleExpChanged);
+        C->OnLevelChanged.RemoveDynamic(ExpBar, &UPTExpBarWidget::HandleLevelChanged);
+    } */
 
     // 참조 초기화
     BoundCharacter.Reset();
