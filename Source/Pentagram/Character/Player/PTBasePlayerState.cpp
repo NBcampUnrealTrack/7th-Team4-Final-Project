@@ -1,35 +1,45 @@
 #include "Character/Player/PTBasePlayerState.h"
-
+#include "UI/Data/PTDelegates.h"
 #include "Net/UnrealNetwork.h"
+
 
 void APTBasePlayerState::OnRep_CurrentHP()
 {
-    // HP 변경 시 UI 델리게이트 발행 (UI연동 필요)
+    OnHealthChanged.Broadcast(CurrentHP, MaxHP);
 }
 
 void APTBasePlayerState::OnRep_CurrentMP()
 {
-    // MP 변경 시 UI 델리게이트 발행 (UI연동 필요)
+    OnManaChanged.Broadcast(CurrentMP, MaxMP);
 }
 
 void APTBasePlayerState::OnRep_RequiredExp()
 {
-    //  시 UI 델리게이트 발행 (UI연동 필요)
+    OnExpChanged.Broadcast(CurrentExp, RequiredExp);
 }
 
 void APTBasePlayerState::OnRep_PlayerLevel()
 {
-    //  시 UI 델리게이트 발행 (UI연동 필요)
+    OnLevelChanged.Broadcast(PlayerLevel);
 }
 
 void APTBasePlayerState::OnRep_CurrentGold()
 {
-    // 시 UI 델리게이트 발행 (UI연동 필요)
+    OnGoldChanged.Broadcast(CurrentGold);
 }
 
 void APTBasePlayerState::OnRep_CurrentExp()
 {
-    // UI 델리게이트 발행 (UI연동 필요)
+    OnExpChanged.Broadcast(CurrentExp, RequiredExp);
+}
+
+void APTBasePlayerState::BroadcastAllStats()
+{
+    OnHealthChanged.Broadcast(CurrentHP, MaxHP);
+    OnManaChanged.Broadcast(CurrentMP, MaxMP);
+    OnLevelChanged.Broadcast(PlayerLevel);
+    OnExpChanged.Broadcast(CurrentExp, RequiredExp);
+    OnGoldChanged.Broadcast(CurrentGold);
 }
 
 void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

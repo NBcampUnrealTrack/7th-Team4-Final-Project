@@ -47,6 +47,13 @@ public:
 
 #pragma endregion
 
+    // 플레이어가 F키를 눌렀을 때 호출할 메인 함수
+    void TryInteract(); 
+
+    // 상호작용의 실제 처리 담당 
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_TryInteract(AActor* TargetActor); 
+
     //서버에서 스킬이 호출
     UFUNCTION(Server, Reliable)
     void Server_UseSkill(FName SkillID);

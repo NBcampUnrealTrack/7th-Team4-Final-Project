@@ -19,6 +19,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+    // 네트워크 리플리케이트를 위한 프로퍼티 등록 함수 오버라이드 
+    virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;  
+
 public:
     // 아이템 추가 시도 함수 (성공 시 true, 가방이 가득 차면 false)
     UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -30,14 +33,17 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool UsePotion(int32 SlotIndex);
 
+    // [리플리케이션] 클라이언트가 물약을 먹었을 때 서버에게 실제 데이터 처리를 요청하는 Server RPC
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_UsePotion(int32 SlotIndex); 
 
 protected:
     // 가방 크기 총 30칸
     const int32 MaxSlotCount = 30;
 
     // 인벤토리 실제 데이터를 담는 배열
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TArray<FInventorySlot> InventorySlots;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Inventory")
+    TArray<FInventorySlot> InventorySlots; 
 
 private:
     // 회복을 주기적으로 실행할 타이머 핸들 및 카운터
