@@ -8,6 +8,7 @@
 #include "PTGameMode.generated.h"
 
 class APTBasePlayerState;
+class UDataTable;
 
 /**
  *
@@ -32,6 +33,11 @@ public:
     AActor* SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation, float DropRate) const;
 
 protected:
+    virtual void BeginPlay() override;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
+    TObjectPtr<UDataTable> QuestDataTable;
+
     UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;        //리스폰 대기 시간
 

@@ -6,6 +6,7 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "PTGameState.h"
 #include "PTPlayerLevelSubsystem.h"
+#include "PTQuestSubsystem.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -13,6 +14,25 @@ APTGameMode::APTGameMode()
 {
     GameStateClass = APTGameState::StaticClass();
     PlayerStateClass = APTBasePlayerState::StaticClass();
+}
+
+void APTGameMode::BeginPlay()
+{
+    Super::BeginPlay();
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->SetQuestDataTable(QuestDataTable);
 }
 
 void APTGameMode::PostLogin(APlayerController* NewPlayer)
