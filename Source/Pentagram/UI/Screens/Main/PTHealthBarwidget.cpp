@@ -16,6 +16,7 @@ void UPTHealthBarwidget::NativeConstruct()
 
 void UPTHealthBarwidget::HandleHealthChanged(float Current, float Max)
 {
+    UE_LOG(LogTemp, Warning, TEXT("HandleHealthChanged %f / %f"), Current, Max);
     SetValue(Current, Max);
 }
 

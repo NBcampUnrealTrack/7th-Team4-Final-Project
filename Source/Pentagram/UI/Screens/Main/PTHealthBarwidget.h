@@ -17,7 +17,7 @@ class PENTAGRAM_API UPTHealthBarwidget : public UPTStatBarWidget
     GENERATED_BODY()
 
 public:
-    /** PTStatComponent의 FPTOnHealthChanged 델리게이트가 직접 바인딩 가능한 시그니처 */
+   //델리게이트 변수 선언
     UFUNCTION()
     void HandleHealthChanged(float Current, float Max);
 
