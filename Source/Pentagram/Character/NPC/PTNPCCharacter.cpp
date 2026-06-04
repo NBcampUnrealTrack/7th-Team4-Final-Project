@@ -43,7 +43,34 @@ void APTNPCCharacter::Interact(APlayerController* InteractPlayerController)
 
 void APTNPCCharacter::ServerInteract_Implementation(APlayerController* InteractPlayerController)
 {
-    if (InteractPlayerController == nullptr || QuestID.IsNone())
+    if (InteractPlayerController == nullptr)
+    {
+        return;
+    }
+
+    if (NPCID.IsNone())
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
+}
+
+void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
+{
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
     {
         return;
     }
@@ -63,9 +90,14 @@ void APTNPCCharacter::ServerInteract_Implementation(APlayerController* InteractP
     QuestSubsystem->AcceptQuest(QuestID);
 }
 
-FName APTNPCCharacter::GetQuestID() const
+FName APTNPCCharacter::GetNPCID() const
 {
-    return QuestID;
+    return NPCID;
+}
+
+const TArray<FName>& APTNPCCharacter::GetQuestIDs() const
+{
+    return QuestIDs;
 }
 
 void APTNPCCharacter::EndDialogue()
