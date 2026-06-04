@@ -34,6 +34,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Skill")
     TArray<FName> SkillSlots;
 
+    UPROPERTY()
+    FName CurrentSkillID = NAME_None;
+
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);
 
     //델리게이트의 인스턴스
@@ -43,6 +46,9 @@ public:
     // 슬롯의 남은 쿨다운 시간을 반환
     UFUNCTION(BlueprintCallable)
     float GetCooldownRemaining(int32 SlotIndex) const;
+
+    //DT에서 스킬 데이터 조회
+    FPTSkillRow* GetSkillData(FName SkillID) const;
 
 protected:
     virtual void BeginPlay() override;
@@ -56,6 +62,4 @@ protected:
     //쿨다운 중인 슬롯 체크
     void OnCooldownEnd(int32 SlotIndex);
 
-    //DT에서 스킬 데이터 조회
-    FPTSkillRow* GetSkillData(FName SkillID) const;
 };

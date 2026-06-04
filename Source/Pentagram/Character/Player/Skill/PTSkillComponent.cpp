@@ -2,6 +2,7 @@
 
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
+#include "Character/Player/PTPlayerCharacter.h"
 
 UPTSkillComponent::UPTSkillComponent()
 {
@@ -39,6 +40,8 @@ FName UPTSkillComponent::GetSkillAtSlot(int32 SlotIndex) const
 void UPTSkillComponent::TryActivateSkill(FName SkillID)
 {
     UE_LOG(LogTemp,Warning, TEXT("TryActivateSkill 호출 - SkillID: %s"), *SkillID.ToString());
+
+    CurrentSkillID = SkillID;
 
     if (!GetOwner()->HasAuthority())
     {
@@ -102,6 +105,22 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
         SkillData->Cooldown,
         false
     );
+
+    if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
+    {
+        // 공격 상태 초기화
+        APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(Owner);
+        if (PlayerCharacter)
+        {
+            PlayerCharacter->bIsAttacking = false;
+            PlayerCharacter->bCanCombo = false;
+            PlayerCharacter->ComboIndex = 0;
+            Owner->StopAnimMontage(); // 공격 몽타주 정지
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 실행: %s"), *Montage->GetName());
+        Owner->PlayAnimMontage(Montage);
+    }
 
     // 몽타주 재생
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
