@@ -4,34 +4,36 @@
 #include "PTSaveSubsystem.h"
 
 #include "Character/Player/PTBasePlayerState.h"
+#include "Kismet/GameplayStatics.h"
 #include "PTQuestSubsystem.h"
+#include "PTSaveGame.h"
 
-void UPTSaveSubsystem::SaveGame()
+namespace
 {
-    QuestSaveData();
-    bHasSaveData = true;
+const FString PTSaveSlotName = TEXT("PTPlayerSave");
+constexpr int32 PTSaveUserIndex = 0;
 }
 
 void UPTSaveSubsystem::SaveGame(const APTBasePlayerState* PlayerState)
 {
-    PlayerStateSaveData(PlayerState);
-    QuestSaveData();
-    bHasSaveData = true;
-}
-
-void UPTSaveSubsystem::LoadGame()
-{
-    if (!bHasSaveData)
+    if (PlayerState == nullptr)
     {
         return;
     }
 
-    QuestLoadData();
+    PlayerStateSaveData(PlayerState);
+    QuestSaveData();
+    bHasSaveData = SaveSlotData();
 }
 
 void UPTSaveSubsystem::LoadGame(APTBasePlayerState* PlayerState)
 {
-    if (!bHasSaveData)
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    if (!LoadSlotData())
     {
         return;
     }
@@ -42,13 +44,14 @@ void UPTSaveSubsystem::LoadGame(APTBasePlayerState* PlayerState)
 
 bool UPTSaveSubsystem::HasSaveData() const
 {
-    return bHasSaveData;
+    return bHasSaveData || UGameplayStatics::DoesSaveGameExist(PTSaveSlotName, PTSaveUserIndex);
 }
 
 void UPTSaveSubsystem::DeleteSaveData()
 {
-    SaveData = FPTSaveData();
+    SaveData = FPTPlayerSaveData();
     bHasSaveData = false;
+    UGameplayStatics::DeleteGameInSlot(PTSaveSlotName, PTSaveUserIndex);
 }
 
 void UPTSaveSubsystem::PlayerStateSaveData(const APTBasePlayerState* PlayerState)
@@ -104,4 +107,36 @@ void UPTSaveSubsystem::QuestLoadData() const
     {
         QuestSubsystem->SetAcceptedQuestProgresses(SaveData.AcceptedQuests);
     }
+}
+
+bool UPTSaveSubsystem::SaveSlotData()
+{
+    UPTSaveGame* SaveGameObject = Cast<UPTSaveGame>(
+        UGameplayStatics::CreateSaveGameObject(UPTSaveGame::StaticClass()));
+    if (SaveGameObject == nullptr)
+    {
+        return false;
+    }
+
+    SaveGameObject->SaveData = SaveData;
+    return UGameplayStatics::SaveGameToSlot(SaveGameObject, PTSaveSlotName, PTSaveUserIndex);
+}
+
+bool UPTSaveSubsystem::LoadSlotData()
+{
+    if (!UGameplayStatics::DoesSaveGameExist(PTSaveSlotName, PTSaveUserIndex))
+    {
+        return false;
+    }
+
+    UPTSaveGame* LoadedSaveGame = Cast<UPTSaveGame>(
+        UGameplayStatics::LoadGameFromSlot(PTSaveSlotName, PTSaveUserIndex));
+    if (LoadedSaveGame == nullptr)
+    {
+        return false;
+    }
+
+    SaveData = LoadedSaveGame->SaveData;
+    bHasSaveData = true;
+    return true;
 }

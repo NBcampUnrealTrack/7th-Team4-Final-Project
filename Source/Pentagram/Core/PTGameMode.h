@@ -25,6 +25,7 @@ public:
     void SetGamePhase(EGamePhase NewPhase);     //게임 상태 설정
     void StartGame();       //스타트 게임
     void EndGame();         //앤드게임
+    void OnBossFightStarted(); //보스전 시작
     void OnBossDefeated();  //보스 처치
     void OnAllPlayersDead(); //플레이어 전원 사망
     void RespawnPlayer(APlayerController* PlayerController);        //리스폰 플레이어

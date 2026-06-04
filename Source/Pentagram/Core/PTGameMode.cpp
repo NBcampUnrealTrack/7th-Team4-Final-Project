@@ -68,6 +68,11 @@ void APTGameMode::EndGame()
     SetGamePhase(EGamePhase::GameOver);
 }
 
+void APTGameMode::OnBossFightStarted()
+{
+    SetGamePhase(EGamePhase::BossFight);
+}
+
 void APTGameMode::OnBossDefeated()
 {
     SetGamePhase(EGamePhase::GameClear);

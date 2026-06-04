@@ -30,10 +30,10 @@ public:
     virtual void BeginPlay() override;
 
     UFUNCTION(BlueprintCallable, Category = "PT|NPC")
-    void Interact(APlayerController* InstigatorController);
+    void Interact(APlayerController* InteractPlayerController);
 
     UFUNCTION(Server, Reliable)
-    void ServerInteract(APlayerController* InstigatorController);
+    void ServerInteract(APlayerController* InteractPlayerController);
 
     UFUNCTION(BlueprintCallable, Category = "PT|NPC")
     void EndDialogue();
