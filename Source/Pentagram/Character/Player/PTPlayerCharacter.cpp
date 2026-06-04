@@ -1,4 +1,4 @@
-// PTPlayerCharacter.cpp 
+// PTPlayerCharacter.cpp
 #include "Character/Player/PTPlayerCharacter.h"
 
 #include "EnhancedInputComponent.h"
@@ -11,14 +11,14 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
-#include "PTInventoryComponent.h" 
-#include "PTEquipmentComponent.h" 
+#include "PTInventoryComponent.h"
+#include "PTEquipmentComponent.h"
 
-// 충돌 및 디버그 라인을 그리기 위함 
+// 충돌 및 디버그 라인을 그리기 위함
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 
-#include "Core/Interface/PTInteractableInterface.h" 
+#include "Core/Interface/PTInteractableInterface.h"
 
 APTPlayerCharacter::APTPlayerCharacter()
 {
@@ -31,6 +31,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     SpringArmComp->bInheritRoll = false;
     SpringArmComp->bInheritYaw = false;
     SpringArmComp->bEnableCameraLag = false;
+    SpringArmComp->bDoCollisionTest = false;
     SpringArmComp->SocketOffset = FVector(0.f, 0.f, 200.f);
 
     CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -38,6 +39,11 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->bUsePawnControlRotation = false;
 
     SkillComp = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+
+    MaxHP = 100.f;
+    CurrentHP = MaxHP;
+    MaxMP = 50.f;
+    CurrentMP = MaxMP;
 
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
@@ -148,7 +154,7 @@ void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
         return;
     }
 
-    // 인터페이스 장착 여부 확인 및 최종 실행 명령 
+    // 인터페이스 장착 여부 확인 및 최종 실행 명령
     if (TargetActor->GetClass()->ImplementsInterface(UPTInteractableInterface::StaticClass()))
     {
         UE_LOG(LogTemp, Log, TEXT("[서버 최종 승인] 인터페이스 실행 성공"));
@@ -160,7 +166,7 @@ bool APTPlayerCharacter::Server_TryInteract_Validate(AActor* TargetActor)
 {
     if (!TargetActor) return false;
     return true;
-} 
+}
 
 void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
 {
