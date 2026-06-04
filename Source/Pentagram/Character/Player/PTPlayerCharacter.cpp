@@ -199,11 +199,7 @@ void APTPlayerCharacter::OnDeath()
     if (!HasAuthority()) return;
 
     GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
-
-    if (DeathMontage)
-    {
-        PlayAnimMontage(DeathMontage);
-    }
+    if (DeathMontage) PlayAnimMontage(DeathMontage);
 
     OnPlayerDied.Broadcast();
 
