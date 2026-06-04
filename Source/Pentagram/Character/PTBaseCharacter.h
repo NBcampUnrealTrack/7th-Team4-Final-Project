@@ -17,6 +17,7 @@ public:
     //데미지 적용
     UFUNCTION(BlueprintCallable, Category = "Combat")
     virtual float ApplyDamage(float DamageAmount, AActor* Attacker);
+    void PostInitializeComponents();
 
     //사망 처리
     UFUNCTION(BlueprintCallable, Category = "Combat")

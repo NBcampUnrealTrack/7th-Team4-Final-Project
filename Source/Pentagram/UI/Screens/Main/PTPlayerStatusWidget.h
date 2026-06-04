@@ -26,6 +26,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Status|Debug")
     void DebugSetAll(float Hp, float MaxHp, float Mp, float MaxMp, float Exp, float ReqExp);
 
+    bool bInitialStatsApplied = false;
 protected:
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
