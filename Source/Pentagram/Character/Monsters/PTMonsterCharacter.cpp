@@ -13,6 +13,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Item/PTGoldPickup.h"
 #include "Net/UnrealNetwork.h"
+#include "Core/PTRewardSubsystem.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -21,14 +22,19 @@ APTMonsterCharacter::APTMonsterCharacter()
 
 float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 {
-    if (DamageAmount > 0.f)
+    const float FinalDamage = Super::ApplyDamage(DamageAmount, Attacker);
+
+    if (FinalDamage > 0.f && HasAuthority())
     {
         RegisterDamageContributor(Attacker);
     }
 
-    const float FinalDamage = Super::ApplyDamage(DamageAmount, Attacker);
-
     return FinalDamage;
+}
+
+void APTMonsterCharacter::ClearExpContributors()
+{
+    ExpContributors.Empty();
 }
 
 void APTMonsterCharacter::BeginPlay()
@@ -102,22 +108,28 @@ void APTMonsterCharacter::OnDeath()
     }
 
     Super::OnDeath();
-
-    SetMonsterState(EMonsterState::Dead);
-
-    if (AAIController* AIC = Cast<AAIController>(GetController()))
-    {
-        if (AIC->BrainComponent)
-        {
-            AIC->BrainComponent->StopLogic(TEXT("Monster Dead"));
-        }
-    }
-
     if (HasAuthority())
     {
-        UE_LOG(LogTemp, Warning, TEXT("[%s] OnDeath — GiveExp + SpawnDrops 시작"), *GetName());
-        GiveExpToContributors();
-        SpawnDeathDrops();
+        SetMonsterState(EMonsterState::Dead);
+
+        if (AAIController* AIC = Cast<AAIController>(GetController()))
+        {
+            if (AIC->BrainComponent)
+            {
+                AIC->BrainComponent->StopLogic(TEXT("Monster Dead"));
+            }
+        }
+
+        UWorld* World = GetWorld();
+        if (World)
+        {
+            UPTRewardSubsystem* RewardSys = World->GetSubsystem<UPTRewardSubsystem>();
+            if (RewardSys)
+            {
+                RewardSys->HandleMonsterDeathReward(this);
+            }
+        }
+
         GetWorldTimerManager().SetTimer(
             DestroyTimerHandle,
             this,
@@ -154,84 +166,6 @@ void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
     }
 
     ExpContributors.Add(PS);
-}
-
-void APTMonsterCharacter::GiveExpToContributors()
-{
-    UGameInstance* GI = GetGameInstance();
-    if (!GI)
-    {
-        return;
-    }
-
-    UPTPlayerLevelSubsystem* LevelSys = GI->GetSubsystem<UPTPlayerLevelSubsystem>();
-    if (!LevelSys)
-    {
-        return;
-    }
-
-    for (const TWeakObjectPtr<APTBasePlayerState>& WeakPS : ExpContributors)
-    {
-        APTBasePlayerState* PS = WeakPS.Get();
-        if (!IsValid(PS))
-        {
-            continue;
-        }
-
-        LevelSys->AddExp(PS, RewardExp);
-    }
-
-    ExpContributors.Empty();
-}
-
-void APTMonsterCharacter::SpawnDeathDrops()
-{
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        return;
-    }
-
-    const FVector DropLocation = GetActorLocation() + FVector(0.f, 0.f, 50.f);
-
-    UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnDeathDrops 호출"), *GetName());
-
-    if (GoldPickupClass)
-    {
-        APTGoldPickup* GoldActor = World->SpawnActorDeferred<APTGoldPickup>(GoldPickupClass, FTransform(DropLocation));
-        if (GoldActor)
-        {
-            const int32 SafeMin = FMath::Min(GoldDropMin, GoldDropMax);
-            const int32 SafeMax = FMath::Max(GoldDropMin, GoldDropMax);
-
-#if !UE_BUILD_SHIPPING
-            if (GoldDropMin > GoldDropMax)
-            {
-                UE_LOG(LogTemp, Warning, TEXT("[%s] GoldDropMin(%d) > GoldDropMax(%d) - DT 확인 필요"), *GetName(), GoldDropMin, GoldDropMax);
-            }
-#endif
-            const int32 Amount = FMath::RandRange(SafeMin, SafeMax);
-
-            UE_LOG(LogTemp, Warning, TEXT("[%s] 골드 Pickup 스폰 — 금액: %d"), *GetName(), Amount);
-
-            GoldActor->SetGoldAmount(Amount);
-            GoldActor->FinishSpawning(FTransform(DropLocation));
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[%s] GoldPickupClass 미설정 — 골드 드랍 스킵"), *GetName());
-    }
-
-    if (EquipmentDropClass && FMath::FRand() <= EquipDropRate)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[%s] 장비 드랍 스폰"), *GetName());
-        World->SpawnActor<AActor>(
-            EquipmentDropClass,
-            DropLocation,
-            FRotator::ZeroRotator
-        );
-    }
 }
 
 void APTMonsterCharacter::HandleDestroyAfterDeath()
@@ -272,28 +206,27 @@ void APTMonsterCharacter::PerformAttack()
         return;
     }
 
-    const FVector TraceStart = GetActorLocation();
-    const FVector TraceEnd = TraceStart;
-    const float TraceRadius = AttackRange;
-
-    TArray<FHitResult> HitResults;
-    FCollisionQueryParams Params;
-    Params.AddIgnoredActor(this);
-
     UWorld* World = GetWorld();
     if (!World)
     {
         return;
     }
 
+    const FVector TraceStart = GetActorLocation() + GetActorForwardVector() * AttackForwardOffset + FVector(0.f, 0.f, AttackHeightOffset);
+    const FVector TraceEnd = TraceStart;
+
+    TArray<FHitResult> HitResults;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(this);
+
     const bool bHit = World->SweepMultiByChannel(
         HitResults, TraceStart, TraceEnd,
         FQuat::Identity, ECC_Pawn,
-        FCollisionShape::MakeSphere(TraceRadius), Params
+        FCollisionShape::MakeSphere(AttackRadius), Params
     );
 
 #if !UE_BUILD_SHIPPING
-    DrawDebugSphere(World, TraceStart, TraceRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.f);
+    DrawDebugSphere(World, TraceStart, AttackRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.f);
 #endif
 
     for (const FHitResult& Hit : HitResults)
@@ -313,7 +246,7 @@ void APTMonsterCharacter::PerformAttack()
 
         if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
         {
-            Player->ApplyDamage(GetAttackDamage(), this);
+            Player->ApplyDamage(GetAttackDamage(), Player);
         }
     }
 }
@@ -365,4 +298,17 @@ void APTMonsterCharacter::OnRep_CurrentState()
     {
         PlayDeathMontage();
     }
+}
+
+FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
+{
+    FPTMonsterRewardData Data;
+    Data.RewardExp = RewardExp;
+    Data.GoldDropMin = GoldDropMin;
+    Data.GoldDropMax = GoldDropMax;
+    Data.EquipDropRate = EquipDropRate;
+    Data.GoldPickupClass = GoldPickupClass;
+    Data.EquipmentDropClass = EquipmentDropClass;
+
+    return Data;
 }
