@@ -85,7 +85,7 @@ void APTPlayerController::SetupInputComponent()
     {
         UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
 
-        if (IA_Move) EnhancedInput->BindAction(IA_Move, ETriggerEvent::Started, this, &APTPlayerController::OnRightClick);
+        if (IA_Move) EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerController::OnRightClick);
 
         if (IA_Attack) EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Started, this, &APTPlayerController::OnLeftClick);
 

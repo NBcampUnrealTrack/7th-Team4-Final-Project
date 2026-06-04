@@ -37,6 +37,20 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     return FinalDamage;
 }
 
+void APTBaseCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    if (const FPTCharacterRow* Row = CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("Load")))
+    {
+        MaxHP = Row->MaxHP;   CurrentHP = Row->MaxHP;
+        MaxMP = Row->MaxMP;   CurrentMP = Row->MaxMP;
+        BaseDef = Row->BaseDef; BaseAtk = Row->BaseAtk;
+        AttackSpeed = Row->AttackSpeed; MoveSpeed = Row->MoveSpeed;
+        GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+    }
+}
+
 void APTBaseCharacter::OnDeath()
 {
     // 이동 불가

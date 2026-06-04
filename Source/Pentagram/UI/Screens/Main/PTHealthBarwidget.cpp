@@ -10,7 +10,7 @@ void UPTHealthBarwidget::NativeConstruct()
 
     if (PB_Bar)
     {
-        PB_Bar->SetBarFillType(EProgressBarFillType::RightToLeft);
+        PB_Bar->SetBarFillType(EProgressBarFillType::LeftToRight);
     }
 }
 
