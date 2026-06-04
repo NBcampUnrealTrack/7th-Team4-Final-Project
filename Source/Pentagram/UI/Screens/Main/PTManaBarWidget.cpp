@@ -22,7 +22,7 @@ void UPTManaBarWidget::HandleManaChanged(float Current, float Max)
 
 void UPTManaBarWidget::BindToPlayerState(APTBasePlayerState* PS)
 {
-    PS->OnManaChanged.AddUniqueDynamic(this, &UPTManaBarWidget::UPTManaBarWidget::HandleManaChanged);
+    PS->OnManaChanged.AddUniqueDynamic(this, &UPTManaBarWidget::HandleManaChanged);
 
 }
 

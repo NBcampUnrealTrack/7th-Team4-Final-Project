@@ -78,6 +78,20 @@ void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
     UnbindFromCharacter();
     BoundCharacter = InCharacter;
 
+    APTBasePlayerState* PS = InCharacter->GetPlayerState<APTBasePlayerState>();
+    if (!PS)
+    {
+        GetWorld()->GetTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::TryBindFromOwningPawn));
+        return;
+    }
+
+    if (HealthBar) HealthBar->SetupPlayerState(PS);
+    if (ManaBar)   ManaBar->SetupPlayerState(PS);
+    if (ExpBar)    ExpBar->SetupPlayerState(PS);
+
+    // 바인딩 직후 현재 값 강제 반영
+    PS->BroadcastAllStats();
 }
 
 void UPTPlayerStatusWidget::UnbindFromCharacter()
