@@ -10,6 +10,8 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/GameModeBase.h" // 리스폰(GM->RestartPlayer)을 사용하기 위함
+#include "Core/PTGameMode.h" 
 #include "Net/UnrealNetwork.h"
 #include "PTInventoryComponent.h" 
 #include "PTEquipmentComponent.h" 
@@ -59,6 +61,7 @@ void APTPlayerCharacter::PossessedBy(AController* NewController)
         PS->MaxHP = MaxHP;
         PS->CurrentMP = MaxMP;
         PS->MaxMP = MaxMP;
+
     }
 }
 
@@ -200,6 +203,33 @@ void APTPlayerCharacter::OnDeath()
     }
 
     OnPlayerDied.Broadcast();
+
+    // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동 
+    APlayerController* PC = Cast<APlayerController>(GetController());
+    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode()); 
+
+    if (GM && PC)
+    {
+        // 죽은 캐릭터와 분리되기 전, 기억해둔 데이터(리스폰 위치)를 백업한다 
+        FVector SavedLoc = FVector::ZeroVector;
+        bool bHasLoc = false;
+
+        APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
+        if (PS && PS->HasRespawnLocation())
+        {
+            SavedLoc = PS->GetSavedRespawnLocation();
+            bHasLoc = true;
+        }
+
+        // 백업한 데이터를 게임모드 리스폰 함수 인자에 넣는다 
+        GM->RespawnPlayer(PC, SavedLoc, bHasLoc);
+
+        // 이제 안심하고 죽은 캐릭터와 분리해도 데이터가 유실되지 않는다 
+        PC->UnPossess();
+    }
+
+    // 분리되서 껍데기만 남은 캐릭터는 메모리에서 소멸시킨다 
+    Destroy();
 }
 
 void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
