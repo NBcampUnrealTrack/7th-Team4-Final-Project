@@ -31,7 +31,7 @@ public:
     TObjectPtr<UDataTable> SkillDataTable;
 
     // 스킬 슬롯 (Q, W, E, R)
-    UPROPERTY(VisibleAnywhere, Category = "Skill")
+    UPROPERTY(EditAnywhere, Category = "Skill")
     TArray<FName> SkillSlots;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);

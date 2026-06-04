@@ -38,25 +38,54 @@ FName UPTSkillComponent::GetSkillAtSlot(int32 SlotIndex) const
 
 void UPTSkillComponent::TryActivateSkill(FName SkillID)
 {
-    if (!GetOwner()->HasAuthority()) return;
+    UE_LOG(LogTemp,Warning, TEXT("TryActivateSkill 호출 - SkillID: %s"), *SkillID.ToString());
+
+    if (!GetOwner()->HasAuthority())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill권한 없음 - 서버가 아님"));
+        return;
+    }
 
     // DT에서 스킬 데이터 조회
     const FPTSkillRow* SkillData = GetSkillData(SkillID);
-    if (!SkillData) return;
+    if (!SkillData)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("DT에서 스킬 데이터 없음 - SkillID: %s"), *SkillID.ToString());
+        return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Skill 데이터 조회 성공 - MP소모: %.1f, 쿨다운: %.1f"), SkillData->MPCost, SkillData->Cooldown);
 
     // 슬롯 인덱스 찾기
     int32 SlotIndex = SkillSlots.IndexOfByKey(SkillID);
-    if (SlotIndex == INDEX_NONE) return;
+    if (SlotIndex == INDEX_NONE)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 슬롯에 등록되지 않은 스킬"));
+        return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Skill 슬롯 인덱스: %d"), SlotIndex);
 
     // 쿨다운 체크
-    if (bIsCooldown[SlotIndex]) return;
+    if (bIsCooldown[SlotIndex])
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 쿨다운 중 - 남은 시간: %.1f초"), GetCooldownRemaining(SlotIndex));
+        return;
+    }
 
     // MP 체크 및 차감
     APTBaseCharacter* Owner = Cast<APTBaseCharacter>(GetOwner());
-    if (!Owner) return;
+    if (!Owner)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill Owner 실패"));
+        return;
+    }
 
-    if (Owner->CurrentMP < SkillData->MPCost) return;
+    if (Owner->CurrentMP < SkillData->MPCost)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill MP 부족 - 현재: %.1f, 필요: %.1f"), Owner->CurrentMP, SkillData->MPCost);
+        return;
+    }
     Owner->CurrentMP -= SkillData->MPCost;
+    UE_LOG(LogTemp, Warning, TEXT("Skill 스킬 발동 성공 - 남은 MP: %.1f"), Owner->CurrentMP);
 
     // PlayerState MP 반영
     APTBasePlayerState* PS = Owner->GetPlayerState<APTBasePlayerState>();
@@ -77,13 +106,20 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
     // 몽타주 재생
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
     {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 실행: %s"), *Montage->GetName());
         Owner->PlayAnimMontage(Montage);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
     }
 }
 
 void UPTSkillComponent::OnCooldownEnd(int32 SlotIndex)
 {
     bIsCooldown[SlotIndex] = false;
+    UE_LOG(LogTemp, Warning, TEXT("Skill 쿨다운 종료 - 슬롯: %d"), SlotIndex);
+    OnSkillCooldownEnd.Broadcast(SlotIndex);
     // UI 쿨다운 종료 델리게이트 발행 (나중에 연동)
 }
 
