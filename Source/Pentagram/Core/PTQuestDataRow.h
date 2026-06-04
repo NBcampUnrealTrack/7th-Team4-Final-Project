@@ -48,6 +48,15 @@ struct PENTAGRAM_API FPTQuestDataRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest")
     TArray<FPTQuestCondition> Conditions;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest|Reward", meta = (ClampMin = "0"))
+    int32 RewardGold = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest|Reward", meta = (ClampMin = "0"))
+    int32 RewardExp = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest|Reward")
+    TArray<FName> RewardItemIDs;
 };
 
 UENUM(BlueprintType)
