@@ -31,6 +31,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     SpringArmComp->bInheritRoll = false;
     SpringArmComp->bInheritYaw = false;
     SpringArmComp->bEnableCameraLag = false;
+    SpringArmComp->bDoCollisionTest = false;
     SpringArmComp->SocketOffset = FVector(0.f, 0.f, 200.f);
 
     CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
