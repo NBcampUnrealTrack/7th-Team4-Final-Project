@@ -53,6 +53,17 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "PT|Delegates")
     void BroadcastAllStats();
+
+    // 리스폰 지점 세팅 및 반환 
+    UFUNCTION(BlueprintCallable, Category = "PT|Respawn") 
+    void SetSavedRespawnLocation(const FVector& NewLocation);
+
+    UFUNCTION(BlueprintPure, Category = "PT|Respawn")
+    FVector GetSavedRespawnLocation() const { return SavedRespawnLocation; }
+
+    UFUNCTION(BlueprintPure, Category = "PT|Respawn")
+    bool HasRespawnLocation() const { return bHasRespawnLocation; }
+
 protected:
 
     UFUNCTION()
@@ -74,4 +85,12 @@ protected:
     void OnRep_CurrentExp();
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+private:
+    // 실제 리스폰 위치 데이터가 저장될 곳 (서버에서만 안전하게 관리)
+    UPROPERTY()
+    FVector SavedRespawnLocation;
+
+    UPROPERTY()
+    bool bHasRespawnLocation = false; 
 };
