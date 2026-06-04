@@ -42,6 +42,13 @@ void APTBasePlayerState::BroadcastAllStats()
     OnGoldChanged.Broadcast(CurrentGold);
 }
 
+// 리스폰 위치를 장부에 기록 
+void APTBasePlayerState::SetSavedRespawnLocation(const FVector& NewLocation)
+{
+    SavedRespawnLocation = NewLocation; 
+    bHasRespawnLocation = true; 
+}
+
 void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
