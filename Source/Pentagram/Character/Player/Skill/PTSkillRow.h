@@ -36,6 +36,13 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     ESkillType SkillType = ESkillType::Active;*/
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+    float SkillRadius = 100.f;
+
+    // 스킬 발생 위치 오스펫 (캐릭터를 중심으로 기준)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+    FVector SkillOffset = FVector(0.f, 0.f, 0.f); //앞, 양옆, 위아래
+
     // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;
