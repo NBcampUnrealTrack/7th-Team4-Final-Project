@@ -3,6 +3,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Core/PTQuestSubsystem.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
 APTNPCCharacter::APTNPCCharacter()
@@ -30,7 +31,18 @@ void APTNPCCharacter::BeginPlay()
     InteractionRangeSphere->OnComponentEndOverlap.AddDynamic(this, &APTNPCCharacter::OnInteractionRangeEndOverlap);
 }
 
-void APTNPCCharacter::Interact(APlayerController* InteractPlayerController)
+void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
+{
+    APawn* InteractPawn = Cast<APawn>(InteractorCharacter);
+    APlayerController* InteractPlayerController = InteractPawn != nullptr
+        ? Cast<APlayerController>(InteractPawn->GetController())
+        : nullptr;
+
+    StartDialogue(InteractPlayerController);
+    ServerInteract(InteractPlayerController);
+}
+
+void APTNPCCharacter::StartDialogue(APlayerController* InteractPlayerController)
 {
     if (!InteractPlayerController || !IsAvailableForInteraction())
     {
@@ -88,6 +100,28 @@ void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
     }
 
     QuestSubsystem->AcceptQuest(QuestID);
+}
+
+void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
+{
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->RewardQuest(QuestID);
 }
 
 FName APTNPCCharacter::GetNPCID() const

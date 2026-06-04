@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/Interface/PTInteractableInterface.h"
 #include "GameFramework/Actor.h"
 #include "PTNPCCharacter.generated.h"
 
@@ -20,7 +21,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTNPCPlayerControllerDelegate, APla
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTNPCSimpleDelegate);
 
 UCLASS()
-class PENTAGRAM_API APTNPCCharacter : public AActor
+class PENTAGRAM_API APTNPCCharacter : public AActor, public IPTInteractableInterface
 {
     GENERATED_BODY()
 
@@ -28,15 +29,18 @@ public:
     APTNPCCharacter();
 
     virtual void BeginPlay() override;
+    virtual void Interact_Implementation(AActor* InteractorCharacter) override;
 
-    UFUNCTION(BlueprintCallable, Category = "PT|NPC")
-    void Interact(APlayerController* InteractPlayerController);
+    void StartDialogue(APlayerController* InteractPlayerController);
 
     UFUNCTION(Server, Reliable)
     void ServerInteract(APlayerController* InteractPlayerController);
 
     UFUNCTION(Server, Reliable)
     void ServerAcceptQuest(FName QuestID);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRewardQuest(FName QuestID);
 
     UFUNCTION(BlueprintCallable, Category = "PT|NPC")
     void EndDialogue();
