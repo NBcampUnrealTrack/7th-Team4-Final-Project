@@ -67,30 +67,43 @@ void UPTPlayerStatusWidget::HandlePossessedPawnChanged(APawn* OldPawn, APawn* Ne
     }
 }
 
+void UPTPlayerStatusWidget::RefreshStatsUntilValid()
+{
+    APTBaseCharacter* C = BoundCharacter.Get();
+    if (!C) return;
+
+    APTBasePlayerState* PS = C->GetPlayerState<APTBasePlayerState>();
+    if (!PS) return;
+
+    PS->BroadcastAllStats();
+
+    // MaxHP가 아직 0이면 = 복제 미도착 → 다음 틱 재시도
+    if (PS->MaxHP <= 0.f)
+    {
+        GetWorld()->GetTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::RefreshStatsUntilValid));
+    }
+}
 void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
 {
-    // 유효성 검사 및 중복 바인딩 방지
-    if (!InCharacter || BoundCharacter.Get() == InCharacter)
+    if (!InCharacter || BoundCharacter.Get() == InCharacter) return;
+
+    APTBasePlayerState* PS = InCharacter->GetPlayerState<APTBasePlayerState>();
+    if (!PS)
     {
+        RefreshStatsUntilValid();
+        GetWorld()->GetTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::TryBindFromOwningPawn));
         return;
     }
 
     UnbindFromCharacter();
     BoundCharacter = InCharacter;
 
-    APTBasePlayerState* PS = InCharacter->GetPlayerState<APTBasePlayerState>();
-    if (!PS)
-    {
-        GetWorld()->GetTimerManager().SetTimerForNextTick(
-            FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::TryBindFromOwningPawn));
-        return;
-    }
-
     if (HealthBar) HealthBar->SetupPlayerState(PS);
     if (ManaBar)   ManaBar->SetupPlayerState(PS);
     if (ExpBar)    ExpBar->SetupPlayerState(PS);
 
-    // 바인딩 직후 현재 값 강제 반영
     PS->BroadcastAllStats();
 }
 
