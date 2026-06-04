@@ -2,6 +2,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Core/PTQuestSubsystem.h"
 #include "GameFramework/PlayerController.h"
 
 APTNPCCharacter::APTNPCCharacter()
@@ -29,25 +30,74 @@ void APTNPCCharacter::BeginPlay()
     InteractionRangeSphere->OnComponentEndOverlap.AddDynamic(this, &APTNPCCharacter::OnInteractionRangeEndOverlap);
 }
 
-void APTNPCCharacter::Interact(APlayerController* InstigatorController)
+void APTNPCCharacter::Interact(APlayerController* InteractPlayerController)
 {
-    if (!InstigatorController || !IsAvailableForInteraction())
+    if (!InteractPlayerController || !IsAvailableForInteraction())
     {
         return;
     }
 
     SetNPCState(ENPCState::Talking);
-    OnDialogueStarted.Broadcast(InstigatorController);
+    OnDialogueStarted.Broadcast(InteractPlayerController);
 }
 
-void APTNPCCharacter::ServerInteract_Implementation(APlayerController* InstigatorController)
+void APTNPCCharacter::ServerInteract_Implementation(APlayerController* InteractPlayerController)
 {
+    if (InteractPlayerController == nullptr)
+    {
+        return;
+    }
 
+    if (NPCID.IsNone())
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
 }
 
-FName APTNPCCharacter::GetQuestID() const
+void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
 {
-    return QuestID;
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->AcceptQuest(QuestID);
+}
+
+FName APTNPCCharacter::GetNPCID() const
+{
+    return NPCID;
+}
+
+const TArray<FName>& APTNPCCharacter::GetQuestIDs() const
+{
+    return QuestIDs;
 }
 
 void APTNPCCharacter::EndDialogue()

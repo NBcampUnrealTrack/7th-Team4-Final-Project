@@ -8,6 +8,7 @@
 #include "PTGameMode.generated.h"
 
 class APTBasePlayerState;
+class UDataTable;
 
 /**
  *
@@ -24,6 +25,7 @@ public:
     void SetGamePhase(EGamePhase NewPhase);     //게임 상태 설정
     void StartGame();       //스타트 게임
     void EndGame();         //앤드게임
+    void OnBossFightStarted(); //보스전 시작
     void OnBossDefeated();  //보스 처치
     void OnAllPlayersDead(); //플레이어 전원 사망
     void RespawnPlayer(APlayerController* PlayerController);        //리스폰 플레이어
@@ -32,6 +34,11 @@ public:
     AActor* SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation, float DropRate) const;
 
 protected:
+    virtual void BeginPlay() override;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
+    TObjectPtr<UDataTable> QuestDataTable;
+
     UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;        //리스폰 대기 시간
 

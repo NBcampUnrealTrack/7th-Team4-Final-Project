@@ -10,7 +10,7 @@
 class APTBasePlayerState;
 
 USTRUCT(BlueprintType)
-struct FPTSaveData
+struct FPTPlayerSaveData
 {
     GENERATED_BODY()
 
@@ -38,20 +38,20 @@ class PENTAGRAM_API UPTSaveSubsystem : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
-    void SaveGame();
     void SaveGame(const APTBasePlayerState* PlayerState);
-    void LoadGame();
     void LoadGame(APTBasePlayerState* PlayerState);
     bool HasSaveData() const;
     void DeleteSaveData();
-    const FPTSaveData& GetSaveData() const { return SaveData; }
+    const FPTPlayerSaveData& GetSaveData() const { return SaveData; }
 
 private:
     void PlayerStateSaveData(const APTBasePlayerState* PlayerState);
     void QuestSaveData();
     void PlayerStateLoadData(APTBasePlayerState* PlayerState) const;
     void QuestLoadData() const;
+    bool SaveSlotData();
+    bool LoadSlotData();
 
-    FPTSaveData SaveData; // save 데이터
+    FPTPlayerSaveData SaveData; // 플레이어 저장 데이터
     bool bHasSaveData = false;
 };

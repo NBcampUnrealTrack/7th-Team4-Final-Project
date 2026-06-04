@@ -30,21 +30,24 @@ public:
     virtual void BeginPlay() override;
 
     UFUNCTION(BlueprintCallable, Category = "PT|NPC")
-    void Interact(APlayerController* InstigatorController);
+    void Interact(APlayerController* InteractPlayerController);
 
     UFUNCTION(Server, Reliable)
-    void ServerInteract(APlayerController* InstigatorController);
+    void ServerInteract(APlayerController* InteractPlayerController);
+
+    UFUNCTION(Server, Reliable)
+    void ServerAcceptQuest(FName QuestID);
 
     UFUNCTION(BlueprintCallable, Category = "PT|NPC")
     void EndDialogue();
 
-    UFUNCTION(BlueprintPure, Category = "PT|NPC")
     ENPCState GetNPCState() const { return CurrentState; }
 
-    UFUNCTION(BlueprintPure, Category = "PT|NPC")
     bool IsAvailableForInteraction() const { return CurrentState == ENPCState::Idle; }
 
-    FName GetQuestID() const;
+    FName GetNPCID() const;
+
+    const TArray<FName>& GetQuestIDs() const;
 
     // 인터랙션 UI 표시 연동 (F키 안내 표시)
     UPROPERTY(BlueprintAssignable, Category = "PT|NPC|Interaction")
@@ -80,8 +83,11 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
     TObjectPtr<USphereComponent> InteractionRangeSphere;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC")
+    FName NPCID = NAME_None;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Quest")
-    FName QuestID = NAME_None;
+    TArray<FName> QuestIDs;
 
 private:
     void SetNPCState(ENPCState NewState);
