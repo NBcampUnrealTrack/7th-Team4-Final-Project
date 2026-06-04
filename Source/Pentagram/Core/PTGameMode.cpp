@@ -1,5 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+// PTGameMode.cpp
 
 #include "PTGameMode.h"
 
@@ -87,34 +86,46 @@ void APTGameMode::OnAllPlayersDead()
     SetGamePhase(EGamePhase::GameOver);
 }
 
-void APTGameMode::RespawnPlayer(APlayerController* PlayerController)
+void APTGameMode::RespawnPlayer(AController* NewPlayer, const FVector& RespawnLoc, bool bHasCheckpoint)
 {
-    if (PlayerController == nullptr)
+    if (!NewPlayer)
     {
         return;
     }
-
-    if (RespawnDelaySeconds <= 0.f)
-    {
-        RestartPlayer(PlayerController);
-        return;
-    }
-
-    TWeakObjectPtr<APlayerController> WeakPlayerController = PlayerController;
-    FTimerDelegate RespawnDelegate = FTimerDelegate::CreateWeakLambda(this,
-        [this, WeakPlayerController]()
-        {
-            APlayerController* StoredPlayerController = WeakPlayerController.Get();
-            if (StoredPlayerController == nullptr)
-            {
-                return;
-            }
-
-            RestartPlayer(StoredPlayerController);
-        });
 
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, RespawnDelegate, RespawnDelaySeconds, false);
+
+    // 죽는 순간 가로챈 RespawnLoc와 bHasCheckpoint를 3초 뒤 람다 함수로 그대로 안전하게 전달합니다.
+    GetWorld()->GetTimerManager().SetTimer(RespawnTimerHandle, [this, NewPlayer, RespawnLoc, bHasCheckpoint]()
+        {
+            if (!NewPlayer) return;
+
+            if (bHasCheckpoint)
+            {
+                FVector SpawnLoc = RespawnLoc;
+                SpawnLoc.Z += 150.0f; // 안전 공중 부활 보정
+
+                FActorSpawnParameters SpawnParams;
+                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+                SpawnParams.Owner = this;
+
+                if (DefaultPawnClass)
+                {
+                    APawn* NewPawn = GetWorld()->SpawnActor<APawn>(DefaultPawnClass, SpawnLoc, FRotator::ZeroRotator, SpawnParams);
+                    if (NewPawn)
+                    {
+                        NewPlayer->Possess(NewPawn);
+                        UE_LOG(LogTemp, Warning, TEXT("유저가 등록된 체크포인트 지점에서 부활했습니다"));
+                        return;
+                    }
+                }
+            }
+
+            // 체크포인트가 없다면 기본 스타트 지점으로 부활
+            UE_LOG(LogTemp, Log, TEXT("등록된 체크포인트가 없어 초기 스타트 지점에서 부활합니다."));
+            this->RestartPlayer(NewPlayer);
+
+        }, 3.0f, false);
 }
 
 void APTGameMode::DistributeExp(int32 ExpAmount)
@@ -195,4 +206,46 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
     PlayerState->CurrentExp = FMath::Max(PlayerState->CurrentExp, 0);
     PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
     PlayerState->CurrentGold = FMath::Max(PlayerState->CurrentGold, 0);
+}
+
+// 💡 엔진이 최종적으로 캐릭터를 스폰할 위치를 연산할 때 인터셉트하는 정석 오버라이드 함수
+void APTGameMode::RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform)
+{
+    if (NewPlayer == nullptr) return;
+
+    // 1. 부활하려는 유저의 영구 데이터 장부(PlayerState)를 가져옵니다.
+    APTBasePlayerState* PS = NewPlayer->GetPlayerState<APTBasePlayerState>();
+
+    // 2. 만약 장부가 존재하고, 저장된 체크포인트 리스폰 지점 좌표가 있다면?
+    if (PS && PS->HasRespawnLocation())
+    {
+        FVector RespawnLoc = PS->GetSavedRespawnLocation();
+        RespawnLoc.Z += 150.0f; // 끼임 방지, 공중 스폰
+
+        FTransform CustomSpawnTransform = SpawnTransform;
+        CustomSpawnTransform.SetLocation(RespawnLoc);
+
+        // 폰을 스폰할 때 충돌을 완전히 무시하고 무조건 스폰하도록 파라미터를 강제 세팅 
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+        SpawnParams.Owner = this;
+
+        // 게임모드에 설정된 DefaultPawnClass가 유효한지 검사
+        if (DefaultPawnClass)
+        {
+            // 1. 월드에 캐릭터를 강제로 스폰시킵니다.
+            APawn* NewPawn = GetWorld()->SpawnActor<APawn>(DefaultPawnClass, RespawnLoc, FRotator::ZeroRotator, SpawnParams);
+            if (NewPawn)
+            {
+                // 2. 스폰된 캐릭터에 플레이어 컨트롤러를 빙의(Possess)시킵니다.
+                NewPlayer->Possess(NewPawn);
+
+                UE_LOG(LogTemp, Log, TEXT("스폰 성공! 유저가 체크포인트에서 부활했습니다."), *NewPlayer->GetName());
+                return;
+            }
+        }
+    } 
+
+    // 4. 저장된 체크포인트가 없는 유저라면 원래 설계된 기본 PlayerStart 위치에서 태어나게 둡니다.
+    Super::RestartPlayerAtTransform(NewPlayer, SpawnTransform); 
 }

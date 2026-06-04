@@ -1,3 +1,4 @@
+// PTPlayerController.cpp 
 #include "Character/Player/PTPlayerController.h"
 
 #include "CommonActivatableWidget.h"
@@ -144,17 +145,22 @@ void APTPlayerController::PlayAttackMontage()
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
+    // [안전장치] 조종중인 캐릭터가 사라져 없거나 이미 죽은 유령 상태라면 마우스 클릭 이동 처리를 완전히 차단 
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()); 
+    if (!PC)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("현재 조종중인 캐릭터 액터가 월드에 존재하지 않습니다."));
+        return;
+    }
+
+    if (PC->bIsAttacking) return;
+
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
     if (HitResult.bBlockingHit)
     {
-        if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        {
-            if (PC->bIsAttacking) return;
-        }
-
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location);
+        UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location); 
     }
 }
 
