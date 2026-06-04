@@ -124,5 +124,5 @@ private:
 
     void RegisterDamageContributor(AActor* DamageCauser);
     void HandleDestroyAfterDeath();
-    void PlayDeathMontage();
+    float PlayDeathMontage();
 };

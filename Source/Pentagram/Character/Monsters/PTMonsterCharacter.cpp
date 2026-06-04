@@ -1,19 +1,21 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
+
+// ── 프로젝트 — 몬스터 ────────────────────────────────────────
 #include "Character/Monsters/PTMonsterAIController.h"
 #include "Character/Player/PTPlayerCharacter.h"
+#include "Character/Player/PTBasePlayerState.h"
+#include "Core/PTRewardSubsystem.h"
 #include "AIController.h"
 #include "BrainComponent.h"
-#include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "CollisionShape.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
-#include "CollisionShape.h"
-#include "Core/PTPlayerLevelSubsystem.h"
-#include "Character/Player/PTBasePlayerState.h"
-#include "GameFramework/PlayerController.h"
-#include "Item/PTGoldPickup.h"
 #include "Net/UnrealNetwork.h"
-#include "Core/PTRewardSubsystem.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -24,7 +26,7 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 {
     const float FinalDamage = Super::ApplyDamage(DamageAmount, Attacker);
 
-    if (FinalDamage > 0.f && HasAuthority())
+    if (HasAuthority())
     {
         RegisterDamageContributor(Attacker);
     }
@@ -32,49 +34,21 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     return FinalDamage;
 }
 
-void APTMonsterCharacter::ClearExpContributors()
-{
-    ExpContributors.Empty();
-}
-
-void APTMonsterCharacter::BeginPlay()
-{
-    Super::BeginPlay();
-
-    SpawnLocation = GetActorLocation();
-
-    InitializeMonster();
-}
-
-void APTMonsterCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-    GetWorldTimerManager().ClearTimer(DestroyTimerHandle);
-
-    Super::EndPlay(EndPlayReason);
-}
-
-void APTMonsterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME(APTMonsterCharacter, CurrentState);
-}
-
 void APTMonsterCharacter::InitializeMonster()
 {
     const FPTCharacterRow* Row = CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("InitializeMonster"));
     if (!Row) return;
 
-    SightAngle = Row->SightAngle;
-    SightRange = Row->SightRange;
-    ChaseRange = Row->ChaseRange;
-    AttackRange = Row->AttackRange;
-    PatrolRadius = Row->PatrolRadius;
+    SightAngle       = Row->SightAngle;
+    SightRange       = Row->SightRange;
+    ChaseRange       = Row->ChaseRange;
+    AttackRange      = Row->AttackRange;
+    PatrolRadius     = Row->PatrolRadius;
     MaxChaseDistance = Row->MaxChaseDistance;
-    GoldDropMin = Row->GoldDropMin;
-    GoldDropMax = Row->GoldDropMax;
-    EquipDropRate = Row->EquipDropRate;
-    RewardExp = Row->RewardExp;
+    GoldDropMin      = Row->GoldDropMin;
+    GoldDropMax      = Row->GoldDropMax;
+    EquipDropRate    = Row->EquipDropRate;
+    RewardExp        = Row->RewardExp;
 
     SetMonsterState(EMonsterState::Idle);
 
@@ -93,110 +67,6 @@ void APTMonsterCharacter::SetMonsterState(EMonsterState NewState)
     }
 
     CurrentState = NewState;
-
-    if (CurrentState == EMonsterState::Dead)
-    {
-        PlayDeathMontage();
-    }
-}
-
-void APTMonsterCharacter::OnDeath()
-{
-    if (IsDead())
-    {
-        return;
-    }
-
-    Super::OnDeath();
-    if (HasAuthority())
-    {
-        SetMonsterState(EMonsterState::Dead);
-
-        if (AAIController* AIC = Cast<AAIController>(GetController()))
-        {
-            if (AIC->BrainComponent)
-            {
-                AIC->BrainComponent->StopLogic(TEXT("Monster Dead"));
-            }
-        }
-
-        UWorld* World = GetWorld();
-        if (World)
-        {
-            UPTRewardSubsystem* RewardSys = World->GetSubsystem<UPTRewardSubsystem>();
-            if (RewardSys)
-            {
-                RewardSys->HandleMonsterDeathReward(this);
-            }
-        }
-
-        GetWorldTimerManager().SetTimer(
-            DestroyTimerHandle,
-            this,
-            &APTMonsterCharacter::HandleDestroyAfterDeath,
-            DestroyDelay,
-            false
-        );
-    }
-}
-
-void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
-{
-    if (!DamageCauser)
-    {
-        return;
-    }
-
-    APawn* Pawn = Cast<APawn>(DamageCauser);
-    if (!Pawn)
-    {
-        return;
-    }
-
-    APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-    if (!PC)
-    {
-        return;
-    }
-
-    APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
-    if (!PS)
-    {
-        return;
-    }
-
-    ExpContributors.Add(PS);
-}
-
-void APTMonsterCharacter::HandleDestroyAfterDeath()
-{
-    Destroy();
-}
-
-void APTMonsterCharacter::PlayDeathMontage()
-{
-    USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!MeshComp || !DeathMontage)
-    {
-        return;
-    }
-
-    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-    if (!AnimInstance)
-    {
-        return;
-    }
-
-    if (AnimInstance->Montage_IsPlaying(DeathMontage))
-    {
-        return;
-    }
-
-    const float MontageLength = AnimInstance->Montage_Play(DeathMontage);
-    if (MontageLength > 0.f)
-    {
-        DestroyDelay = MontageLength;
-    }
 }
 
 void APTMonsterCharacter::PerformAttack()
@@ -212,7 +82,9 @@ void APTMonsterCharacter::PerformAttack()
         return;
     }
 
-    const FVector TraceStart = GetActorLocation() + GetActorForwardVector() * AttackForwardOffset + FVector(0.f, 0.f, AttackHeightOffset);
+    const FVector TraceStart = GetActorLocation()
+        + GetActorForwardVector() * AttackForwardOffset
+        + FVector(0.f, 0.f, AttackHeightOffset);
     const FVector TraceEnd = TraceStart;
 
     TArray<FHitResult> HitResults;
@@ -246,7 +118,7 @@ void APTMonsterCharacter::PerformAttack()
 
         if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
         {
-            Player->ApplyDamage(GetAttackDamage(), Player);
+            Player->ApplyDamage(GetAttackDamage(), this);
         }
     }
 }
@@ -287,15 +159,12 @@ void APTMonsterCharacter::StopAttack()
     }
 }
 
-float APTMonsterCharacter::GetAttackDamage() const
-{
-    return BaseAtk;
-}
-
 void APTMonsterCharacter::OnRep_CurrentState()
 {
     if (CurrentState == EMonsterState::Dead)
     {
+        GetCharacterMovement()->DisableMovement();
+        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
         PlayDeathMontage();
     }
 }
@@ -303,12 +172,146 @@ void APTMonsterCharacter::OnRep_CurrentState()
 FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
 {
     FPTMonsterRewardData Data;
-    Data.RewardExp = RewardExp;
-    Data.GoldDropMin = GoldDropMin;
-    Data.GoldDropMax = GoldDropMax;
-    Data.EquipDropRate = EquipDropRate;
-    Data.GoldPickupClass = GoldPickupClass;
+    Data.RewardExp          = RewardExp;
+    Data.GoldDropMin        = GoldDropMin;
+    Data.GoldDropMax        = GoldDropMax;
+    Data.EquipDropRate      = EquipDropRate;
+    Data.GoldPickupClass    = GoldPickupClass;
     Data.EquipmentDropClass = EquipmentDropClass;
 
     return Data;
+}
+
+void APTMonsterCharacter::ClearExpContributors()
+{
+    ExpContributors.Empty();
+}
+
+void APTMonsterCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    SpawnLocation = GetActorLocation();
+
+    InitializeMonster();
+}
+
+void APTMonsterCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    GetWorldTimerManager().ClearTimer(DestroyTimerHandle);
+
+    Super::EndPlay(EndPlayReason);
+}
+
+void APTMonsterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APTMonsterCharacter, CurrentState);
+}
+
+void APTMonsterCharacter::OnDeath()
+{
+    if (IsDead())
+    {
+        return;
+    }
+
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    Super::OnDeath();
+
+    SetMonsterState(EMonsterState::Dead);
+
+    const float MontageLength = PlayDeathMontage();
+    const float ActualDelay   = MontageLength > 0.f ? MontageLength : DestroyDelay;
+
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        if (AIC->BrainComponent)
+        {
+            AIC->BrainComponent->StopLogic(TEXT("Monster Dead"));
+        }
+    }
+
+    UWorld* World = GetWorld();
+    if (World)
+    {
+        UPTRewardSubsystem* RewardSys = World->GetSubsystem<UPTRewardSubsystem>();
+        if (RewardSys)
+        {
+            RewardSys->HandleMonsterDeathReward(this);
+        }
+    }
+
+    GetWorldTimerManager().SetTimer(
+        DestroyTimerHandle,
+        this,
+        &APTMonsterCharacter::HandleDestroyAfterDeath,
+        ActualDelay,
+        false
+    );
+}
+
+float APTMonsterCharacter::GetAttackDamage() const
+{
+    return BaseAtk;
+}
+
+void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
+{
+    if (!DamageCauser)
+    {
+        return;
+    }
+
+    APawn* Pawn = Cast<APawn>(DamageCauser);
+    if (!Pawn)
+    {
+        return;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+    if (!PC)
+    {
+        return;
+    }
+
+    APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    ExpContributors.Add(PS);
+}
+
+void APTMonsterCharacter::HandleDestroyAfterDeath()
+{
+    Destroy();
+}
+
+float APTMonsterCharacter::PlayDeathMontage()
+{
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp || !DeathMontage)
+    {
+        return 0.f;
+    }
+
+    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+    if (!AnimInstance)
+    {
+        return 0.f;
+    }
+
+    if (AnimInstance->Montage_IsPlaying(DeathMontage))
+    {
+        return 0.f;
+    }
+
+    return AnimInstance->Montage_Play(DeathMontage);
 }
