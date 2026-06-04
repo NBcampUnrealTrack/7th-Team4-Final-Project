@@ -5,6 +5,7 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Character/Player/PTPlayerCharacter.h"
 
 APTMonsterAIController::APTMonsterAIController()
 {
@@ -80,9 +81,19 @@ void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulu
         return;
     }
 
+    if (!Cast<APTPlayerCharacter>(Actor))
+    {
+        return;
+    }
+
     if (Stimulus.WasSuccessfullySensed())
     {
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
         BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
+    }
+    else
+    {
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
+        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
     }
 }
