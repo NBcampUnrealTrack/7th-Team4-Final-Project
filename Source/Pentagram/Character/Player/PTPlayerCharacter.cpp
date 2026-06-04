@@ -53,6 +53,17 @@ void APTPlayerCharacter::PossessedBy(AController* NewController)
     Super::PossessedBy(NewController);
     UE_LOG(LogTemp, Warning, TEXT("PossessedBy Called"));
 
+    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
+    if (PS)
+    {
+        PS->CurrentHP = MaxHP;
+        PS->MaxHP = MaxHP;
+        PS->CurrentMP = MaxMP;
+        PS->MaxMP = MaxMP;
+
+        UE_LOG(LogTemp, Warning, TEXT("MaxHP: %f"), PS->MaxHP);
+    }
+
 }
 
 void APTPlayerCharacter::BeginPlay()
@@ -68,17 +79,6 @@ void APTPlayerCharacter::BeginPlay()
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Controller is null"));
-    }
-
-    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
-    if (PS)
-    {
-        PS->CurrentHP = MaxHP;
-        PS->MaxHP = MaxHP;
-        PS->CurrentMP = MaxMP;
-        PS->MaxMP = MaxMP;
-
-        UE_LOG(LogTemp, Warning, TEXT("MaxHP: %f"), PS->MaxHP);
     }
 
     if (HasAuthority())
