@@ -15,13 +15,13 @@ public:
     UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, VisibleAnywhere, Category ="PT|Stat")
     float CurrentHP;
 
-    UPROPERTY(Replicated, VisibleAnywhere, Category ="PT|Stat")
+    UPROPERTY(ReplicatedUsing = OnRep_MaxHP, VisibleAnywhere, Category ="PT|Stat")
     float MaxHP;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentMP, VisibleAnywhere, Category ="PT|Stat")
     float CurrentMP;
 
-    UPROPERTY(Replicated, VisibleAnywhere, Category ="PT|Stat")
+    UPROPERTY(ReplicatedUsing = OnRep_MaxMP, VisibleAnywhere, Category ="PT|Stat")
     float MaxMP;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentGold, VisibleAnywhere, Category = "PT|Economy")
@@ -54,8 +54,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|Delegates")
     void BroadcastAllStats();
 
-    // 리스폰 지점 세팅 및 반환 
-    UFUNCTION(BlueprintCallable, Category = "PT|Respawn") 
+    // 리스폰 지점 세팅 및 반환
+    UFUNCTION(BlueprintCallable, Category = "PT|Respawn")
     void SetSavedRespawnLocation(const FVector& NewLocation);
 
     UFUNCTION(BlueprintPure, Category = "PT|Respawn")
@@ -84,6 +84,12 @@ protected:
     UFUNCTION()
     void OnRep_CurrentExp();
 
+    UFUNCTION()
+    void OnRep_MaxHP();
+
+    UFUNCTION()
+    void OnRep_MaxMP();
+
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
@@ -92,5 +98,5 @@ private:
     FVector SavedRespawnLocation;
 
     UPROPERTY()
-    bool bHasRespawnLocation = false; 
+    bool bHasRespawnLocation = false;
 };
