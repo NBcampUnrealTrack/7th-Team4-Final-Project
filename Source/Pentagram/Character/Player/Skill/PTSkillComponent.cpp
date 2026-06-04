@@ -121,13 +121,6 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 실행: %s"), *Montage->GetName());
         Owner->PlayAnimMontage(Montage);
     }
-
-    // 몽타주 재생
-    if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 실행: %s"), *Montage->GetName());
-        Owner->PlayAnimMontage(Montage);
-    }
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
