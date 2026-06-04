@@ -83,25 +83,24 @@ void APTPlayerController::SetupInputComponent()
     if (EnhancedInput)
     {
         UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
-        if (IA_Move)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("IA_Move Binding"));
-            EnhancedInput->BindAction(IA_Move, ETriggerEvent::Started, this, &APTPlayerController::OnRightClick);
-        }
-        if (IA_Attack)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("IA_Attack Binding"));
-            EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Started, this, &APTPlayerController::OnLeftClick);
-        }
-        if (IA_Inventory)
-        {
-            EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
-        }
-        if (IA_Interact) 
-        {
+
+        if (IA_Move) EnhancedInput->BindAction(IA_Move, ETriggerEvent::Started, this, &APTPlayerController::OnRightClick);
+
+        if (IA_Attack) EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Started, this, &APTPlayerController::OnLeftClick);
+
+        if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
+
+        if (IA_Interact)
             UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
             EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
-        }
+
+        if (IA_Skill1) EnhancedInput->BindAction(IA_Skill1, ETriggerEvent::Started, this, &APTPlayerController::OnSkill1);
+
+        if (IA_Skill2) EnhancedInput->BindAction(IA_Skill2, ETriggerEvent::Started, this, &APTPlayerController::OnSkill2);
+
+        if (IA_Skill3) EnhancedInput->BindAction(IA_Skill3, ETriggerEvent::Started, this, &APTPlayerController::OnSkill3);
+
+        if (IA_Skill4) EnhancedInput->BindAction(IA_Skill4, ETriggerEvent::Started, this, &APTPlayerController::OnSkill4);
     }
 
     AddUIInputMapping();
@@ -223,13 +222,13 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     PlayAttackMontage();
 }
 
-void APTPlayerController::OnInteractPressed() // F 상호작용 구현부 
-{ 
+void APTPlayerController::OnInteractPressed() // F 상호작용 구현부
+{
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (PlayerCharacter)
     {
-        // 캐릭터에게 주변 스캔 및 상호작용 처리를 위임합니다. 
-        // (다음 작업 때 PTPlayerCharacter 클래스 내부에 TryInteract() 함수를 구현해 주면 연동됩니다)
+        // 캐릭터에게 주변 스캔 및 상호작용 처리를 위임합니다.
+        // (다음 작업 때 PTPlayerCharacter 클래스 내부에 TryInteract() 함수를 구현해 주면 연동)
         PlayerCharacter->TryInteract();
         UE_LOG(LogTemp, Log, TEXT("컨트롤러: F키 입력 감지 -> 캐릭터에게 상호작용 명령 전달"));
     }
