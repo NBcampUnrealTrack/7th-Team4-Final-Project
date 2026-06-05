@@ -7,7 +7,7 @@
 UPTSkillComponent::UPTSkillComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
-
+    SetIsReplicatedByDefault(true);
     //스킬 슬롯 초기화
     SkillSlots.Init(NAME_None, 4);
     CooldownTimers.SetNum(4);
@@ -106,6 +106,9 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
         false
     );
 
+    // ★ 발동 성공한 이 시점에 소유 클라로 "쿨다운 시작" 통지
+    Client_NotifyCooldownStarted(SlotIndex, SkillData->Cooldown);
+
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
     {
         // 공격 상태 초기화
@@ -125,6 +128,10 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
     }
+}
+void UPTSkillComponent::Client_NotifyCooldownStarted_Implementation(int32 SlotIndex, float Duration)
+{
+    OnSkillCooldownStart.Broadcast(SlotIndex, Duration);
 }
 
 void UPTSkillComponent::OnCooldownEnd(int32 SlotIndex)

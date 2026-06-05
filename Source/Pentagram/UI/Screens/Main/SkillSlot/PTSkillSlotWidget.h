@@ -1,9 +1,11 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTSkillSlotWidget.generated.h"
 
 class UPTSkillSlotEntryWidget;
+class UPTSkillComponent;
 
 UCLASS()
 class PENTAGRAM_API UPTSkillSlotWidget : public UCommonUserWidget
@@ -23,9 +25,17 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void SetSlotUsable(int32 SlotIndex, bool bUsable);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
+    void InitWithSkillComponent(UPTSkillComponent* InSkillComp);
+
 protected:
     virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
 
+    UFUNCTION()
+    void HandleCooldownStart(int32 SlotIndex, float Duration);
+    UFUNCTION()
+    void HandleCooldownEnd(int32 SlotIndex);
     // 슬롯 Q
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UPTSkillSlotEntryWidget> Slot_Q;
@@ -49,4 +59,7 @@ private:
     // 슬롯 배열
     UPROPERTY()
     TArray<TObjectPtr<UPTSkillSlotEntryWidget>> Entries;
+
+    UPROPERTY()
+    TWeakObjectPtr<UPTSkillComponent> SkillComp;
 };
