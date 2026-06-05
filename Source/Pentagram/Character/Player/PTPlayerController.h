@@ -1,4 +1,4 @@
-// PTPlayerController.h 
+// PTPlayerController.h
 #pragma once
 
 #include "CoreMinimal.h"
@@ -90,8 +90,13 @@ public:
     FKey InventoryFallbackKey = EKeys::I;
 
 private:
+    FVector MoveDestination = FVector::ZeroVector;
+    bool bMoveToDestination = false;
+    static constexpr float AcceptanceRadius = 50.f;
+
     void AddUIInputMapping();
     void RemoveUIInputMapping();
+    void Tick(float DeltaTime);
 
     UPROPERTY()
     TObjectPtr<UPTPrimaryLayout> PrimaryLayout;

@@ -1,4 +1,3 @@
-// PTPlayerController.cpp
 #include "Character/Player/PTPlayerController.h"
 
 #include "CommonActivatableWidget.h"
@@ -23,7 +22,7 @@ APTPlayerController::APTPlayerController()
 void APTPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-    UE_LOG(LogTemp, Warning, TEXT("Controller BeginPlay Called"));
+    if (!IsLocalPlayerController()) return;
 
     if (!IsLocalPlayerController()) return;
 
@@ -253,6 +252,8 @@ void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APTPlayerController::OnInventoryPressed()
 {
+    if (!IsLocalPlayerController()) return;
+
     ULocalPlayer* LP = GetLocalPlayer();
     if (!LP)
     {
@@ -270,6 +271,8 @@ void APTPlayerController::OnInventoryPressed()
 
 void APTPlayerController::PushInitialHUD()
 {
+    if (!IsLocalPlayerController()) return;
+
     if (!InitialHUDClass)
     {
         return;
@@ -286,6 +289,8 @@ void APTPlayerController::PushInitialHUD()
 
 void APTPlayerController::AddUIInputMapping()
 {
+    if (!IsLocalPlayerController()) return;
+
     if (bUIInputMappingAdded || !IMC_UI)
     {
         return;
@@ -342,23 +347,18 @@ void APTPlayerController::Tick(float DeltaTime)
 
     if (!bMoveToDestination) return;
 
-    ACharacter* MyChar = Cast<ACharacter>(GetPawn());
-    if (!MyChar) return;
+    ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
+    if (!MyCharacter) return;
 
-    FVector CurrentLocation = MyChar->GetActorLocation();
-    FVector Direction = MoveDestination - CurrentLocation;
+    FVector Direction = MoveDestination - MyCharacter->GetActorLocation();
     Direction.Z = 0.f;
 
-    float Distance = Direction.Size2D();
-
-    if (Distance <= AcceptanceRadius)
+    if (Direction.Size2D() <= AcceptanceRadius)
     {
         bMoveToDestination = false;
-        MyChar->GetCharacterMovement()->StopMovementImmediately();
+        MyCharacter->GetCharacterMovement()->StopMovementImmediately();
         return;
     }
 
-    FVector MoveDirection = Direction.GetSafeNormal();
-
-    MyChar->AddMovementInput(MoveDirection, 1.f);
+    MyCharacter->AddMovementInput(Direction.GetSafeNormal(), 1.f);
 }
