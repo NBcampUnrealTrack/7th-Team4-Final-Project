@@ -10,15 +10,7 @@ class USkeletalMeshComponent;
 class USceneComponent;
 class APlayerController;
 
-UENUM(BlueprintType)
-enum class ENPCState : uint8
-{
-    Idle    UMETA(DisplayName = "Idle"),
-    Talking UMETA(DisplayName = "Talking"),
-};
-
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTNPCPlayerControllerDelegate, APlayerController*, PlayerController);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTNPCSimpleDelegate);
 
 UCLASS()
 class PENTAGRAM_API APTNPCCharacter : public AActor, public IPTInteractableInterface
@@ -30,27 +22,14 @@ public:
 
     virtual void BeginPlay() override;
     virtual void Interact_Implementation(AActor* InteractorCharacter) override;
-
-    void StartDialogue(APlayerController* InteractPlayerController);
-
-    UFUNCTION(Server, Reliable)
-    void ServerInteract(APlayerController* InteractPlayerController);
-
+    
     UFUNCTION(Server, Reliable)
     void ServerAcceptQuest(FName QuestID);
-
+    
     UFUNCTION(Server, Reliable)
     void ServerRewardQuest(FName QuestID);
-
-    UFUNCTION(BlueprintCallable, Category = "PT|NPC")
-    void EndDialogue();
-
-    ENPCState GetNPCState() const { return CurrentState; }
-
-    bool IsAvailableForInteraction() const { return CurrentState == ENPCState::Idle; }
-
+    
     FName GetNPCID() const;
-
     const TArray<FName>& GetQuestIDs() const;
 
     // 인터랙션 UI 표시 연동 (F키 안내 표시)
@@ -65,9 +44,6 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "PT|NPC|Dialogue")
     FPTNPCPlayerControllerDelegate OnDialogueStarted;
 
-    // 다이얼로그 연동: 대화 종료 시 브로드캐스트
-    UPROPERTY(BlueprintAssignable, Category = "PT|NPC|Dialogue")
-    FPTNPCSimpleDelegate OnDialogueEnded;
 
 protected:
     UFUNCTION()
@@ -94,10 +70,5 @@ protected:
     TArray<FName> QuestIDs;
 
 private:
-    void SetNPCState(ENPCState NewState);
-
-    UPROPERTY(VisibleAnywhere, Category = "PT|State")
-    ENPCState CurrentState = ENPCState::Idle;
-
     static constexpr float InteractionRadius = 200.f;
 };
