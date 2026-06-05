@@ -176,62 +176,55 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 
 void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 {
-    UE_LOG(LogTemp, Warning, TEXT("OnLeftClick Called"));
-
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
     bMoveToDestination = false;
     StopMovement();
 
-    // 공격 중이고 콤보 입력 불가 상태면 회전 및 공격 무시
     if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
 
+    // 히트결과 한 번만 가져오기
     FHitResult HitResult;
-    if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult) && HitResult.bBlockingHit)
+    bool bGotHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+
+    // 회전 처리
+    if (bGotHit && HitResult.bBlockingHit)
     {
         FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
         Direction.Z = 0.f;
-
         if (!Direction.IsNearlyZero())
         {
             FRotator NewRotation = Direction.Rotation();
-
             PlayerCharacter->SetActorRotation(NewRotation);
             Server_SetActorRotation(NewRotation);
         }
     }
 
-    // 마우스 밑에 있는 오브젝트 스캔
-    if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
+    // 아이템 체크 — 히트된 액터가 드롭아이템인지 먼저 확인
+    if (bGotHit && HitResult.GetActor())
     {
-        // 그 오브젝트가 드롭 아이템 액터인가
         APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
         if (TargetItem)
         {
-            // 캐릭터와 아이템 간의 평면(2D) 거리 확인
-            float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
-            if (Distance2D <= 100.0f) // 1미터 이내 범위 판정
-            {
-                // 캐릭터의 인벤토리 컴포넌트를 가져와 아이템 집어넣기
-                if (PlayerCharacter->GetInventoryComponent() &&
-                    PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
-                {
-                    TargetItem->Destroy(); // 월드에서 아이템에셋 삭제
-                    UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
+            float Distance2D = FVector::Dist2D(
+                PlayerCharacter->GetActorLocation(),
+                TargetItem->GetActorLocation()
+            );
 
-                    return; // 아이템을 주웠으므로 공격 로직을 타지 않도록 리턴
-                }
+            if (Distance2D <= 250.f)
+            {
+                TargetItem->Server_RequestPickup(PlayerCharacter); // 서버 RPC
             }
             else
             {
                 UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
-                return; // 거리가 멀어 못 줍는 상태여도 헛공격이 나가지 않도록 잠금
             }
+            return;
         }
     }
 
-    // 아이템 상호작용이 일어나지 않았다면 콤보 공격 연출 실행
+    // 아이템 아닐 때만 공격
     if (PlayerCharacter->bIsAttacking)
     {
         if (PlayerCharacter->bCanCombo)
