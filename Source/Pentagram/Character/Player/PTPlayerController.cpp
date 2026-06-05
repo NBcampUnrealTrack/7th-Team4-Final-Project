@@ -1,4 +1,4 @@
-// PTPlayerController.cpp 
+// PTPlayerController.cpp
 #include "Character/Player/PTPlayerController.h"
 
 #include "CommonActivatableWidget.h"
@@ -6,11 +6,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
-#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Skill/PTSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 APTPlayerController::APTPlayerController()
@@ -24,6 +24,8 @@ void APTPlayerController::BeginPlay()
 {
     Super::BeginPlay();
     UE_LOG(LogTemp, Warning, TEXT("Controller BeginPlay Called"));
+
+    if (!IsLocalPlayerController()) return;
 
     FInputModeGameAndUI InputMode;
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -92,8 +94,10 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
 
         if (IA_Interact)
+        {
             UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
             EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
+        }
 
         if (IA_Skill1) EnhancedInput->BindAction(IA_Skill1, ETriggerEvent::Started, this, &APTPlayerController::OnSkill1);
 
@@ -145,23 +149,19 @@ void APTPlayerController::PlayAttackMontage()
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
-    // [안전장치] 조종중인 캐릭터가 사라져 없거나 이미 죽은 유령 상태라면 마우스 클릭 이동 처리를 완전히 차단 
-    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()); 
-    if (!PC)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("현재 조종중인 캐릭터 액터가 월드에 존재하지 않습니다."));
-        return;
-    }
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
 
     if (PC->bIsAttacking) return;
 
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+    if (!HitResult.bBlockingHit) return;
 
-    if (HitResult.bBlockingHit)
-    {
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location); 
-    }
+    if (!PC || PC->bIsAttacking) return;
+
+    MoveDestination = HitResult.Location;
+    bMoveToDestination = true;
 }
 
 void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
@@ -171,6 +171,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
+    bMoveToDestination = false;
     StopMovement();
 
     // 공격 중이고 콤보 입력 불가 상태면 회전 및 공격 무시
@@ -182,8 +183,12 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     {
         FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
         Direction.Z = 0.f;
-        FRotator NewRotation = Direction.Rotation();
-        PlayerCharacter->SetActorRotation(NewRotation);
+
+        if (!Direction.IsNearlyZero())
+        {
+            FRotator NewRotation = Direction.Rotation();
+            PlayerCharacter->SetActorRotation(NewRotation);
+        }
     }
 
     // 마우스 밑에 있는 오브젝트 스캔
@@ -329,4 +334,31 @@ void APTPlayerController::RemoveUIInputMapping()
 
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
+}
+
+void APTPlayerController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (!bMoveToDestination) return;
+
+    ACharacter* MyChar = Cast<ACharacter>(GetPawn());
+    if (!MyChar) return;
+
+    FVector CurrentLocation = MyChar->GetActorLocation();
+    FVector Direction = MoveDestination - CurrentLocation;
+    Direction.Z = 0.f;
+
+    float Distance = Direction.Size2D();
+
+    if (Distance <= AcceptanceRadius)
+    {
+        bMoveToDestination = false;
+        MyChar->GetCharacterMovement()->StopMovementImmediately();
+        return;
+    }
+
+    FVector MoveDirection = Direction.GetSafeNormal();
+
+    MyChar->AddMovementInput(MoveDirection, 1.f);
 }

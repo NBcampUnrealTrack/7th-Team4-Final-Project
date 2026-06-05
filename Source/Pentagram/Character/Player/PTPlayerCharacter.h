@@ -26,10 +26,10 @@ public:
     TObjectPtr<class UPTSkillComponent> SkillComp;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
-    TObjectPtr<UPTInventoryComponent> InventoryComponent; 
+    TObjectPtr<UPTInventoryComponent> InventoryComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta = (AllowPrivateAccess = "true"))
-    TObjectPtr<UPTEquipmentComponent> EquipmentComponent; 
+    TObjectPtr<UPTEquipmentComponent> EquipmentComponent;
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
@@ -48,11 +48,11 @@ public:
 #pragma endregion
 
     // 플레이어가 F키를 눌렀을 때 호출할 메인 함수
-    void TryInteract(); 
+    void TryInteract();
 
-    // 상호작용의 실제 처리 담당 
+    // 상호작용의 실제 처리 담당
     UFUNCTION(Server, Reliable, WithValidation)
-    void Server_TryInteract(AActor* TargetActor); 
+    void Server_TryInteract(AActor* TargetActor);
 
     //서버에서 스킬이 호출
     UFUNCTION(Server, Reliable)

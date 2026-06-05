@@ -10,7 +10,6 @@ void UAN_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* 
 
     APTPlayerCharacter* OwnerPlayer = Cast<APTPlayerCharacter>(MeshComp->GetOwner());
     if (!OwnerPlayer) return;
-    if (!OwnerPlayer->HasAuthority()) return;
 
     FVector ForwardOffset = OwnerPlayer->GetActorForwardVector() * 150.f;
     FVector HeightOffset = FVector(0.f, 0.f, 50.f);
@@ -25,6 +24,9 @@ void UAN_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* 
     false,          // 지속 여부
     1.f             // 표시 시간(초)
     );
+
+    // 데미지는 서버에서만
+    if (!OwnerPlayer->HasAuthority()) return;
 
     TArray<AActor*> HitActors;
     TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;

@@ -1,22 +1,16 @@
-// PTPlayerCharacter.cpp
 #include "Character/Player/PTPlayerCharacter.h"
 
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Skill/PTSkillComponent.h"
-#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "GameFramework/GameModeBase.h" // 리스폰(GM->RestartPlayer)을 사용하기 위함
-#include "Core/PTGameMode.h" 
+#include "GameFramework/GameModeBase.h"
+#include "Core/PTGameMode.h"
 #include "Net/UnrealNetwork.h"
 #include "PTInventoryComponent.h"
 #include "PTEquipmentComponent.h"
-
-// 충돌 및 디버그 라인을 그리기 위함
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 
@@ -24,6 +18,10 @@
 
 APTPlayerCharacter::APTPlayerCharacter()
 {
+    SetReplicateMovement(true);
+    GetCharacterMovement()->SetIsReplicated(true);
+    bReplicates = true;
+
     SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
     SpringArmComp->SetupAttachment(RootComponent);
     SpringArmComp->TargetArmLength = 1500.f;
@@ -46,7 +44,8 @@ APTPlayerCharacter::APTPlayerCharacter()
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
-    GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
+    GetCharacterMovement()->bUseControllerDesiredRotation = false;
+    GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
     bUseControllerRotationYaw = false;
 }
 
@@ -106,7 +105,7 @@ void APTPlayerCharacter::TryInteract()
     // 공격 중일 때는 차단
     if (bIsAttacking) return;
 
-    // 💡 [안전 보강] PlayerState의 체력 장부를 검사하여 사망 시 차단 처리
+    // PlayerState의 체력 장부를 검사하여 사망 시 차단 처리
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
     if (PS && PS->CurrentHP <= 0) return;
 
@@ -203,13 +202,13 @@ void APTPlayerCharacter::OnDeath()
 
     OnPlayerDied.Broadcast();
 
-    // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동 
+    // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동
     APlayerController* PC = Cast<APlayerController>(GetController());
-    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode()); 
+    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
 
     if (GM && PC)
     {
-        // 죽은 캐릭터와 분리되기 전, 기억해둔 데이터(리스폰 위치)를 백업한다 
+        // 죽은 캐릭터와 분리되기 전, 기억해둔 데이터(리스폰 위치)를 백업한다
         FVector SavedLoc = FVector::ZeroVector;
         bool bHasLoc = false;
 
@@ -220,14 +219,14 @@ void APTPlayerCharacter::OnDeath()
             bHasLoc = true;
         }
 
-        // 백업한 데이터를 게임모드 리스폰 함수 인자에 넣는다 
+        // 백업한 데이터를 게임모드 리스폰 함수 인자에 넣는다
         GM->RespawnPlayer(PC, SavedLoc, bHasLoc);
 
-        // 이제 안심하고 죽은 캐릭터와 분리해도 데이터가 유실되지 않는다 
+        // 이제 안심하고 죽은 캐릭터와 분리해도 데이터가 유실되지 않는다
         PC->UnPossess();
     }
 
-    // 분리되서 껍데기만 남은 캐릭터는 메모리에서 소멸시킨다 
+    // 분리되서 껍데기만 남은 캐릭터는 메모리에서 소멸시킨다
     Destroy();
 }
 
