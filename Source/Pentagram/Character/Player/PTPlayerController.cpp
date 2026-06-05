@@ -110,6 +110,15 @@ void APTPlayerController::SetupInputComponent()
     AddUIInputMapping();
 }
 
+void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRotation)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (PC)
+    {
+        PC->SetActorRotation(NewRotation);
+    }
+}
+
 void APTPlayerController::OnSkill1(const FInputActionValue& Value)
 {
     if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
@@ -143,6 +152,8 @@ void APTPlayerController::PlayAttackMontage()
     PlayerCharacter->bIsAttacking = true;
     PlayerCharacter->bCanCombo = false;
     PlayerCharacter->PlayAnimMontage(PlayerCharacter->AttackMontages[PlayerCharacter->ComboIndex]);
+    PlayerCharacter->Server_PlayAttackMontage(PlayerCharacter->ComboIndex);
+
     PlayerCharacter->ComboIndex++;
 }
 
@@ -177,8 +188,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
 
     FHitResult HitResult;
-    GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-    if (HitResult.bBlockingHit)
+    if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult) && HitResult.bBlockingHit)
     {
         FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
         Direction.Z = 0.f;
@@ -186,7 +196,9 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         if (!Direction.IsNearlyZero())
         {
             FRotator NewRotation = Direction.Rotation();
+
             PlayerCharacter->SetActorRotation(NewRotation);
+            Server_SetActorRotation(NewRotation);
         }
     }
 

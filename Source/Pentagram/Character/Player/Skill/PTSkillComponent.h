@@ -47,6 +47,9 @@ public:
     UFUNCTION(BlueprintCallable)
     float GetCooldownRemaining(int32 SlotIndex) const;
 
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlaySkillMontage(UAnimMontage* Montage);
+
     //DT에서 스킬 데이터 조회
     FPTSkillRow* GetSkillData(FName SkillID) const;
 
