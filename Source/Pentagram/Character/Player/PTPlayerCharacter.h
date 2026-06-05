@@ -34,6 +34,12 @@ public:
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
 
+    UFUNCTION(Server, Reliable)
+    void Server_PlayAttackMontage(int32 MontageIndex);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlayAttackMontage(int32 MontageIndex);
+
 #pragma region 일반 공격 관련
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
