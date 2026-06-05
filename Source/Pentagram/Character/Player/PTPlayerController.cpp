@@ -1,4 +1,3 @@
-// PTPlayerController.cpp 
 #include "Character/Player/PTPlayerController.h"
 
 #include "CommonActivatableWidget.h"
@@ -6,11 +5,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
-#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Skill/PTSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 APTPlayerController::APTPlayerController()
@@ -23,7 +22,7 @@ APTPlayerController::APTPlayerController()
 void APTPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-    UE_LOG(LogTemp, Warning, TEXT("Controller BeginPlay Called"));
+    if (!IsLocalPlayerController()) return;
 
     FInputModeGameAndUI InputMode;
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -145,8 +144,8 @@ void APTPlayerController::PlayAttackMontage()
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
-    // [안전장치] 조종중인 캐릭터가 사라져 없거나 이미 죽은 유령 상태라면 마우스 클릭 이동 처리를 완전히 차단 
-    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()); 
+    // [안전장치] 조종중인 캐릭터가 사라져 없거나 이미 죽은 유령 상태라면 마우스 클릭 이동 처리를 완전히 차단
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC)
     {
         UE_LOG(LogTemp, Warning, TEXT("현재 조종중인 캐릭터 액터가 월드에 존재하지 않습니다."));
@@ -158,10 +157,8 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
-    if (HitResult.bBlockingHit)
-    {
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location); 
-    }
+    MoveDestination = HitResult.Location;
+    bMoveToDestination = true;
 }
 
 void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
@@ -171,6 +168,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
+    bMoveToDestination = false;
     StopMovement();
 
     // 공격 중이고 콤보 입력 불가 상태면 회전 및 공격 무시
@@ -248,6 +246,8 @@ void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APTPlayerController::OnInventoryPressed()
 {
+    if (!IsLocalPlayerController()) return;
+
     ULocalPlayer* LP = GetLocalPlayer();
     if (!LP)
     {
@@ -265,6 +265,8 @@ void APTPlayerController::OnInventoryPressed()
 
 void APTPlayerController::PushInitialHUD()
 {
+    if (!IsLocalPlayerController()) return;
+
     if (!InitialHUDClass)
     {
         return;
@@ -281,6 +283,8 @@ void APTPlayerController::PushInitialHUD()
 
 void APTPlayerController::AddUIInputMapping()
 {
+    if (!IsLocalPlayerController()) return;
+
     if (bUIInputMappingAdded || !IMC_UI)
     {
         return;
@@ -329,4 +333,26 @@ void APTPlayerController::RemoveUIInputMapping()
 
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
+}
+
+void APTPlayerController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (!bMoveToDestination) return;
+
+    ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
+    if (!MyCharacter) return;
+
+    FVector Direction = MoveDestination - MyCharacter->GetActorLocation();
+    Direction.Z = 0.f;
+
+    if (Direction.Size2D() <= AcceptanceRadius)
+    {
+        bMoveToDestination = false;
+        MyCharacter->GetCharacterMovement()->StopMovementImmediately();
+        return;
+    }
+
+    MyCharacter->AddMovementInput(Direction.GetSafeNormal(), 1.f);
 }
