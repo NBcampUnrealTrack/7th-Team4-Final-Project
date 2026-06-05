@@ -99,6 +99,21 @@ void APTPlayerCharacter::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 }
 
+void APTPlayerCharacter::Server_PlayAttackMontage_Implementation(int32 MontageIndex)
+{
+    Multicast_PlayAttackMontage(MontageIndex);
+}
+
+void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 MontageIndex)
+{
+    if (IsLocallyControlled()) return;
+
+    if (AttackMontages.IsValidIndex(MontageIndex))
+    {
+        PlayAnimMontage(AttackMontages[MontageIndex]);
+    }
+}
+
 // 클라이언트/서버 공용 상호작용 시도 함수
 void APTPlayerCharacter::TryInteract()
 {
