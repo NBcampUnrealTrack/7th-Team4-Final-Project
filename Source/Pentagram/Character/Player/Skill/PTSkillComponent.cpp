@@ -107,6 +107,9 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
         false
     );
 
+    // ★ 발동 성공한 이 시점에 소유 클라로 "쿨다운 시작" 통지
+    Client_NotifyCooldownStarted(SlotIndex, SkillData->Cooldown);
+
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
     {
         APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(Owner);
@@ -123,6 +126,10 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
     }
+}
+void UPTSkillComponent::Client_NotifyCooldownStarted_Implementation(int32 SlotIndex, float Duration)
+{
+    OnSkillCooldownStart.Broadcast(SlotIndex, Duration);
 }
 
 void UPTSkillComponent::OnCooldownEnd(int32 SlotIndex)
