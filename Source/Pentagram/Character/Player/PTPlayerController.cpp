@@ -184,7 +184,6 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 
     if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
 
-    // 히트결과 한 번만 가져오기
     FHitResult HitResult;
     bool bGotHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
@@ -199,28 +198,33 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
             PlayerCharacter->SetActorRotation(NewRotation);
             Server_SetActorRotation(NewRotation);
         }
-    }
 
-    // 아이템 체크 — 히트된 액터가 드롭아이템인지 먼저 확인
-    if (bGotHit && HitResult.GetActor())
-    {
+        // 마우스 밑에 있는 오브젝트가 드롭 아이템 액터인가 (재호출 없이 재사용)
         APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
         if (TargetItem)
         {
-            float Distance2D = FVector::Dist2D(
-                PlayerCharacter->GetActorLocation(),
-                TargetItem->GetActorLocation()
-            );
+            // 캐릭터와 아이템 간의 평면(2D) 거리 확인
+            float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
 
-            if (Distance2D <= 250.f)
+            if (Distance2D <= 100.0f) // 1미터 이내 범위 판정
             {
-                TargetItem->Server_RequestPickup(PlayerCharacter); // 서버 RPC
+                // 캐릭터의 인벤토리 컴포넌트를 가져와 아이템 집어넣기
+                if (PlayerCharacter->GetInventoryComponent() &&
+                    PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
+                {
+                    TargetItem->Destroy(); // 월드에서 아이템 에셋 삭제
+                    UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("인벤토리가 가득 찼습니다."));
+                }
             }
             else
             {
                 UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
             }
-            return;
+            return; // 아이템 클릭 시 공격 차단
         }
     }
 
