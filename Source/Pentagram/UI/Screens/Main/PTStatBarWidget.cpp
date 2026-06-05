@@ -21,6 +21,11 @@ void UPTStatBarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
     // 목표값에 도달했으면 종료
     if (FMath::IsNearlyEqual(DisplayCurrent, TargetCurrent, 0.01f))
     {
+        if (DisplayCurrent != TargetCurrent)
+        {
+            DisplayCurrent = TargetCurrent;
+            ApplyDisplay();
+        }
         return;
     }
 
@@ -68,8 +73,8 @@ void UPTStatBarWidget::ApplyDisplay()
     if (Txt_Value)
     {
         const FString Str = FString::Printf(TEXT("%d / %d"),
-            FMath::FloorToInt(DisplayCurrent),
-            FMath::FloorToInt(MaxValue));
+            FMath::RoundToInt(DisplayCurrent),
+            FMath::RoundToInt(MaxValue));
         Txt_Value->SetText(FText::FromString(Str));
     }
 
