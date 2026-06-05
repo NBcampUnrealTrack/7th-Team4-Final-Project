@@ -102,16 +102,77 @@ void APTGameMode::RespawnPlayer(AController* NewPlayer, const FVector& RespawnLo
 
             if (bHasCheckpoint)
             {
-                FVector SpawnLoc = RespawnLoc;
-                SpawnLoc.Z += 150.0f; // 안전 공중 부활 보정
+                // 체크포인트가 있다면 그 지점에서 부활 
+                // 리스폰 지점이 다른 지형지물에 겹쳐서 캐릭터가 낀 채로 부활하는 상황을 방지하기 위한 변수 
+                FVector FinalSpawnLoc = RespawnLoc;
+                bool bFoundSafeSpot = false;
 
-                FActorSpawnParameters SpawnParams;
-                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+                // 캐릭터의 크기에 맞춰서 주변 빈 공간을 탐색하기 위한 가상의 캡슐 형태 정의
+                float TestRadius = 45.0f;
+                float TestHalfHeight = 95.0f;
+                FCollisionShape CharacterShape = FCollisionShape::MakeCapsule(TestRadius, TestHalfHeight);
+
+                FCollisionQueryParams QueryParams;
+                QueryParams.AddIgnoredActor(this);
+
+                // 주변 무작위 빈 공간 탐색 시도 (최대 10번 빙글빙글 돌며 스캔)
+                for (int32 i = 0; i < 10; ++i)
+                {
+                    FVector RandomOffset = FVector::ZeroVector;
+
+                    if (i > 0) // 첫 시도(i=0)에는 정중앙 위를 먼저 보고, 꽉 막혔다면 주변을 탐색
+                    {
+                        // 리스폰 포인트 기준 평면(X, Y) 상으로 150~250 유닛 떨어진 랜덤한 방향 계산
+                        float RandomAngle = FMath::FRandRange(0.0f, 360.0f);
+                        float RandomDistance = FMath::FRandRange(150.0f, 250.0f);
+
+                        RandomOffset.X = FMath::Cos(FMath::DegreesToRadians(RandomAngle)) * RandomDistance;
+                        RandomOffset.Y = FMath::Sin(FMath::DegreesToRadians(RandomAngle)) * RandomDistance;
+                        // 땅에 파묻히지 않도록 높이 보정치 추가
+                        RandomOffset.Z = 50.0f;
+                    }
+
+                    FVector TestLoc = RespawnLoc + RandomOffset;
+                    TestLoc.Z += TestHalfHeight; // 캡슐의 중심점 높이로 정렬
+
+                    // 해당 위치에 장애물이나 벽, 리스폰 포인트 구조물이 겹치는지 엔진 장부 스캔
+                    bool bOverlap = GetWorld()->OverlapBlockingTestByChannel(
+                        TestLoc,
+                        FQuat::Identity,
+                        ECC_Pawn, // 캐릭터들이 충돌하는 채널 기준으로 스캔
+                        CharacterShape,
+                        QueryParams
+                    );
+
+                    if (!bOverlap)
+                    {
+                        // 아무것도 겹치지 않는 완전 안전한 빈 자리를 찾았음
+                        FinalSpawnLoc = TestLoc;
+                        bFoundSafeSpot = true;
+                        break;
+                    }
+                }
+
+                if (!bFoundSafeSpot)
+                {
+                    // 만약 주변 10개 구역이 전부 무언가로 꽉 막혀있다면 최후의 수단으로 공중 부활시킴 
+                    FinalSpawnLoc = RespawnLoc;
+                    FinalSpawnLoc.Z += 300.0f;
+                    UE_LOG(LogTemp, Warning, TEXT("주변 빈 공간을 찾지 못해 강제로 높은 공중에서 부활시킵니다."));
+                }
+                else
+                {
+                    UE_LOG(LogTemp, Log, TEXT("리스폰 포인트 주변의 안전한 빈 자리를 확보했습니다: %s"), *FinalSpawnLoc.ToString());
+                }
+
+                // 빈 공간 검증을 마쳤으므로, 스폰할 때 아주 미세하게 충돌이 밀려나도 무조건 스폰되게 옵션 변경
+                FActorSpawnParameters SpawnParams; 
+                SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
                 SpawnParams.Owner = this;
 
                 if (DefaultPawnClass)
                 {
-                    APawn* NewPawn = GetWorld()->SpawnActor<APawn>(DefaultPawnClass, SpawnLoc, FRotator::ZeroRotator, SpawnParams);
+                    APawn* NewPawn = GetWorld()->SpawnActor<APawn>(DefaultPawnClass, FinalSpawnLoc, FRotator::ZeroRotator, SpawnParams);
                     if (NewPawn)
                     {
                         NewPlayer->Possess(NewPawn);

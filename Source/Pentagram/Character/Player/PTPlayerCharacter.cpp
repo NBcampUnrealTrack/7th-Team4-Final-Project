@@ -198,13 +198,15 @@ void APTPlayerCharacter::OnDeath()
     if (!HasAuthority()) return;
 
     GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
-    if (DeathMontage) PlayAnimMontage(DeathMontage);
-
+    if (DeathMontage)
+    {
+        PlayAnimMontage(DeathMontage);
+    }
     OnPlayerDied.Broadcast();
 
     // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동
-    APlayerController* PC = Cast<APlayerController>(GetController());
-    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
+    class APlayerController* PC = Cast<APlayerController>(GetController());
+    class APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
 
     if (GM && PC)
     {
@@ -212,7 +214,7 @@ void APTPlayerCharacter::OnDeath()
         FVector SavedLoc = FVector::ZeroVector;
         bool bHasLoc = false;
 
-        APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
+        class APTBasePlayerState* PS = PC->GetPlayerState<class APTBasePlayerState>();
         if (PS && PS->HasRespawnLocation())
         {
             SavedLoc = PS->GetSavedRespawnLocation();
