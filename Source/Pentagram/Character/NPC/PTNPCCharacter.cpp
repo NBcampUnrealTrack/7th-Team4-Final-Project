@@ -33,116 +33,63 @@ void APTNPCCharacter::BeginPlay()
 
 void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 {
+    if (!HasAuthority() || !InteractorCharacter) return;
+
     APawn* InteractPawn = Cast<APawn>(InteractorCharacter);
-    APlayerController* InteractPlayerController = InteractPawn != nullptr
-        ? Cast<APlayerController>(InteractPawn->GetController())
-        : nullptr;
+    APlayerController* InteractPlayerController = InteractPawn ? Cast<APlayerController>(InteractPawn->GetController()) : nullptr;
 
-    StartDialogue(InteractPlayerController);
-    ServerInteract(InteractPlayerController);
-}
+    if (InteractPlayerController == nullptr) return;
 
-void APTNPCCharacter::StartDialogue(APlayerController* InteractPlayerController)
-{
-    if (!InteractPlayerController || !IsAvailableForInteraction())
+    // 해당 플레이어의 퀘스트 진척도 업데이트
+    if (!NPCID.IsNone())
     {
-        return;
+        UGameInstance* GameInstance = GetGameInstance();
+        UPTQuestSubsystem* QuestSubsystem = GameInstance ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+        if (QuestSubsystem)
+        {
+            QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
+        }
     }
 
-    SetNPCState(ENPCState::Talking);
+    // 말을 건 플레이어만 대화창 브로드캐스트
     OnDialogueStarted.Broadcast(InteractPlayerController);
 }
 
-void APTNPCCharacter::ServerInteract_Implementation(APlayerController* InteractPlayerController)
-{
-    if (InteractPlayerController == nullptr)
-    {
-        return;
-    }
-
-    if (NPCID.IsNone())
-    {
-        return;
-    }
-
-    UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
-    {
-        return;
-    }
-
-    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem == nullptr)
-    {
-        return;
-    }
-
-    QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
-}
-
+// 퀘스트 수락
 void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
 {
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
-    {
-        return;
-    }
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID)) return;
 
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
+    UPTQuestSubsystem* QuestSubsystem = GameInstance ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+    if (QuestSubsystem)
     {
-        return;
+        QuestSubsystem->AcceptQuest(QuestID);
     }
-
-    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem == nullptr)
-    {
-        return;
-    }
-
-    QuestSubsystem->AcceptQuest(QuestID);
 }
 
+// 퀘스트 보상 
 void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
 {
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
-    {
-        return;
-    }
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID)) return;
 
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
+    UPTQuestSubsystem* QuestSubsystem = GameInstance ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+    if (QuestSubsystem)
     {
-        return;
+        QuestSubsystem->RewardQuest(QuestID);
     }
-
-    UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem == nullptr)
-    {
-        return;
-    }
-
-    QuestSubsystem->RewardQuest(QuestID);
 }
 
-FName APTNPCCharacter::GetNPCID() const
-{
-    return NPCID;
-}
+FName APTNPCCharacter::GetNPCID() const { return NPCID; }
+const TArray<FName>& APTNPCCharacter::GetQuestIDs() const { return QuestIDs; }
 
-const TArray<FName>& APTNPCCharacter::GetQuestIDs() const
-{
-    return QuestIDs;
-}
-
-void APTNPCCharacter::EndDialogue()
-{
-    SetNPCState(ENPCState::Idle);
-    OnDialogueEnded.Broadcast();
-}
-
+// 안전을 위해 범위 진입/이탈 체크도 오직 '서버'에서만 판단하여 해당 유저에게 이벤트를 전송.
 void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+    if (!HasAuthority()) return;
+
     APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
     if (PC)
     {
@@ -153,14 +100,11 @@ void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* Overla
 void APTNPCCharacter::OnInteractionRangeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+    if (!HasAuthority()) return;
+
     APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
     if (PC)
     {
         OnPlayerExitRange.Broadcast(PC);
     }
-}
-
-void APTNPCCharacter::SetNPCState(ENPCState NewState)
-{
-    CurrentState = NewState;
 }

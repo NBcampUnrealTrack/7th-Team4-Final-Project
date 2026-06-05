@@ -162,7 +162,7 @@ void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
 
     // 거리 2차 검증 (핵 방지용 보안 장부 체크)
     float Distance = FVector::Dist(GetActorLocation(), TargetActor->GetActorLocation());
-    if (Distance > 250.0f)
+    if (Distance > 350.0f)
     {
         UE_LOG(LogTemp, Warning, TEXT("[서버 보안 경고] 유저가 너무 먼 곳과 상호작용을 시도함. (거리: %f)"), Distance);
         return;
