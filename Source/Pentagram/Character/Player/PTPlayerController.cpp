@@ -5,11 +5,11 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
-#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Skill/PTSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 APTPlayerController::APTPlayerController()
@@ -22,7 +22,9 @@ APTPlayerController::APTPlayerController()
 void APTPlayerController::BeginPlay()
 {
     Super::BeginPlay();
-    UE_LOG(LogTemp, Warning, TEXT("Controller BeginPlay Called"));
+    if (!IsLocalPlayerController()) return;
+
+    if (!IsLocalPlayerController()) return;
 
     FInputModeGameAndUI InputMode;
     InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
@@ -84,15 +86,17 @@ void APTPlayerController::SetupInputComponent()
     {
         UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
 
-        if (IA_Move) EnhancedInput->BindAction(IA_Move, ETriggerEvent::Started, this, &APTPlayerController::OnRightClick);
+        if (IA_Move) EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerController::OnRightClick);
 
         if (IA_Attack) EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Started, this, &APTPlayerController::OnLeftClick);
 
         if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
 
         if (IA_Interact)
+        {
             UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
             EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
+        }
 
         if (IA_Skill1) EnhancedInput->BindAction(IA_Skill1, ETriggerEvent::Started, this, &APTPlayerController::OnSkill1);
 
@@ -104,6 +108,15 @@ void APTPlayerController::SetupInputComponent()
     }
 
     AddUIInputMapping();
+}
+
+void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRotation)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (PC)
+    {
+        PC->SetActorRotation(NewRotation);
+    }
 }
 
 void APTPlayerController::OnSkill1(const FInputActionValue& Value)
@@ -139,23 +152,26 @@ void APTPlayerController::PlayAttackMontage()
     PlayerCharacter->bIsAttacking = true;
     PlayerCharacter->bCanCombo = false;
     PlayerCharacter->PlayAnimMontage(PlayerCharacter->AttackMontages[PlayerCharacter->ComboIndex]);
+    PlayerCharacter->Server_PlayAttackMontage(PlayerCharacter->ComboIndex);
+
     PlayerCharacter->ComboIndex++;
 }
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->bIsAttacking) return;
+
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+    if (!HitResult.bBlockingHit) return;
 
-    if (HitResult.bBlockingHit)
-    {
-        if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        {
-            if (PC->bIsAttacking) return;
-        }
+    if (!PC || PC->bIsAttacking) return;
 
-        UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, HitResult.Location);
-    }
+    MoveDestination = HitResult.Location;
+    bMoveToDestination = true;
 }
 
 void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
@@ -165,19 +181,25 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
+    bMoveToDestination = false;
     StopMovement();
 
     // 공격 중이고 콤보 입력 불가 상태면 회전 및 공격 무시
     if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
 
     FHitResult HitResult;
-    GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-    if (HitResult.bBlockingHit)
+    if (GetHitResultUnderCursor(ECC_Visibility, false, HitResult) && HitResult.bBlockingHit)
     {
         FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
         Direction.Z = 0.f;
-        FRotator NewRotation = Direction.Rotation();
-        PlayerCharacter->SetActorRotation(NewRotation);
+
+        if (!Direction.IsNearlyZero())
+        {
+            FRotator NewRotation = Direction.Rotation();
+
+            PlayerCharacter->SetActorRotation(NewRotation);
+            Server_SetActorRotation(NewRotation);
+        }
     }
 
     // 마우스 밑에 있는 오브젝트 스캔
@@ -242,6 +264,8 @@ void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void APTPlayerController::OnInventoryPressed()
 {
+    if (!IsLocalPlayerController()) return;
+
     ULocalPlayer* LP = GetLocalPlayer();
     if (!LP)
     {
@@ -259,6 +283,8 @@ void APTPlayerController::OnInventoryPressed()
 
 void APTPlayerController::PushInitialHUD()
 {
+    if (!IsLocalPlayerController()) return;
+
     if (!InitialHUDClass)
     {
         return;
@@ -275,6 +301,8 @@ void APTPlayerController::PushInitialHUD()
 
 void APTPlayerController::AddUIInputMapping()
 {
+    if (!IsLocalPlayerController()) return;
+
     if (bUIInputMappingAdded || !IMC_UI)
     {
         return;
@@ -323,4 +351,26 @@ void APTPlayerController::RemoveUIInputMapping()
 
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
+}
+
+void APTPlayerController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (!bMoveToDestination) return;
+
+    ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
+    if (!MyCharacter) return;
+
+    FVector Direction = MoveDestination - MyCharacter->GetActorLocation();
+    Direction.Z = 0.f;
+
+    if (Direction.Size2D() <= AcceptanceRadius)
+    {
+        bMoveToDestination = false;
+        MyCharacter->GetCharacterMovement()->StopMovementImmediately();
+        return;
+    }
+
+    MyCharacter->AddMovementInput(Direction.GetSafeNormal(), 1.f);
 }

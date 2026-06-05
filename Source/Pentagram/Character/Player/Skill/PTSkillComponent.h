@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTSkillRow.h"
 #include "PTSkillComponent.generated.h"
 
@@ -43,9 +44,18 @@ public:
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillCooldownEnd OnSkillCooldownEnd;
 
+    UPROPERTY(BlueprintAssignable)
+    FPTOnSkillCooldownStart OnSkillCooldownStart;
+
+    UFUNCTION(Client, Reliable)
+    void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
+
     // 슬롯의 남은 쿨다운 시간을 반환
     UFUNCTION(BlueprintCallable)
     float GetCooldownRemaining(int32 SlotIndex) const;
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlaySkillMontage(UAnimMontage* Montage);
 
     //DT에서 스킬 데이터 조회
     FPTSkillRow* GetSkillData(FName SkillID) const;

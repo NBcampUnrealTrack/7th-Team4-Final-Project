@@ -33,6 +33,16 @@ void APTBasePlayerState::OnRep_CurrentExp()
     OnExpChanged.Broadcast(CurrentExp, RequiredExp);
 }
 
+void APTBasePlayerState::OnRep_MaxHP()
+{
+    OnHealthChanged.Broadcast(CurrentHP, MaxHP);
+}
+
+void APTBasePlayerState::OnRep_MaxMP()
+{
+    OnManaChanged.Broadcast(CurrentMP, MaxMP);
+}
+
 void APTBasePlayerState::BroadcastAllStats()
 {
     OnHealthChanged.Broadcast(CurrentHP, MaxHP);
@@ -42,11 +52,11 @@ void APTBasePlayerState::BroadcastAllStats()
     OnGoldChanged.Broadcast(CurrentGold);
 }
 
-// 리스폰 위치를 장부에 기록 
+// 리스폰 위치를 장부에 기록
 void APTBasePlayerState::SetSavedRespawnLocation(const FVector& NewLocation)
 {
-    SavedRespawnLocation = NewLocation; 
-    bHasRespawnLocation = true; 
+    SavedRespawnLocation = NewLocation;
+    bHasRespawnLocation = true;
 }
 
 void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

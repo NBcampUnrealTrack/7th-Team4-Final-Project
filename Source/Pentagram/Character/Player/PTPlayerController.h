@@ -1,3 +1,4 @@
+// PTPlayerController.h
 #pragma once
 
 #include "CoreMinimal.h"
@@ -41,6 +42,8 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill4;
 
+    UFUNCTION(Server, Reliable)
+    void Server_SetActorRotation(FRotator NewRotation);
 
     void OnSkill1(const FInputActionValue& Value);
     void OnSkill2(const FInputActionValue& Value);
@@ -50,13 +53,18 @@ public:
 protected:
     void PlayAttackMontage();
     virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
     virtual void AcknowledgePossession(class APawn* P) override;
 
 private:
+    FVector MoveDestination = FVector::ZeroVector;
+    bool bMoveToDestination = false;
+    static constexpr float AcceptanceRadius = 50.f;
+
     void OnRightClick(const FInputActionValue& Value);
     void OnLeftClick(const FInputActionValue& Value);
-    void OnInteractPressed(); 
+    void OnInteractPressed();
 
     //UI
 

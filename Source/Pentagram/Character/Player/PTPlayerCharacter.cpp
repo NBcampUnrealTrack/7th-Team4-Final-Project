@@ -1,27 +1,27 @@
-// PTPlayerCharacter.cpp 
 #include "Character/Player/PTPlayerCharacter.h"
 
-#include "EnhancedInputComponent.h"
-#include "EnhancedInputSubsystems.h"
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Skill/PTSkillComponent.h"
-#include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/GameModeBase.h"
+#include "Core/PTGameMode.h"
 #include "Net/UnrealNetwork.h"
-#include "PTInventoryComponent.h" 
-#include "PTEquipmentComponent.h" 
-
-// 충돌 및 디버그 라인을 그리기 위함 
+#include "PTInventoryComponent.h"
+#include "PTEquipmentComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 
-#include "Core/Interface/PTInteractableInterface.h" 
+#include "Core/Interface/PTInteractableInterface.h"
 
 APTPlayerCharacter::APTPlayerCharacter()
 {
+    SetReplicateMovement(true);
+    GetCharacterMovement()->SetIsReplicated(true);
+    bReplicates = true;
+
     SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
     SpringArmComp->SetupAttachment(RootComponent);
     SpringArmComp->TargetArmLength = 1500.f;
@@ -31,6 +31,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     SpringArmComp->bInheritRoll = false;
     SpringArmComp->bInheritYaw = false;
     SpringArmComp->bEnableCameraLag = false;
+    SpringArmComp->bDoCollisionTest = false;
     SpringArmComp->SocketOffset = FVector(0.f, 0.f, 200.f);
 
     CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
@@ -43,7 +44,8 @@ APTPlayerCharacter::APTPlayerCharacter()
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 
     GetCharacterMovement()->bOrientRotationToMovement = true;
-    GetCharacterMovement()->RotationRate = FRotator(0.f, 360.f, 0.f);
+    GetCharacterMovement()->bUseControllerDesiredRotation = false;
+    GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
     bUseControllerRotationYaw = false;
 }
 
@@ -59,7 +61,10 @@ void APTPlayerCharacter::PossessedBy(AController* NewController)
         PS->MaxHP = MaxHP;
         PS->CurrentMP = MaxMP;
         PS->MaxMP = MaxMP;
+
+        UE_LOG(LogTemp, Warning, TEXT("MaxHP: %f"), PS->MaxHP);
     }
+
 }
 
 void APTPlayerCharacter::BeginPlay()
@@ -94,13 +99,28 @@ void APTPlayerCharacter::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 }
 
+void APTPlayerCharacter::Server_PlayAttackMontage_Implementation(int32 MontageIndex)
+{
+    Multicast_PlayAttackMontage(MontageIndex);
+}
+
+void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 MontageIndex)
+{
+    if (IsLocallyControlled()) return;
+
+    if (AttackMontages.IsValidIndex(MontageIndex))
+    {
+        PlayAnimMontage(AttackMontages[MontageIndex]);
+    }
+}
+
 // 클라이언트/서버 공용 상호작용 시도 함수
 void APTPlayerCharacter::TryInteract()
 {
     // 공격 중일 때는 차단
     if (bIsAttacking) return;
 
-    // 💡 [안전 보강] PlayerState의 체력 장부를 검사하여 사망 시 차단 처리
+    // PlayerState의 체력 장부를 검사하여 사망 시 차단 처리
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
     if (PS && PS->CurrentHP <= 0) return;
 
@@ -148,7 +168,7 @@ void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
         return;
     }
 
-    // 인터페이스 장착 여부 확인 및 최종 실행 명령 
+    // 인터페이스 장착 여부 확인 및 최종 실행 명령
     if (TargetActor->GetClass()->ImplementsInterface(UPTInteractableInterface::StaticClass()))
     {
         UE_LOG(LogTemp, Log, TEXT("[서버 최종 승인] 인터페이스 실행 성공"));
@@ -160,7 +180,7 @@ bool APTPlayerCharacter::Server_TryInteract_Validate(AActor* TargetActor)
 {
     if (!TargetActor) return false;
     return true;
-} 
+}
 
 void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
 {
@@ -193,13 +213,38 @@ void APTPlayerCharacter::OnDeath()
     if (!HasAuthority()) return;
 
     GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
-
     if (DeathMontage)
     {
         PlayAnimMontage(DeathMontage);
     }
-
     OnPlayerDied.Broadcast();
+
+    // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동
+    class APlayerController* PC = Cast<APlayerController>(GetController());
+    class APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
+
+    if (GM && PC)
+    {
+        // 죽은 캐릭터와 분리되기 전, 기억해둔 데이터(리스폰 위치)를 백업한다
+        FVector SavedLoc = FVector::ZeroVector;
+        bool bHasLoc = false;
+
+        class APTBasePlayerState* PS = PC->GetPlayerState<class APTBasePlayerState>();
+        if (PS && PS->HasRespawnLocation())
+        {
+            SavedLoc = PS->GetSavedRespawnLocation();
+            bHasLoc = true;
+        }
+
+        // 백업한 데이터를 게임모드 리스폰 함수 인자에 넣는다
+        GM->RespawnPlayer(PC, SavedLoc, bHasLoc);
+
+        // 이제 안심하고 죽은 캐릭터와 분리해도 데이터가 유실되지 않는다
+        PC->UnPossess();
+    }
+
+    // 분리되서 껍데기만 남은 캐릭터는 메모리에서 소멸시킨다
+    Destroy();
 }
 
 void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

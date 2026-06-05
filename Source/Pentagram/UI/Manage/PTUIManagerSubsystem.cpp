@@ -67,12 +67,10 @@ void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemov
 
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
 {
-    // 1. 인벤토리가 이미 유효하게 떠 있는 경우 (닫기)
+
     if (InventoryInstance && InventoryInstance->IsActivated())
     {
         InventoryInstance->DeactivateWidget();
-        // 참고: DeactivateWidget이 호출되면 Common UI 스택이
-        // 자동으로 위젯을 관리하므로 여기서 즉시 nullptr을 넣지 마세요.
         return;
     }
 

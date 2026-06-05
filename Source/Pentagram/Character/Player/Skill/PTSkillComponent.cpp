@@ -7,6 +7,7 @@
 UPTSkillComponent::UPTSkillComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
+    SetIsReplicatedByDefault(true);
 
     //스킬 슬롯 초기화
     SkillSlots.Init(NAME_None, 4);
@@ -106,25 +107,29 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
         false
     );
 
+    // ★ 발동 성공한 이 시점에 소유 클라로 "쿨다운 시작" 통지
+    Client_NotifyCooldownStarted(SlotIndex, SkillData->Cooldown);
+
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
     {
-        // 공격 상태 초기화
         APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(Owner);
         if (PlayerCharacter)
         {
             PlayerCharacter->bIsAttacking = false;
             PlayerCharacter->bCanCombo = false;
             PlayerCharacter->ComboIndex = 0;
-            Owner->StopAnimMontage(); // 공격 몽타주 정지
+            Owner->StopAnimMontage();
         }
-
-        UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 실행: %s"), *Montage->GetName());
-        Owner->PlayAnimMontage(Montage);
+        Multicast_PlaySkillMontage(Montage);
     }
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
     }
+}
+void UPTSkillComponent::Client_NotifyCooldownStarted_Implementation(int32 SlotIndex, float Duration)
+{
+    OnSkillCooldownStart.Broadcast(SlotIndex, Duration);
 }
 
 void UPTSkillComponent::OnCooldownEnd(int32 SlotIndex)
@@ -141,6 +146,16 @@ float UPTSkillComponent::GetCooldownRemaining(int32 SlotIndex) const
 
     return GetWorld()->GetTimerManager().GetTimerRemaining(CooldownTimers[SlotIndex]);
     //쿨다운이 끝났을 때 발행하는 델리게이트
+}
+
+void UPTSkillComponent::Multicast_PlaySkillMontage_Implementation(UAnimMontage* Montage)
+{
+    if (!Montage) return;
+
+    APTBaseCharacter* Owner = Cast<APTBaseCharacter>(GetOwner());
+    if (!Owner) return;
+
+    Owner->PlayAnimMontage(Montage);
 }
 
 

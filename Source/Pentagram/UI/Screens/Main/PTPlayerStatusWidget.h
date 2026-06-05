@@ -26,6 +26,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Status|Debug")
     void DebugSetAll(float Hp, float MaxHp, float Mp, float MaxMp, float Exp, float ReqExp);
 
+    bool bInitialStatsApplied = false;
 protected:
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
@@ -50,6 +51,7 @@ private:
     /** 빙의된 폰이 바뀔 때 호출 (위젯이 떴는데 폰이 아직 없거나 교체된 경우) */
     UFUNCTION()
     void HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
+    void RefreshStatsUntilValid();
 
     UPROPERTY(Transient)
     TWeakObjectPtr<APTBaseCharacter> BoundCharacter;

@@ -1,7 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "PTPlayerStatusWidget.h"
+﻿#include "PTPlayerStatusWidget.h"
 #include "PTHealthBarwidget.h"
 #include "PTExpBarWidget.h"
 #include "PTManaBarWidget.h"
@@ -14,21 +11,17 @@
 void UPTPlayerStatusWidget::NativeConstruct()
 {
     Super::NativeConstruct();
-
-    // 위젯 생성 시 플레이어 폰 바인딩 시도
     TryBindFromOwningPawn();
 }
 
 void UPTPlayerStatusWidget::NativeDestruct()
 {
-    // 위젯 소멸 시 컨트롤러 델리게이트 해제
     if (BoundPC.IsValid())
     {
         BoundPC->OnPossessedPawnChanged.RemoveDynamic(this, &UPTPlayerStatusWidget::HandlePossessedPawnChanged);
         BoundPC.Reset();
     }
 
-    // 캐릭터 바인딩 해제
     UnbindFromCharacter();
     Super::NativeDestruct();
 }
@@ -38,7 +31,7 @@ void UPTPlayerStatusWidget::TryBindFromOwningPawn()
     APlayerController* PC = GetOwningPlayer();
     if (!PC) return;
 
-    // 빙의(Possess) 변경 이벤트 1회 등록 (멀티플레이/로딩 지연 대비)
+    // 빙의 변경 이벤트 1회 등록 (멀티플레이/로딩 지연 대비)
     if (BoundPC.Get() != PC)
     {
         if (BoundPC.IsValid())
@@ -49,7 +42,6 @@ void UPTPlayerStatusWidget::TryBindFromOwningPawn()
         PC->OnPossessedPawnChanged.AddDynamic(this, &UPTPlayerStatusWidget::HandlePossessedPawnChanged);
     }
 
-    // 폰이 이미 존재하면 즉시 바인딩 (없으면 위에서 등록한 이벤트가 나중에 처리함)
     if (APTBaseCharacter* Char = Cast<APTBaseCharacter>(PC->GetPawn()))
     {
         BindToCharacter(Char);
@@ -58,7 +50,6 @@ void UPTPlayerStatusWidget::TryBindFromOwningPawn()
 
 void UPTPlayerStatusWidget::HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn)
 {
-    // 조종하는 폰이 바뀌면 기존 해제 후 새 폰에 바인딩
     UnbindFromCharacter();
 
     if (APTBaseCharacter* Char = Cast<APTBaseCharacter>(NewPawn))
@@ -69,47 +60,62 @@ void UPTPlayerStatusWidget::HandlePossessedPawnChanged(APawn* OldPawn, APawn* Ne
 
 void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
 {
-    // 유효성 검사 및 중복 바인딩 방지
-    if (!InCharacter || BoundCharacter.Get() == InCharacter)
+    if (!InCharacter || BoundCharacter.Get() == InCharacter) return;
+
+    APTBasePlayerState* PS = InCharacter->GetPlayerState<APTBasePlayerState>();
+    if (!PS)
     {
+        // PlayerState가 아직 복제/링크 안 됨 → BoundCharacter는 건드리지 않고 다음 틱 재시도
+        GetWorld()->GetTimerManager().SetTimerForNextTick(
+            FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::TryBindFromOwningPawn));
         return;
     }
 
     UnbindFromCharacter();
     BoundCharacter = InCharacter;
 
-    APTBasePlayerState* PS = InCharacter->GetPlayerState<APTBasePlayerState>();
-    if (!PS)
-    {
-        GetWorld()->GetTimerManager().SetTimerForNextTick(
-            FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::TryBindFromOwningPawn));
-        return;
-    }
-
     if (HealthBar) HealthBar->SetupPlayerState(PS);
     if (ManaBar)   ManaBar->SetupPlayerState(PS);
     if (ExpBar)    ExpBar->SetupPlayerState(PS);
 
-    // 바인딩 직후 현재 값 강제 반영
-    PS->BroadcastAllStats();
+    // 초기 동기화 재시작: 스탯 값이 복제될 때까지 폴링
+    bInitialStatsApplied = false;
+    RefreshStatsUntilValid();
+}
+
+void UPTPlayerStatusWidget::RefreshStatsUntilValid()
+{
+    if (bInitialStatsApplied) return;            // 최초 1회 성공 후 영구 종료 (죽음/런타임과 무관)
+
+    APTBaseCharacter* C = BoundCharacter.Get();
+    if (!C) return;
+
+    APTBasePlayerState* PS = C->GetPlayerState<APTBasePlayerState>();
+    if (!PS) return;
+
+    if (PS->MaxHP > 0.f)                         // 스탯 복제 도착 확인
+    {
+        PS->BroadcastAllStats();
+        bInitialStatsApplied = true;
+        return;
+    }
+
+    // 아직 미도착 → 다음 틱 재시도
+    GetWorld()->GetTimerManager().SetTimerForNextTick(
+        FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::RefreshStatsUntilValid));
 }
 
 void UPTPlayerStatusWidget::UnbindFromCharacter()
 {
-    // 바인딩된 캐릭터가 없으면 무시
-    if (!BoundCharacter.IsValid())
-    {
-        return;
-    }
-
-    APTBaseCharacter* C = BoundCharacter.Get();
+    if (!BoundCharacter.IsValid()) return;
 
     BoundCharacter.Reset();
+    // 각 StatBar는 SetupPlayerState(새 PS) 시 이전 PS를 자동 해제하고,
+    // 위젯 소멸 시엔 각 바의 NativeDestruct에서 해제됩니다.
 }
 
 void UPTPlayerStatusWidget::DebugSetAll(float Hp, float MaxHp, float Mp, float MaxMp, float Exp, float ReqExp)
 {
-    // 디버그 테스트용: 모든 스탯 바 UI 강제 업데이트
     if (HealthBar) HealthBar->SetValue(Hp, MaxHp);
     if (ManaBar)   ManaBar->SetValue(Mp, MaxMp);
     if (ExpBar)    ExpBar->SetValue(Exp, ReqExp);
