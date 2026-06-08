@@ -96,6 +96,8 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Skill3) EnhancedInput->BindAction(IA_Skill3, ETriggerEvent::Started, this, &APTPlayerController::OnSkill3);
 
         if (IA_Skill4) EnhancedInput->BindAction(IA_Skill4, ETriggerEvent::Started, this, &APTPlayerController::OnSkill4);
+
+        if (IA_Dodge) EnhancedInput->BindAction(IA_Dodge, ETriggerEvent::Started, this, &APTPlayerController::OnDodge);
     }
 
     AddUIInputMapping();
@@ -132,6 +134,18 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
 {
     if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
         PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
+}
+
+void APTPlayerController::OnDodge(const FInputActionValue& Value)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC || !PC->DodgeMontage) return;
+
+    bMoveToDestination = false;
+    StopMovement();
+
+    PC->PlayAnimMontage(PC->DodgeMontage);
+    PC->Server_Dodge();
 }
 
 void APTPlayerController::PlayAttackMontage()

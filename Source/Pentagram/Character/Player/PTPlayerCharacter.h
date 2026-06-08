@@ -40,6 +40,23 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttackMontage(int32 MontageIndex);
 
+#pragma region 닷지 관련
+
+    // 무적 여부
+    UPROPERTY(VisibleAnywhere, Category ="Dodge")
+    bool bIsInvincible = false;
+
+    UPROPERTY(EditAnywhere, Category = "Anim")
+    TObjectPtr<UAnimMontage> DodgeMontage;
+
+    UFUNCTION(Server, Reliable)
+    void Server_Dodge();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlayDodgeMontage();
+
+#pragma endregion
+
 #pragma region 일반 공격 관련
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")

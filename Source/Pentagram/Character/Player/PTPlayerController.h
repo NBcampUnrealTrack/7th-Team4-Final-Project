@@ -43,6 +43,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill4;
 
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_Dodge;
+
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);
 
@@ -54,6 +57,8 @@ public:
     void OnSkill2(const FInputActionValue& Value);
     void OnSkill3(const FInputActionValue& Value);
     void OnSkill4(const FInputActionValue& Value);
+
+    void OnDodge(const FInputActionValue& Value);
 
 protected:
     void PlayAttackMontage();

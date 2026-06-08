@@ -25,7 +25,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
     SpringArmComp->SetupAttachment(RootComponent);
     SpringArmComp->TargetArmLength = 1500.f;
-    SpringArmComp->SetRelativeRotation(FRotator(-55.f, 0.f, 0.f));
+    SpringArmComp->SetRelativeRotation(FRotator(-55.f, 45.f, 0.f));
     SpringArmComp->bUsePawnControlRotation = false;
     SpringArmComp->bInheritPitch = false;
     SpringArmComp->bInheritRoll = false;
@@ -112,6 +112,17 @@ void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 Montag
     {
         PlayAnimMontage(AttackMontages[MontageIndex]);
     }
+}
+
+void APTPlayerCharacter::Server_Dodge_Implementation()
+{
+    Multicast_PlayDodgeMontage();
+}
+
+void APTPlayerCharacter::Multicast_PlayDodgeMontage_Implementation()
+{
+    if (IsLocallyControlled()) return;
+    PlayAnimMontage(DodgeMontage);
 }
 
 // 클라이언트/서버 공용 상호작용 시도 함수

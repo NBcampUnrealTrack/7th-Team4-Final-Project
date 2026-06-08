@@ -51,11 +51,12 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<USoundBase> SkillSound;
 
+    // 타격 지점 사운드
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+    TSoftObjectPtr<USoundBase> SkillHitSound;
+
     // 스킬 발동 시 실행할 이펙트
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<UNiagaraSystem> SkillEffect;
 
-    // 타격 지점 나이아가라
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
-    TSoftObjectPtr<UNiagaraSystem> SkillHitSound;
 };

@@ -3,6 +3,7 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
 #include "Character/Player/PTPlayerCharacter.h"
+#include "NiagaraFunctionLibrary.h"
 
 UPTSkillComponent::UPTSkillComponent()
 {
@@ -120,7 +121,10 @@ void UPTSkillComponent::TryActivateSkill(FName SkillID)
             PlayerCharacter->ComboIndex = 0;
             Owner->StopAnimMontage();
         }
-        Multicast_PlaySkillMontage(Montage);
+
+        UNiagaraSystem* Effect = SkillData->SkillEffect.LoadSynchronous();
+        USoundBase* Sound = SkillData->SkillSound.LoadSynchronous();
+        Multicast_PlaySkillMontage(Montage, Effect, Sound);
     }
     else
     {
@@ -148,14 +152,32 @@ float UPTSkillComponent::GetCooldownRemaining(int32 SlotIndex) const
     //쿨다운이 끝났을 때 발행하는 델리게이트
 }
 
-void UPTSkillComponent::Multicast_PlaySkillMontage_Implementation(UAnimMontage* Montage)
+void UPTSkillComponent::Multicast_PlaySkillMontage_Implementation(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound)
 {
     if (!Montage) return;
 
     APTBaseCharacter* Owner = Cast<APTBaseCharacter>(GetOwner());
     if (!Owner) return;
 
+    // 몽타주 재생
     Owner->PlayAnimMontage(Montage);
+
+    FVector SkillOffset = FVector::ZeroVector;
+    const FPTSkillRow* SkillData = GetSkillData(CurrentSkillID);
+    if (SkillData)
+    {
+        SkillOffset = SkillData->SkillOffset;
+    }
+
+    //스킬 사전 위치
+    FVector SpawnLocation = Owner->GetActorLocation() + Owner->GetActorRotation().RotateVector(SkillOffset);
+    FRotator SpawnRotation = Owner->GetActorRotation();
+
+    // 나이아가라 이펙토
+    if (Effect)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), Effect, SpawnLocation, SpawnRotation);
+    }
 }
 
 
