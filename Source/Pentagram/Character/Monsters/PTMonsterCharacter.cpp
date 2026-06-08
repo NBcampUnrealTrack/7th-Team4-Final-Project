@@ -1,6 +1,5 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
 
-// ── 프로젝트 — 몬스터 ────────────────────────────────────────
 #include "Character/Monsters/PTMonsterAIController.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
@@ -29,6 +28,7 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     if (HasAuthority())
     {
         RegisterDamageContributor(Attacker);
+        OnHPChanged.Broadcast(CurrentHP, MaxHP);
     }
 
     return FinalDamage;
@@ -259,6 +259,11 @@ void APTMonsterCharacter::OnDeath()
 float APTMonsterCharacter::GetAttackDamage() const
 {
     return BaseAtk;
+}
+
+void APTMonsterCharacter::OnRep_CurrentHP()
+{
+    OnHPChanged.Broadcast(CurrentHP, MaxHP);
 }
 
 void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)

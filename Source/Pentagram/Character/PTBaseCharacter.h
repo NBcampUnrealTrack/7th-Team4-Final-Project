@@ -23,10 +23,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Combat")
     virtual void OnDeath();
 
+    UFUNCTION()
+    virtual void OnRep_CurrentHP();
+
     UPROPERTY(EditAnywhere, Category = "Data")
     FDataTableRowHandle CharacterDataHandle;
 
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, VisibleAnywhere, Category = "Stats")
     float CurrentHP;   // 현재 체력
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
     float MaxHP;       // 최대 체력
