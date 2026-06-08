@@ -1,6 +1,6 @@
-#include "Character/Monsters/PTMonsterAIController.h"
+﻿#include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
-#include "Character/Monsters/PTMonsterBlackboardKeys.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "BehaviorTree/BehaviorTree.h"

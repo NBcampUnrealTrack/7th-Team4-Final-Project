@@ -1,6 +1,6 @@
-#include "Character/Monsters/PTMonsterCharacter.h"
+﻿#include "Character/Monsters/PTMonsterCharacter.h"
 
-#include "Character/Monsters/PTMonsterAIController.h"
+#include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Core/PTRewardSubsystem.h"
