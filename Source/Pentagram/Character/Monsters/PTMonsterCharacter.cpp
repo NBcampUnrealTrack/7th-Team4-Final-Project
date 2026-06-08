@@ -133,13 +133,12 @@ float APTMonsterCharacter::StartAttack()
         return 1.f;
     }
 
-    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-    if (!IsValid(AnimInstance) || !IsValid(AttackMontage))
-    {
-        return 1.f;
-    }
+    const float Duration = AttackMontage->GetPlayLength();
 
-    const float Duration = AnimInstance->Montage_Play(AttackMontage);
+    if (HasAuthority())
+    {
+        Multicast_PlayAttackMontage(AttackMontage);
+    }
 
     return Duration > 0.f ? Duration : 1.f;
 }
@@ -169,6 +168,25 @@ void APTMonsterCharacter::OnRep_CurrentState()
     }
 }
 
+void APTMonsterCharacter::Multicast_PlayAttackMontage_Implementation(UAnimMontage* MontageToPlay)
+{
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!IsValid(MeshComp))
+    {
+        return;
+    }
+
+    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+    if (!IsValid(AnimInstance) || !IsValid(MontageToPlay))
+    {
+        return;
+    }
+
+    AnimInstance->Montage_Play(MontageToPlay);
+
+    UE_LOG(LogTemp, Log, TEXT("[Monster] Multicast Play Montage: %s"), *GetNameSafe(MontageToPlay));
+}
+
 FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
 {
     FPTMonsterRewardData Data;
@@ -178,6 +196,7 @@ FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
     Data.EquipDropRate      = EquipDropRate;
     Data.GoldPickupClass    = GoldPickupClass;
     Data.EquipmentDropClass = EquipmentDropClass;
+    Data.ItemRowHandle      = ItemRowHandle;
 
     return Data;
 }
@@ -318,5 +337,13 @@ float APTMonsterCharacter::PlayDeathMontage()
         return 0.f;
     }
 
-    return AnimInstance->Montage_Play(DeathMontage);
+    const float PlayResult = AnimInstance->Montage_Play(DeathMontage);
+
+    FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveMontageInstance();
+    if (MontageInstance)
+    {
+        MontageInstance->bEnableAutoBlendOut = false;
+    }
+
+    return PlayResult;
 }

@@ -55,18 +55,6 @@ float APTBossMonsterCharacter::StartAttack()
 {
     HitActors.Empty();
 
-    USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!MeshComp)
-    {
-        return 1.f;
-    }
-
-    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-    if (!AnimInstance)
-    {
-        return 1.f;
-    }
-
     const int32 Phase = GetCurrentPhase();
     UAnimMontage* Montage = GetAttackMontageForPhase(Phase);
     if (!Montage)
@@ -74,7 +62,13 @@ float APTBossMonsterCharacter::StartAttack()
         return 1.f;
     }
 
-    const float Duration = AnimInstance->Montage_Play(Montage);
+    const float Duration = Montage->GetPlayLength();
+
+    if (HasAuthority())
+    {
+        Multicast_PlayAttackMontage(Montage);
+    }
+
     return Duration > 0.f ? Duration : 1.f;
 }
 

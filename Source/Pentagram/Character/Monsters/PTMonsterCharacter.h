@@ -8,6 +8,7 @@
 #include "PTMonsterCharacter.generated.h"
 
 class UAnimMontage;
+struct FDataTableRowHandle;
 class APTBasePlayerState;
 
 UCLASS()
@@ -43,6 +44,9 @@ public:
 
     UFUNCTION()
     void OnRep_CurrentState();
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayAttackMontage(UAnimMontage* MontageToPlay);
 
     FPTMonsterRewardData GetRewardData() const;
 
@@ -119,6 +123,9 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
     TSubclassOf<AActor> EquipmentDropClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
+    FDataTableRowHandle ItemRowHandle;
 
     TSet<TWeakObjectPtr<APTBasePlayerState>> ExpContributors;
 
