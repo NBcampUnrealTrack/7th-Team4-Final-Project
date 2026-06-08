@@ -8,6 +8,7 @@
 APTDropItemActorBase::APTDropItemActorBase()
 { 
 	PrimaryActorTick.bCanEverTick = false;
+    bReplicates = true;
 
     // 충돌 체 구축 (기획서 상 1미터 이내 접근을 위함, 반경 100cm 설정)
     CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
@@ -30,12 +31,26 @@ APTDropItemActorBase::APTDropItemActorBase()
 }
 
 
+void APTDropItemActorBase::SetItemData(const FItemData& InItemData)
+{
+    InstanceItemData = InItemData;
+}
+
+void APTDropItemActorBase::RefreshItemVisual()
+{
+    OnItemDataSet();
+}
+
 void APTDropItemActorBase::BeginPlay()
 {
 	Super::BeginPlay();
     InitializeItemData(); 
 }
 
+
+void APTDropItemActorBase::OnItemDataSet()
+{
+}
 
 void APTDropItemActorBase::InitializeItemData()
 {
