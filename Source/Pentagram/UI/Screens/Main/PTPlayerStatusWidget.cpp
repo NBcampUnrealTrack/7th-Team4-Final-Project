@@ -1,7 +1,7 @@
 ﻿#include "PTPlayerStatusWidget.h"
-#include "PTHealthBarwidget.h"
-#include "PTExpBarWidget.h"
-#include "PTManaBarWidget.h"
+#include "Player/PTHealthBarwidget.h"
+#include "Player/PTExpBarWidget.h"
+#include "Player/PTManaBarWidget.h"
 #include "Character/PTBaseCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/Player/PTPlayerCharacter.h"
@@ -65,7 +65,6 @@ void UPTPlayerStatusWidget::BindToCharacter(APTBaseCharacter* InCharacter)
     APTBasePlayerState* PS = InCharacter->GetPlayerState<APTBasePlayerState>();
     if (!PS)
     {
-        // PlayerState가 아직 복제/링크 안 됨 → BoundCharacter는 건드리지 않고 다음 틱 재시도
         GetWorld()->GetTimerManager().SetTimerForNextTick(
             FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::TryBindFromOwningPawn));
         return;
@@ -100,7 +99,6 @@ void UPTPlayerStatusWidget::RefreshStatsUntilValid()
         return;
     }
 
-    // 아직 미도착 → 다음 틱 재시도
     GetWorld()->GetTimerManager().SetTimerForNextTick(
         FTimerDelegate::CreateUObject(this, &UPTPlayerStatusWidget::RefreshStatsUntilValid));
 }
@@ -110,8 +108,6 @@ void UPTPlayerStatusWidget::UnbindFromCharacter()
     if (!BoundCharacter.IsValid()) return;
 
     BoundCharacter.Reset();
-    // 각 StatBar는 SetupPlayerState(새 PS) 시 이전 PS를 자동 해제하고,
-    // 위젯 소멸 시엔 각 바의 NativeDestruct에서 해제됩니다.
 }
 
 void UPTPlayerStatusWidget::DebugSetAll(float Hp, float MaxHp, float Mp, float MaxMp, float Exp, float ReqExp)

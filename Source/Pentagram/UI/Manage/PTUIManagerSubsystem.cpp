@@ -1,7 +1,7 @@
 ﻿
 
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Screens/Main/PTHUDWidget.h"
+#include "UI/Screens/Main/Player/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
@@ -34,12 +34,10 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
 {
     if (!WidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PushWidget: WidgetClass가 null"));
         return nullptr;
     }
     if(!PrimaryLayout.IsValid())
     {
-        UE_LOG(LogTemp, Warning, TEXT("PushWidget: PrimaryLayout.가 null"));
         return nullptr;
     }
 
@@ -49,7 +47,6 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
     if (!Stack)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PushWidget: Stack가 null"));
         return nullptr;
     }
     return Stack->AddWidget(WidgetClass);
@@ -67,25 +64,27 @@ void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemov
 
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
 {
+    if (!InventoryClass) return;
 
-    if (InventoryInstance && InventoryInstance->IsActivated())
-    {
-        InventoryInstance->DeactivateWidget();
-        return;
-    }
+    bool bIsInventoryOpen = false;
 
-    // 2. 인벤토리가 없거나, 닫혀 있는 경우 (열기)
-    // 인벤토리가 닫혀있다면(IsValid()가 false이거나 Deactivated 상태) 새로 Push
-    InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
-
-    // [중요] 생성된 후 바로 활성화해주어야 Common UI가 입력을 받습니다.
     if (InventoryInstance)
     {
-        InventoryInstance->ActivateWidget();
-        UE_LOG(LogTemp, Warning, TEXT(">> 인벤토리 활성화 완료!"));
+        if (InventoryInstance->IsActivated() || InventoryInstance->IsInViewport())
+        {
+            bIsInventoryOpen = true;
+        }
+    }
+    if (bIsInventoryOpen)
+    {
+        RemoveWidget(InventoryInstance);
+        InventoryInstance = nullptr;
+
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT(">> 인벤토리 Push 실패!"));
+        InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
     }
+
+
 }
