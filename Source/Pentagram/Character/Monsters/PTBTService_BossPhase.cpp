@@ -40,5 +40,6 @@ void UPTBTService_BossPhase::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
     if (NewPhase > CurrentPhase)
     {
         BB->SetValueAsInt(PTMonsterBlackboardKeys::BossPhase, NewPhase);
+        Boss->OnPhaseChanged.Broadcast(NewPhase);
     }
 }

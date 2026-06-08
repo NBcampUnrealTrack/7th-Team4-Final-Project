@@ -24,6 +24,9 @@ public:
     */
     UAnimMontage* GetAttackMontageForPhase(int32 Phase) const;
 
+    UPROPERTY(BlueprintAssignable, Category = "PT|Boss|UI")
+    FPTOnBossPhaseChanged OnPhaseChanged;
+
 protected:
     virtual float StartAttack() override;
     virtual void StopAttack() override;

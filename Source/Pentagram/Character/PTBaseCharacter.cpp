@@ -62,6 +62,11 @@ void APTBaseCharacter::OnDeath()
     //사망 애니메이션 재생은 각 파생 클래스에서 구현해주세요.
 }
 
+void APTBaseCharacter::OnRep_CurrentHP()
+{
+
+}
+
 void APTBaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();

@@ -4,6 +4,7 @@
 #include "Character/PTBaseCharacter.h"
 #include "PTMonsterState.h"
 #include "PTMonsterRewardData.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTMonsterCharacter.generated.h"
 
 class UAnimMontage;
@@ -47,12 +48,16 @@ public:
 
     void ClearExpContributors();
 
+    UPROPERTY(BlueprintAssignable, Category = "PT|Monster|UI")
+    FPTOnBossHealthChanged OnHPChanged;
+
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void OnDeath() override;
     virtual float GetAttackDamage() const;
+    virtual void OnRep_CurrentHP() override;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentState, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     EMonsterState CurrentState = EMonsterState::Idle;
