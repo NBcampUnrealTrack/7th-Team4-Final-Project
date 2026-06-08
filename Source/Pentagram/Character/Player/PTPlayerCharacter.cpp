@@ -13,6 +13,7 @@
 #include "PTEquipmentComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+
 #include "Core/Interface/PTInteractableInterface.h"
 
 APTPlayerCharacter::APTPlayerCharacter()
@@ -24,7 +25,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
     SpringArmComp->SetupAttachment(RootComponent);
     SpringArmComp->TargetArmLength = 1500.f;
-    SpringArmComp->SetRelativeRotation(FRotator(-55.f, 45.f, 0.f));
+    SpringArmComp->SetRelativeRotation(FRotator(-55.f, 0.f, 0.f));
     SpringArmComp->bUsePawnControlRotation = false;
     SpringArmComp->bInheritPitch = false;
     SpringArmComp->bInheritRoll = false;
@@ -37,7 +38,8 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
     CameraComp->bUsePawnControlRotation = false;
 
-    SkillComp          = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+    SkillComp = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 
@@ -56,12 +58,13 @@ void APTPlayerCharacter::PossessedBy(AController* NewController)
     if (PS)
     {
         PS->CurrentHP = MaxHP;
-        PS->MaxHP     = MaxHP;
+        PS->MaxHP = MaxHP;
         PS->CurrentMP = MaxMP;
-        PS->MaxMP     = MaxMP;
+        PS->MaxMP = MaxMP;
 
         UE_LOG(LogTemp, Warning, TEXT("MaxHP: %f"), PS->MaxHP);
     }
+
 }
 
 void APTPlayerCharacter::BeginPlay()
@@ -96,54 +99,22 @@ void APTPlayerCharacter::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 }
 
-void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+void APTPlayerCharacter::Server_PlayAttackMontage_Implementation(int32 MontageIndex)
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    Multicast_PlayAttackMontage(MontageIndex);
 }
 
-void APTPlayerCharacter::OnDeath()
+void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 MontageIndex)
 {
-    Super::OnDeath();
+    if (IsLocallyControlled()) return;
 
-    if (!HasAuthority()) return;
-
-    GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
-
-    if (DeathMontage)
+    if (AttackMontages.IsValidIndex(MontageIndex))
     {
-        PlayAnimMontage(DeathMontage);
+        PlayAnimMontage(AttackMontages[MontageIndex]);
     }
-
-    OnPlayerDied.Broadcast();
-
-    // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동
-    class APlayerController* PC = Cast<APlayerController>(GetController());
-    class APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
-
-    if (GM && PC)
-    {
-        // 죽은 캐릭터와 분리되기 전, 기억해둔 데이터(리스폰 위치)를 백업한다
-        FVector SavedLoc = FVector::ZeroVector;
-        bool bHasLoc = false;
-
-        class APTBasePlayerState* PS = PC->GetPlayerState<class APTBasePlayerState>();
-        if (PS && PS->HasRespawnLocation())
-        {
-            SavedLoc = PS->GetSavedRespawnLocation();
-            bHasLoc = true;
-        }
-
-        // 백업한 데이터를 게임모드 리스폰 함수 인자에 넣는다
-        GM->RespawnPlayer(PC, SavedLoc, bHasLoc);
-
-        // 이제 안심하고 죽은 캐릭터와 분리해도 데이터가 유실되지 않는다
-        PC->UnPossess();
-    }
-
-    // 분리되서 껍데기만 남은 캐릭터는 메모리에서 소멸시킨다
-    Destroy();
 }
 
+// 클라이언트/서버 공용 상호작용 시도 함수
 void APTPlayerCharacter::TryInteract()
 {
     // 공격 중일 때는 차단
@@ -154,9 +125,9 @@ void APTPlayerCharacter::TryInteract()
     if (PS && PS->CurrentHP <= 0) return;
 
     // 1. 레이저(Line Trace) 시작점과 끝점 계산
-    FVector StartLoc   = GetActorLocation();
+    FVector StartLoc = GetActorLocation();
     FVector ForwardVec = GetActorForwardVector();
-    FVector EndLoc     = StartLoc + (ForwardVec * 200.0f);
+    FVector EndLoc = StartLoc + (ForwardVec * 200.0f);
 
     FHitResult HitResult;
     FCollisionQueryParams QueryParams;
@@ -219,32 +190,6 @@ void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
     {
         SkillComp->TryActivateSkill(SkillID);
     }
-}
-
-void APTPlayerCharacter::Server_PlayAttackMontage_Implementation(int32 MontageIndex)
-{
-    Multicast_PlayAttackMontage(MontageIndex);
-}
-
-void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 MontageIndex)
-{
-    if (IsLocallyControlled()) return;
-
-    if (AttackMontages.IsValidIndex(MontageIndex))
-    {
-        PlayAnimMontage(AttackMontages[MontageIndex]);
-    }
-}
-
-void APTPlayerCharacter::Server_Dodge_Implementation()
-{
-    Multicast_PlayDodgeMontage();
-}
-
-void APTPlayerCharacter::Multicast_PlayDodgeMontage_Implementation()
-{
-    if (IsLocallyControlled()) return;
-    PlayAnimMontage(DodgeMontage);
 }
 
 void APTPlayerCharacter::RegenHP()
