@@ -32,9 +32,6 @@ public:
     void ApplyDeathPenalty(APTBasePlayerState* PlayerState);       // 사망 패널티
     void SetProgress(APTBasePlayerState* PlayerState, int32 NewLevel, int32 NewExp);
 
-    FPTNativeOnExpChanged OnExpChanged;
-    FPTNativeOnLevelUp OnLevelUp;
-
 private:
     void LevelUp(APTBasePlayerState* PlayerState);                  // 레벨업 처리
     int32 CalculateRequiredExp(int32 PlayerLevel) const;
@@ -45,4 +42,8 @@ private:
     TMap<int32, int32> RequiredExpByLevel;
 
     int32 DeathPenaltyExp = 0;
+
+public:
+    FPTNativeOnExpChanged OnExpChanged;
+    FPTNativeOnLevelUp OnLevelUp;
 };
