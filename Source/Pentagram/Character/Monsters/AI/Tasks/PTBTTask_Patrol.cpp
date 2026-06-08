@@ -1,6 +1,6 @@
-#include "Character/Monsters/PTBTTask_Patrol.h"
+﻿#include "Character/Monsters/AI/Tasks/PTBTTask_Patrol.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
-#include "Character/Monsters/PTMonsterBlackboardKeys.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
 #include "NavigationSystem.h"

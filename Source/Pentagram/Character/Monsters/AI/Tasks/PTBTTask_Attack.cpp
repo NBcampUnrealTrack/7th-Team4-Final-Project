@@ -1,6 +1,6 @@
-#include "Character/Monsters/PTBTTask_Attack.h"
+﻿#include "Character/Monsters/AI/Tasks/PTBTTask_Attack.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
-#include "Character/Monsters/PTMonsterBlackboardKeys.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Character/Monsters/PTMonsterState.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
