@@ -47,11 +47,6 @@ void APTDropItemActorBase::BeginPlay()
     InitializeItemData(); 
 }
 
-
-void APTDropItemActorBase::OnItemDataSet()
-{
-}
-
 void APTDropItemActorBase::InitializeItemData()
 {
     if (ItemRowHandle.DataTable != nullptr && !ItemRowHandle.RowName.IsNone())
