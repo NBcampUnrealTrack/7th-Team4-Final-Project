@@ -24,15 +24,6 @@ void APTPlayerController::BeginPlay()
     Super::BeginPlay();
     if (!IsLocalPlayerController()) return;
 
-    if (!IsLocalPlayerController()) return;
-
-    FInputModeGameAndUI InputMode;
-    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-    InputMode.SetHideCursorDuringCapture(false);
-    SetInputMode(InputMode);
-
-    UE_LOG(LogTemp, Warning, TEXT("SetInputMode Called"));
-
     AddUIInputMapping();
 
     if (PrimaryLayoutClass)

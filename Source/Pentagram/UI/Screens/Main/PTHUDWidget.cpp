@@ -11,14 +11,10 @@ UPTHUDWidget::UPTHUDWidget(const FObjectInitializer& ObjectInitializer)
     bIsBackHandler = false;
 }
 
-TOptional<FUIInputConfig> UPTHUDWidget::GetDesiredInputConfig() const
-{
-    return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
-}
-
 void UPTHUDWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
+
 }
 
 void UPTHUDWidget::NativeOnDeactivated()
