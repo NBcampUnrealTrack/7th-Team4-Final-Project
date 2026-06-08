@@ -5,6 +5,7 @@
 
 #include "Character/Player/PTBasePlayerState.h"
 #include "Kismet/GameplayStatics.h"
+#include "PTPlayerLevelSubsystem.h"
 #include "PTQuestSubsystem.h"
 #include "PTSaveGame.h"
 
@@ -69,11 +70,6 @@ void UPTSaveSubsystem::PlayerStateSaveData(const APTBasePlayerState* PlayerState
 void UPTSaveSubsystem::QuestSaveData()
 {
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
-    {
-        return;
-    }
-
     UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem != nullptr)
     {
@@ -89,6 +85,15 @@ void UPTSaveSubsystem::PlayerStateLoadData(APTBasePlayerState* PlayerState) cons
     }
 
     PlayerState->CurrentGold = FMath::Max(SaveData.Gold, 0);
+
+    UPTPlayerLevelSubsystem* PlayerLevelSubsystem =
+        GetGameInstance()->GetSubsystem<UPTPlayerLevelSubsystem>();
+    if (PlayerLevelSubsystem != nullptr)
+    {
+        PlayerLevelSubsystem->SetProgress(PlayerState, SaveData.Level, SaveData.Exp);
+        return;
+    }
+
     PlayerState->PlayerLevel = FMath::Max(SaveData.Level, 1);
     PlayerState->CurrentExp = FMath::Max(SaveData.Exp, 0);
     PlayerState->RequiredExp = FMath::Max(PlayerState->PlayerLevel, 1) * 100;
@@ -97,11 +102,6 @@ void UPTSaveSubsystem::PlayerStateLoadData(APTBasePlayerState* PlayerState) cons
 void UPTSaveSubsystem::QuestLoadData() const
 {
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
-    {
-        return;
-    }
-
     UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem != nullptr)
     {

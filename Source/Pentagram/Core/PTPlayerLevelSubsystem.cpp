@@ -4,6 +4,38 @@
 #include "PTPlayerLevelSubsystem.h"
 
 #include "Character/Player/PTBasePlayerState.h"
+#include "Engine/DataTable.h"
+
+void UPTPlayerLevelSubsystem::SetLevelDataTable(UDataTable* InLevelDataTable)
+{
+    LevelDataTable = InLevelDataTable;
+    RebuildLevelDataMap();
+}
+
+void UPTPlayerLevelSubsystem::RebuildLevelDataMap()
+{
+    RequiredExpByLevel.Empty();
+
+    if (LevelDataTable == nullptr)
+    {
+        return;
+    }
+
+    TArray<FPTLevelDataRow*> LevelRows;
+    LevelDataTable->GetAllRows<FPTLevelDataRow>(TEXT("Level Data Map"), LevelRows);
+
+    for (const FPTLevelDataRow* LevelRow : LevelRows)
+    {
+        if (LevelRow == nullptr)
+        {
+            continue;
+        }
+
+        const int32 PlayerLevel = FMath::Max(LevelRow->PlayerLevel, 1);
+        const int32 RequiredExp = FMath::Max(LevelRow->RequiredExp, 1);
+        RequiredExpByLevel.Add(PlayerLevel, RequiredExp);
+    }
+}
 
 void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpAmount)
 {
@@ -12,10 +44,7 @@ void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpA
         return;
     }
 
-    if (PlayerState->RequiredExp <= 0)
-    {
-        PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
-    }
+    PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
 
     PlayerState->CurrentExp += ExpAmount;
 
@@ -103,5 +132,12 @@ void UPTPlayerLevelSubsystem::SetProgress(APTBasePlayerState* PlayerState, int32
 
 int32 UPTPlayerLevelSubsystem::CalculateRequiredExp(int32 PlayerLevel) const
 {
-    return FMath::Max(PlayerLevel, 1) * 100;
+    const int32 SafePlayerLevel = FMath::Max(PlayerLevel, 1);
+    const int32* RequiredExp = RequiredExpByLevel.Find(SafePlayerLevel);
+    if (RequiredExp != nullptr)
+    {
+        return *RequiredExp;
+    }
+
+    return SafePlayerLevel * 100;
 }
