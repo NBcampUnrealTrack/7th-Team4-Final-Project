@@ -1,12 +1,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Engine/DataTable.h"
 #include "PTMonsterRewardData.generated.h"
 
 class AActor;
 class APTGoldPickup;
-class APTDropItemActorBase;
 
 USTRUCT(BlueprintType)
 struct FPTMonsterRewardData
@@ -29,8 +27,5 @@ struct FPTMonsterRewardData
     TSubclassOf<APTGoldPickup> GoldPickupClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Reward")
-    TSubclassOf<APTDropItemActorBase> EquipmentDropClass;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Reward")
-    FDataTableRowHandle ItemRowHandle;
+    TSubclassOf<AActor> EquipmentDropClass;
 };

@@ -4,8 +4,6 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "Core/PTPlayerLevelSubsystem.h"
 #include "Item/PTGoldPickup.h"
-#include "Item/PTDropItemActorBase.h"
-#include "Item/PTItemTypes.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 
@@ -77,11 +75,6 @@ void UPTRewardSubsystem::GiveExpToContributors(APTMonsterCharacter* DeadMonster)
 
 void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
 {
-    if (!DeadMonster)
-    {
-        return;
-    }
-
     UWorld* World = GetWorld();
     if (!World)
     {
@@ -110,32 +103,11 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
 
     if (RewardData.EquipmentDropClass && FMath::FRand() <= RewardData.EquipDropRate)
     {
-        if (!RewardData.ItemRowHandle.DataTable || RewardData.ItemRowHandle.RowName.IsNone())
-        {
-            return;
-        }
-
-        if (!RewardData.ItemRowHandle.DataTable || RewardData.ItemRowHandle.RowName.IsNone())
-        {
-            return;
-        }
-
-        const FItemData* ItemData = RewardData.ItemRowHandle.DataTable->FindRow<FItemData>(RewardData.ItemRowHandle.RowName, TEXT("SpawnDeathDrops"));
-
-        if (!ItemData)
-        {
-            return;
-        }
-
-        APTDropItemActorBase* DropActor = World->SpawnActorDeferred<APTDropItemActorBase>(RewardData.EquipmentDropClass, FTransform(DropLocation));
-        if (!DropActor)
-        {
-            return;
-        }
-
-        DropActor->SetItemData(*ItemData);
-        DropActor->FinishSpawning(FTransform(DropLocation));
-        DropActor->RefreshItemVisual();
+        World->SpawnActor<AActor>(
+            RewardData.EquipmentDropClass,
+            DropLocation,
+            FRotator::ZeroRotator
+        );
 
         UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 장비 드랍 스폰"));
     }

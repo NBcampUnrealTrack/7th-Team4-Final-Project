@@ -1,6 +1,7 @@
-﻿#include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/Monsters/PTMonsterCharacter.h"
 
-#include "Character/Monsters/AI/PTMonsterAIController.h"
+// ── 프로젝트 — 몬스터 ────────────────────────────────────────
+#include "Character/Monsters/PTMonsterAIController.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Core/PTRewardSubsystem.h"
@@ -28,7 +29,6 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     if (HasAuthority())
     {
         RegisterDamageContributor(Attacker);
-        OnHPChanged.Broadcast(CurrentHP, MaxHP);
     }
 
     return FinalDamage;
@@ -133,12 +133,13 @@ float APTMonsterCharacter::StartAttack()
         return 1.f;
     }
 
-    const float Duration = AttackMontage->GetPlayLength();
-
-    if (HasAuthority())
+    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+    if (!IsValid(AnimInstance) || !IsValid(AttackMontage))
     {
-        Multicast_PlayAttackMontage(AttackMontage);
+        return 1.f;
     }
+
+    const float Duration = AnimInstance->Montage_Play(AttackMontage);
 
     return Duration > 0.f ? Duration : 1.f;
 }
@@ -168,25 +169,6 @@ void APTMonsterCharacter::OnRep_CurrentState()
     }
 }
 
-void APTMonsterCharacter::Multicast_PlayAttackMontage_Implementation(UAnimMontage* MontageToPlay)
-{
-    USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!IsValid(MeshComp))
-    {
-        return;
-    }
-
-    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-    if (!IsValid(AnimInstance) || !IsValid(MontageToPlay))
-    {
-        return;
-    }
-
-    AnimInstance->Montage_Play(MontageToPlay);
-
-    UE_LOG(LogTemp, Log, TEXT("[Monster] Multicast Play Montage: %s"), *GetNameSafe(MontageToPlay));
-}
-
 FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
 {
     FPTMonsterRewardData Data;
@@ -196,7 +178,6 @@ FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
     Data.EquipDropRate      = EquipDropRate;
     Data.GoldPickupClass    = GoldPickupClass;
     Data.EquipmentDropClass = EquipmentDropClass;
-    Data.ItemRowHandle      = ItemRowHandle;
 
     return Data;
 }
@@ -280,11 +261,6 @@ float APTMonsterCharacter::GetAttackDamage() const
     return BaseAtk;
 }
 
-void APTMonsterCharacter::OnRep_CurrentHP()
-{
-    OnHPChanged.Broadcast(CurrentHP, MaxHP);
-}
-
 void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
 {
     if (!DamageCauser)
@@ -337,13 +313,5 @@ float APTMonsterCharacter::PlayDeathMontage()
         return 0.f;
     }
 
-    const float PlayResult = AnimInstance->Montage_Play(DeathMontage);
-
-    FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveMontageInstance();
-    if (MontageInstance)
-    {
-        MontageInstance->bEnableAutoBlendOut = false;
-    }
-
-    return PlayResult;
+    return AnimInstance->Montage_Play(DeathMontage);
 }

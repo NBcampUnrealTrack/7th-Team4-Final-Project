@@ -23,12 +23,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Item Data")
     FORCEINLINE FItemData GetItemData() const { return InstanceItemData; }
 
-    UFUNCTION(BlueprintCallable, Category = "PT|Item Data")
-    void SetItemData(const FItemData& InItemData);
-
-    UFUNCTION(BlueprintCallable, Category = "PT|Item Data")
-    void RefreshItemVisual();
-
 protected:
 	virtual void BeginPlay() override;
 
@@ -46,9 +40,6 @@ protected:
     // 실제 이 액터가 품고 있는 아이템 데이터
     UPROPERTY(BlueprintReadOnly, Category = "Item Data")
     FItemData InstanceItemData;
-
-    UFUNCTION(BlueprintImplementableEvent, Category = "PT|Item Data")
-    void OnItemDataSet();
 
     // 데이터 테이블로부터 초기화하는 함수
     void InitializeItemData();

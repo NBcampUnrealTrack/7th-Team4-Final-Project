@@ -65,12 +65,6 @@ struct FItemData : public FTableRowBase
     // Rare 등급 옵션 목록
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     TArray<FString> Item_Bonus_Options;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual")
-    TSoftObjectPtr<UStaticMesh> ItemMeshAsset;    // ← 추가
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Visual")
-    TSoftObjectPtr<UTexture2D> ItemIconAsset;
 };
 
 // 인벤토리 한 칸을 담당할 구조체 
