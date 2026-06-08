@@ -5,7 +5,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
-#include "UI/Screens/Main/PTHUDWidget.h"
+#include "UI/Screens/Main/Player/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 
 void APTHUD::BeginPlay()

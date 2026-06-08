@@ -1,7 +1,7 @@
 ﻿
 
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Screens/Main/PTHUDWidget.h"
+#include "UI/Screens/Main/Player/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
