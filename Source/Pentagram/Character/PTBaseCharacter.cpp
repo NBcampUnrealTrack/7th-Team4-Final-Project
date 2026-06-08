@@ -4,6 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/Player/PTBasePlayerState.h"
+#include "Player/PTPlayerCharacter.h"
 
 APTBaseCharacter::APTBaseCharacter()
 {
@@ -14,6 +15,12 @@ APTBaseCharacter::APTBaseCharacter()
 float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 {
     if (!HasAuthority()) return 0.f;
+
+    //플레이어가 닷지 상태일 때 무적 판정을 체크함
+    if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(this))
+    {
+        if (Player->bIsInvincible) return 0.f;
+    }
 
     // 데미지 계산
     float FinalDamage = FMath::Max(DamageAmount - BaseDef, 1.f);
