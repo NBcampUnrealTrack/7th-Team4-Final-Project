@@ -54,6 +54,7 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> InventoryInstance;
 
+
 public:
     /** 인벤토리 열기/닫기 토글. 컨트롤러에서 클래스 넘김. */
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
