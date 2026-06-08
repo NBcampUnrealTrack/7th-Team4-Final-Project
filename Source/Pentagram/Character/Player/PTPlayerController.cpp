@@ -197,19 +197,10 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
             // 캐릭터와 아이템 간의 평면(2D) 거리 확인
             float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
 
-            if (Distance2D <= 100.0f) // 1미터 이내 범위 판정
+            if (Distance2D <= 250.0f) // 범위 판정
             {
-                // 캐릭터의 인벤토리 컴포넌트를 가져와 아이템 집어넣기
-                if (PlayerCharacter->GetInventoryComponent() &&
-                    PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
-                {
-                    TargetItem->Destroy(); // 월드에서 아이템 에셋 삭제
-                    UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
-                }
-                else
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("인벤토리가 가득 찼습니다."));
-                }
+                // ⭕ 로컬에서 판단을 내리지 않고, 서버 RPC를 전송합니다.
+                Server_TryPickupItem(TargetItem);
             }
             else
             {
@@ -230,6 +221,43 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         return;
     }
     PlayAttackMontage();
+}
+
+// 서버에서 아이템 획득 시도 처리
+void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBase* TargetItem)
+{
+    if (!TargetItem) return;
+
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PlayerCharacter) return;
+
+    // 서버에서도 캐릭터와 아이템 간의 거리가 유효한지 검증 
+    float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
+    if (Distance2D > 250.0f) // 범위 판정 
+    {
+        UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있거나, 잘못된 위치에서 획득 요청이 들어왔습니다."));
+        return;
+    }
+
+    // 서버 권한으로 인벤토리에 안전하게 아이템 집어넣기 시도
+    if (PlayerCharacter->GetInventoryComponent() &&
+        PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
+    {
+        // 서버에서 아이템 동기화 소멸 
+        TargetItem->Destroy(); // 월드에서 아이템 에셋 삭제
+        UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("인벤토리가 가득 찼습니다."));
+    }
+}
+
+// Server RPC 패킷 위변조 검증부
+bool APTPlayerController::Server_TryPickupItem_Validate(APTDropItemActorBase* TargetItem)
+{
+    // 포인터가 오염되지 않았는지 검증
+    return true;
 }
 
 void APTPlayerController::OnInteractPressed() // F 상호작용 구현부

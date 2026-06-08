@@ -32,14 +32,14 @@ void UPTInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps); 
 
-    // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동으로 동기화(복제)시킴. 
+    // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동 동기화. 
     DOREPLIFETIME(UPTInventoryComponent, InventorySlots);
 }
 
 
 bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count)
 {
-    // [멀티플레이어 보안] 아이템 획득(추가) 연산은 무조건 '서버'에서만 수행되어야 합니다. 
+    // [멀티플레이어] 아이템 획득 연산은 무조건 '서버'에서만 수행되어야 합니다. 
     if (!GetOwner()->HasAuthority()) return false;
 
     // 유효하지 않은 데이터나 수량 방어 코드
