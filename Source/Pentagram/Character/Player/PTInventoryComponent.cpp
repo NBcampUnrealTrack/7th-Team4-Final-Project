@@ -1,57 +1,52 @@
-
 #include "PTInventoryComponent.h"
-#include "Character/PTBaseCharacter.h" // 캐릭터 내부 HP 변수에 접근
 
-#include "Net/UnrealNetwork.h" 
-
-
+#include "Character/PTBaseCharacter.h"
+#include "Net/UnrealNetwork.h"
 
 UPTInventoryComponent::UPTInventoryComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = false;
 
-    // 네트워크 리플리케이트 활성화 
+    // 네트워크 리플리케이트 활성화
     SetIsReplicatedByDefault(true);
 }
 
-
 void UPTInventoryComponent::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
-    // [네트워크 최적화] 슬롯 초기화는 '서버'에서만 수행해도 리플리케이션을 통해 클라이언트에 전달되게 함. 
+    // [네트워크 최적화] 슬롯 초기화는 '서버'에서만 수행해도 리플리케이션을 통해 클라이언트에 전달됨.
     if (GetOwner()->HasAuthority())
     {
-        // 게임 시작 시 30칸의 빈 슬롯을 미리 확보. 
-        InventorySlots.Init(FInventorySlot(), MaxSlotCount); 
+        // 게임 시작 시 30칸의 빈 슬롯을 미리 확보.
+        InventorySlots.Init(FInventorySlot(), MaxSlotCount);
     }
 }
 
-// 변수 리플리케이트 규칙 정의 
+// 변수 리플리케이트 규칙 정의
 void UPTInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps); 
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동 동기화. 
+    // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동 동기화.
     DOREPLIFETIME(UPTInventoryComponent, InventorySlots);
 }
 
-
 bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count)
 {
-    // [멀티플레이어] 아이템 획득 연산은 무조건 '서버'에서만 수행되어야 합니다. 
+    // [멀티플레이어] 아이템 획득 연산은 무조건 '서버'에서만 수행되어야 합니다.
     if (!GetOwner()->HasAuthority()) return false;
 
     // 유효하지 않은 데이터나 수량 방어 코드
-    if (NewItemData.Item_ID.IsNone() || Count <= 0) return false; 
+    if (NewItemData.Item_ID.IsNone() || Count <= 0) return false;
 
-    // 소비 아이템인 경우 기존에 같은 아이템이 있는지 먼저 확인 
+    // 소비 아이템인 경우 기존에 같은 아이템이 있는지 먼저 확인
     if (NewItemData.Item_Category == EItemCategory::Consumable)
     {
         int32 TargetIndex = FindSameItemSlot(NewItemData.Item_ID);
         if (TargetIndex != INDEX_NONE)
         {
-            // 기존 슬롯을 찾았다면 수량만 증가 (스택 규칙 적용) 
+            // 기존 슬롯을 찾았다면 수량만 증가 (스택 규칙 적용)
             InventorySlots[TargetIndex].Quantity += Count;
 
             UE_LOG(LogTemp, Log, TEXT("[인벤토리] 기존 슬롯에 수량 추가: %s (+%d개, 총 %d개)"),
@@ -79,6 +74,102 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
     // 가방이 가득 차서 추가 실패
     UE_LOG(LogTemp, Warning, TEXT("[인벤토리] 가방 공간이 부족하여 아이템을 추가할 수 없습니다: %s"), *NewItemData.Item_Name.ToString());
     return false;
+}
+
+bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션) 사용
+{
+    // 슬롯 인덱스 유효성 검사 및 빈 슬롯 검사
+    if (!InventorySlots.IsValidIndex(SlotIndex) || InventorySlots[SlotIndex].IsEmpty()) return false;
+
+    // 카테고리가 포션(Consumable)이 맞는지 확인
+    if (InventorySlots[SlotIndex].ItemData.Item_Category != EItemCategory::Consumable)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("소비 아이템이 아닙니다."));
+        return false;
+    }
+
+    // [멀티플레이어 핵심 분기]
+    // 클라이언트가 UI에서 우클릭 등으로 이 함수를 호출한 경우, 직접 개수를 깎으면 데이터 변조 위험이 있으므로 결정권을 서버한테 넘기는 방식
+    if (!GetOwner()->HasAuthority())
+    {
+        // 클라이언트가 서버에게 안전하게 "나 몇 번 슬롯 물약 쓰겠다" 라고 무전(RPC)을 보내고 리턴.
+        Server_UsePotion(SlotIndex);
+        return true;
+    }
+
+    // 소비 아이템 개수 차감
+    InventorySlots[SlotIndex].Quantity--;
+
+    // 수량이 0 이하가 되었다면 완전히 빈 슬롯으로 초기화
+    if (InventorySlots[SlotIndex].Quantity <= 0)
+    {
+        InventorySlots[SlotIndex] = FInventorySlot();
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("%s 아이템 사용. 남은 수량: %d개"),
+        *InventorySlots[SlotIndex].ItemData.Item_Name.ToString(), InventorySlots[SlotIndex].Quantity);
+
+    // 가방 상황 로그 출력
+    PrintInventoryLog();
+
+    // 5초 동안 매초 서서히 회복되는 타이머 가동
+    GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle); // 기존에 돌던 포션 타이머가 있다면 초기화
+    PotionTickCount = 0;                                         // 틱 카운터 초기화
+
+    // 1초마다 ExecutePotionHealing 함수를 반복 호출 (총 5회)
+    GetWorld()->GetTimerManager().SetTimer(PotionTimerHandle, this, &UPTInventoryComponent::ExecutePotionHealing, 1.0f, true);
+
+    return true;
+}
+
+// Server RPC 실제 실행부
+void UPTInventoryComponent::Server_UsePotion_Implementation(int32 SlotIndex)
+{
+    // 서버 권한으로 진입했으므로 UsePotion 함수를 다시 호출해 서버 데이터를 공식 차감하고 타이머를 켭니다.
+    UsePotion(SlotIndex);
+}
+
+// Server RPC 검증부 (잘못된 요청이나 핵유저 방지 필터)
+bool UPTInventoryComponent::Server_UsePotion_Validate(int32 SlotIndex)
+{
+    // 음수 인덱스나 가방 크기를 초과하는 기괴한 슬롯 패킷 차단
+    if (SlotIndex < 0 || SlotIndex >= MaxSlotCount)
+    {
+        return false; // 패킷 변조로 판단하고 해당 유저 접속을 강제 종료시킬 수 있음
+    }
+    return true;
+}
+
+void UPTInventoryComponent::ExecutePotionHealing() // 포션 회복
+{
+    // 이 코드를 실행하는게 서버가 아니라면 함수를 즉시 리턴
+    if (!GetOwner()->HasAuthority()) return;
+
+    // 이 컴포넌트를 들고 있는 주인(캐릭터) 가져오기
+    APTBaseCharacter* OwnerCharacter = Cast<APTBaseCharacter>(GetOwner());
+    if (!OwnerCharacter)
+    {
+        GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle);
+        return;
+    }
+
+    PotionTickCount++;
+
+    // 매초 전체 HP의 5%씩 회복
+    float HealAmount = OwnerCharacter->MaxHP * 0.05f;
+
+    // 현재 체력이 최대 체력을 넘지 않도록 회복
+    OwnerCharacter->CurrentHP = FMath::Min(OwnerCharacter->CurrentHP + HealAmount, OwnerCharacter->MaxHP);
+
+    UE_LOG(LogTemp, Log, TEXT("[포션 틱 %d회차] 5%% 회복 (+%.1f) -> 현재 HP: %.1f / %.1f"),
+        PotionTickCount, HealAmount, OwnerCharacter->CurrentHP, OwnerCharacter->MaxHP);
+
+    // 5초(5번 틱)가 지나면 타이머 종료
+    if (PotionTickCount >= 5)
+    {
+        GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle);
+        UE_LOG(LogTemp, Log, TEXT("[포션 효과 끝남]"));
+    }
 }
 
 int32 UPTInventoryComponent::FindSameItemSlot(const FName& ItemID) const
@@ -122,101 +213,5 @@ void UPTInventoryComponent::PrintInventoryLog()
                 (int32)InventorySlots[i].ItemData.Item_Type);
         }
     }
-    UE_LOG(LogTemp, Log, TEXT("======================================")); 
-}
-
-bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션) 사용 
-{
-    // 슬롯 인덱스 유효성 검사 및 빈 슬롯 검사
-    if (!InventorySlots.IsValidIndex(SlotIndex) || InventorySlots[SlotIndex].IsEmpty()) return false;
-
-    // 카테고리가 포션(Consumable)이 맞는지 확인
-    if (InventorySlots[SlotIndex].ItemData.Item_Category != EItemCategory::Consumable)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("소비 아이템이 아닙니다."));
-        return false;
-    }
-
-    // [멀티플레이어 핵심 분기] 
-    // 클라이언트가 UI에서 우클릭 등으로 이 함수를 호출한 경우, 직접 개수를 깎으면 데이터 변조 위험이 있으므로 결정권을 서버한테 넘기는 방식 
-    if (!GetOwner()->HasAuthority()) 
-    {
-        // 클라이언트가 서버에게 안전하게 "나 몇 번 슬롯 물약 쓰겠다" 라고 무전(RPC)을 보내고 리턴. 
-        Server_UsePotion(SlotIndex); 
-        return true;
-    }
-
-    // 소비 아이템 개수 차감 
-    InventorySlots[SlotIndex].Quantity--;
-
-    // 수량이 0이하가 되었다면 완전히 빈 슬롯으로 비워주기 위한 초기화 처리
-    if (InventorySlots[SlotIndex].Quantity <= 0)
-    {
-        InventorySlots[SlotIndex] = FInventorySlot();
-    }
-
-    UE_LOG(LogTemp, Log, TEXT("%s 아이템 사용. 남은 수량: %d개"), 
-        *InventorySlots[SlotIndex].ItemData.Item_Name.ToString(), InventorySlots[SlotIndex].Quantity);
-
-    // 가방 상황 로그 출력 
-    PrintInventoryLog(); 
-
-    // 5초 동안 매초 서서히 회복되는 타이머 가동 
-    GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle); // 기존에 돌던 포션 타이머가 있다면 초기화 
-    PotionTickCount = 0; // 틱 카운터 초기화 
-
-    // 1초마다 ExecutePotionHealing 함수를 반복 호출 (총 5회)
-    GetWorld()->GetTimerManager().SetTimer(PotionTimerHandle, this, &UPTInventoryComponent::ExecutePotionHealing, 1.0f, true);
-
-    return true;
-}
-
-// Server RPC 실제 실행부 
-void UPTInventoryComponent::Server_UsePotion_Implementation(int32 SlotIndex)
-{
-    // 서버 권한으로 진입했으므로 UsePotion 함수를 다시 호출해 서버 데이터를 공식 차감하고 타이머를 켭니다.
-    UsePotion(SlotIndex);
-}
-
-// Server RPC 검증부 (잘못된 요청이나 핵유저 방지 필터) 
-bool UPTInventoryComponent::Server_UsePotion_Validate(int32 SlotIndex)
-{
-    // 음수 인덱스나 가방 크기를 초과하는 기괴한 슬롯 패킷 차단
-    if (SlotIndex < 0 || SlotIndex >= MaxSlotCount)
-    {
-        return false; // 패킷 변조로 판단하고 해당 유저 접속을 강제 종료시킬 수 있음
-    }
-    return true;
-}
-
-void UPTInventoryComponent::ExecutePotionHealing() // 포션 회복  
-{
-    // 이 코드를 실행하는게 서버가 아니라면 함수를 즉시 리턴 
-    if (!GetOwner()->HasAuthority()) return; 
-
-    // 이 컴포넌트를 들고 있는 주인(캐릭터) 가져오기
-    APTBaseCharacter* OwnerCharacter = Cast<APTBaseCharacter>(GetOwner());
-    if (!OwnerCharacter)
-    {
-        GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle);
-        return;
-    }
-
-    PotionTickCount++;
-
-    // 매초 전체 HP의 5%씩 회복 
-    float HealAmount = OwnerCharacter->MaxHP * 0.05f;
-
-    // 현재 체력이 최대 체력을 넘지 않도록 회복 
-    OwnerCharacter->CurrentHP = FMath::Min(OwnerCharacter->CurrentHP + HealAmount, OwnerCharacter->MaxHP);
-
-    UE_LOG(LogTemp, Log, TEXT("[포션 틱 %d회차] 5%% 회복 (+%.1f) -> 현재 HP: %.1f / %.1f"),
-        PotionTickCount, HealAmount, OwnerCharacter->CurrentHP, OwnerCharacter->MaxHP);
-
-    // 5초(5번 틱)가 지나면 타이머 종료 
-    if (PotionTickCount >= 5)
-    {
-        GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle);
-        UE_LOG(LogTemp, Log, TEXT("[포션 효과 끝남]"));
-    }
+    UE_LOG(LogTemp, Log, TEXT("======================================"));
 }
