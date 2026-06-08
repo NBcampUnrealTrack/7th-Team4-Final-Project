@@ -22,18 +22,17 @@ void APTGameMode::BeginPlay()
     Super::BeginPlay();
 
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
-    {
-        return;
-    }
-
     UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem == nullptr)
+    if (QuestSubsystem != nullptr)
     {
-        return;
+        QuestSubsystem->SetQuestDataTable(QuestDataTable);
     }
 
-    QuestSubsystem->SetQuestDataTable(QuestDataTable);
+    UPTPlayerLevelSubsystem* PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
+    if (PlayerLevelSubsystem != nullptr)
+    {
+        PlayerLevelSubsystem->SetLevelDataTable(LevelDataTable);
+    }
 }
 
 void APTGameMode::PostLogin(APlayerController* NewPlayer)
@@ -197,11 +196,6 @@ void APTGameMode::DistributeExp(int32 ExpAmount)
     }
 
     UGameInstance* GameInstance = GetGameInstance();
-    if (GameInstance == nullptr)
-    {
-        return;
-    }
-
     UPTPlayerLevelSubsystem* PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
     if (PlayerLevelSubsystem == nullptr)
     {
@@ -265,8 +259,17 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
 
     PlayerState->PlayerLevel = FMath::Max(PlayerState->PlayerLevel, 1);
     PlayerState->CurrentExp = FMath::Max(PlayerState->CurrentExp, 0);
-    PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
     PlayerState->CurrentGold = FMath::Max(PlayerState->CurrentGold, 0);
+
+    UPTPlayerLevelSubsystem* PlayerLevelSubsystem =
+        GetGameInstance()->GetSubsystem<UPTPlayerLevelSubsystem>();
+    if (PlayerLevelSubsystem != nullptr)
+    {
+        PlayerLevelSubsystem->SetProgress(PlayerState, PlayerState->PlayerLevel, PlayerState->CurrentExp);
+        return;
+    }
+
+    PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
 }
 
 // 💡 엔진이 최종적으로 캐릭터를 스폰할 위치를 연산할 때 인터셉트하는 정석 오버라이드 함수

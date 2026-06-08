@@ -43,8 +43,7 @@ void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
     // 해당 플레이어의 퀘스트 진척도 업데이트
     if (!NPCID.IsNone())
     {
-        UGameInstance* GameInstance = GetGameInstance();
-        UPTQuestSubsystem* QuestSubsystem = GameInstance ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+        UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
         if (QuestSubsystem)
         {
             QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
@@ -60,8 +59,7 @@ void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
 {
     if (QuestID.IsNone() || !QuestIDs.Contains(QuestID)) return;
 
-    UGameInstance* GameInstance = GetGameInstance();
-    UPTQuestSubsystem* QuestSubsystem = GameInstance ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem)
     {
         QuestSubsystem->AcceptQuest(QuestID);
@@ -73,8 +71,7 @@ void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
 {
     if (QuestID.IsNone() || !QuestIDs.Contains(QuestID)) return;
 
-    UGameInstance* GameInstance = GetGameInstance();
-    UPTQuestSubsystem* QuestSubsystem = GameInstance ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem)
     {
         QuestSubsystem->RewardQuest(QuestID);

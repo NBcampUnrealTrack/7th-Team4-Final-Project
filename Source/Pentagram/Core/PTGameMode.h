@@ -42,6 +42,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Level")
+    TObjectPtr<UDataTable> LevelDataTable;
+
     UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;        //리스폰 대기 시간
 
