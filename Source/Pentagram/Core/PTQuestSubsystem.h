@@ -37,18 +37,17 @@ public:
     void SetAcceptedQuestProgresses(const TArray<FPTQuestProgress>& InQuestProgresses);
     void ClearAcceptedQuestProgresses();
 
-private:
-    FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;
-    bool AreConditionsCompleted(const FPTQuestProgress& QuestProgress) const;
+    FPTNativeOnQuestAccepted OnQuestAccepted;
+    FPTNativeOnQuestCompleted OnQuestCompleted;
+    FPTNativeOnQuestProgressChanged OnQuestProgressChanged;
 
+private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;
 
     TMap<FName, FPTQuestDataRow> QuestDataMap;
     TMap<FName, FPTQuestProgress> AcceptedQuestProgressMap;
 
-public:
-    FPTNativeOnQuestAccepted OnQuestAccepted;
-    FPTNativeOnQuestCompleted OnQuestCompleted;
-    FPTNativeOnQuestProgressChanged OnQuestProgressChanged;
+    FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;
+    bool AreConditionsCompleted(const FPTQuestProgress& QuestProgress) const;
 };
