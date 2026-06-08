@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
@@ -40,7 +40,7 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     float SkillRadius = 100.f;
 
-    // 스킬 발생 위치 오스펫 (캐릭터를 중심으로 기준)
+    // 스킬 발생 위치 오프셋 (캐릭터를 중심으로 기준)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     FVector SkillOffset = FVector(0.f, 0.f, 0.f); //앞, 양옆, 위아래
 
@@ -48,6 +48,7 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;
 
+    // 스킬 시전 사운드
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<USoundBase> SkillSound;
 
@@ -58,5 +59,4 @@ struct FPTSkillRow : public FTableRowBase
     // 스킬 발동 시 실행할 이펙트
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<UNiagaraSystem> SkillEffect;
-
 };

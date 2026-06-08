@@ -11,7 +11,6 @@
 #include "PTInventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-
 APTPlayerController::APTPlayerController()
 {
     PrimaryActorTick.bCanEverTick = true;
@@ -44,6 +43,57 @@ void APTPlayerController::BeginPlay()
     }
 }
 
+void APTPlayerController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    if (!bMoveToDestination) return;
+
+    ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
+    if (!MyCharacter) return;
+
+    FVector Direction = MoveDestination - MyCharacter->GetActorLocation();
+    Direction.Z = 0.f;
+
+    if (Direction.Size2D() <= AcceptanceRadius)
+    {
+        bMoveToDestination = false;
+        MyCharacter->GetCharacterMovement()->StopMovementImmediately();
+        return;
+    }
+
+    MyCharacter->AddMovementInput(Direction.GetSafeNormal(), 1.f);
+}
+
+void APTPlayerController::SetupInputComponent()
+{
+    Super::SetupInputComponent();
+    UE_LOG(LogTemp, Warning, TEXT("Controller SetupInputComponent Called"));
+
+    UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
+    if (EnhancedInput)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
+
+        if (IA_Move)      EnhancedInput->BindAction(IA_Move,      ETriggerEvent::Triggered, this, &APTPlayerController::OnRightClick);
+        if (IA_Attack)    EnhancedInput->BindAction(IA_Attack,    ETriggerEvent::Started,   this, &APTPlayerController::OnLeftClick);
+        if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started,   this, &APTPlayerController::OnInventoryPressed);
+        if (IA_Dodge)     EnhancedInput->BindAction(IA_Dodge,     ETriggerEvent::Started,   this, &APTPlayerController::OnDodge);
+        if (IA_Skill1)    EnhancedInput->BindAction(IA_Skill1,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill1);
+        if (IA_Skill2)    EnhancedInput->BindAction(IA_Skill2,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
+        if (IA_Skill3)    EnhancedInput->BindAction(IA_Skill3,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill3);
+        if (IA_Skill4)    EnhancedInput->BindAction(IA_Skill4,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill4);
+
+        if (IA_Interact)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
+            EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
+        }
+    }
+
+    AddUIInputMapping();
+}
+
 void APTPlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
@@ -67,48 +117,105 @@ void APTPlayerController::AcknowledgePossession(APawn* P)
     }
 }
 
-void APTPlayerController::SetupInputComponent()
+void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    Super::SetupInputComponent();
-    UE_LOG(LogTemp, Warning, TEXT("Controller SetupInputComponent Called"));
-
-    UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent);
-    if (EnhancedInput)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Controller EnhancedInput Cast Success"));
-
-        if (IA_Move) EnhancedInput->BindAction(IA_Move, ETriggerEvent::Triggered, this, &APTPlayerController::OnRightClick);
-
-        if (IA_Attack) EnhancedInput->BindAction(IA_Attack, ETriggerEvent::Started, this, &APTPlayerController::OnLeftClick);
-
-        if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started, this, &APTPlayerController::OnInventoryPressed);
-
-        if (IA_Interact)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
-            EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
-        }
-
-        if (IA_Skill1) EnhancedInput->BindAction(IA_Skill1, ETriggerEvent::Started, this, &APTPlayerController::OnSkill1);
-
-        if (IA_Skill2) EnhancedInput->BindAction(IA_Skill2, ETriggerEvent::Started, this, &APTPlayerController::OnSkill2);
-
-        if (IA_Skill3) EnhancedInput->BindAction(IA_Skill3, ETriggerEvent::Started, this, &APTPlayerController::OnSkill3);
-
-        if (IA_Skill4) EnhancedInput->BindAction(IA_Skill4, ETriggerEvent::Started, this, &APTPlayerController::OnSkill4);
-
-        if (IA_Dodge) EnhancedInput->BindAction(IA_Dodge, ETriggerEvent::Started, this, &APTPlayerController::OnDodge);
-    }
-
-    AddUIInputMapping();
+    RemoveUIInputMapping();
+    Super::EndPlay(EndPlayReason);
 }
 
-void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRotation)
+void APTPlayerController::PlayAttackMontage()
+{
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PlayerCharacter) return;
+    if (!PlayerCharacter->AttackMontages.IsValidIndex(PlayerCharacter->ComboIndex)) return;
+
+    PlayerCharacter->bIsAttacking = true;
+    PlayerCharacter->bCanCombo    = false;
+    PlayerCharacter->PlayAnimMontage(PlayerCharacter->AttackMontages[PlayerCharacter->ComboIndex]);
+    PlayerCharacter->Server_PlayAttackMontage(PlayerCharacter->ComboIndex);
+
+    PlayerCharacter->ComboIndex++;
+}
+
+void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (PC)
+    if (!PC) return;
+    if (PC->bIsAttacking) return;
+
+    FHitResult HitResult;
+    GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+    if (!HitResult.bBlockingHit) return;
+
+    MoveDestination = HitResult.Location;
+    bMoveToDestination = true;
+}
+
+void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
+{
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PlayerCharacter) return;
+
+    bMoveToDestination = false;
+    StopMovement();
+
+    if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
+
+    FHitResult HitResult;
+    bool bGotHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
+
+    // 회전 처리
+    if (bGotHit && HitResult.bBlockingHit)
     {
-        PC->SetActorRotation(NewRotation);
+        FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
+        Direction.Z = 0.f;
+        if (!Direction.IsNearlyZero())
+        {
+            FRotator NewRotation = Direction.Rotation();
+            PlayerCharacter->SetActorRotation(NewRotation);
+            Server_SetActorRotation(NewRotation);
+        }
+
+        // 마우스 밑에 있는 오브젝트가 드롭 아이템 액터인지 확인 (재호출 없이 재사용)
+        APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
+        if (TargetItem)
+        {
+            // 캐릭터와 아이템 간의 평면(2D) 거리 확인
+            float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
+
+            if (Distance2D <= 250.0f) // 범위 판정
+            {
+                // 로컬에서 판단을 내리지 않고, 서버 RPC를 전송합니다.
+                Server_TryPickupItem(TargetItem);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
+            }
+            return; // 아이템 클릭 시 공격 차단
+        }
+    }
+
+    // 아이템 아닐 때만 공격
+    if (PlayerCharacter->bIsAttacking)
+    {
+        if (PlayerCharacter->bCanCombo)
+        {
+            PlayerCharacter->bCanCombo = false;
+            PlayAttackMontage();
+        }
+        return;
+    }
+    PlayAttackMontage();
+}
+
+void APTPlayerController::OnInteractPressed() // F 상호작용 구현부
+{
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    if (PlayerCharacter)
+    {
+        PlayerCharacter->TryInteract();
+        UE_LOG(LogTemp, Log, TEXT("컨트롤러: F키 입력 감지 -> 캐릭터에게 상호작용 명령 전달"));
     }
 }
 
@@ -148,93 +255,13 @@ void APTPlayerController::OnDodge(const FInputActionValue& Value)
     PC->Server_Dodge();
 }
 
-void APTPlayerController::PlayAttackMontage()
-{
-    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PlayerCharacter) return;
-    if (!PlayerCharacter->AttackMontages.IsValidIndex(PlayerCharacter->ComboIndex)) return;
-
-    PlayerCharacter->bIsAttacking = true;
-    PlayerCharacter->bCanCombo = false;
-    PlayerCharacter->PlayAnimMontage(PlayerCharacter->AttackMontages[PlayerCharacter->ComboIndex]);
-    PlayerCharacter->Server_PlayAttackMontage(PlayerCharacter->ComboIndex);
-
-    PlayerCharacter->ComboIndex++;
-}
-
-void APTPlayerController::OnRightClick(const FInputActionValue& Value)
+void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRotation)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC) return;
-
-    if (PC->bIsAttacking) return;
-
-    FHitResult HitResult;
-    GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-    if (!HitResult.bBlockingHit) return;
-
-    if (!PC || PC->bIsAttacking) return;
-
-    MoveDestination = HitResult.Location;
-    bMoveToDestination = true;
-}
-
-void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
-{
-    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PlayerCharacter) return;
-
-    bMoveToDestination = false;
-    StopMovement();
-
-    if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
-
-    FHitResult HitResult;
-    bool bGotHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
-
-    // 회전 처리
-    if (bGotHit && HitResult.bBlockingHit)
+    if (PC)
     {
-        FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
-        Direction.Z = 0.f;
-        if (!Direction.IsNearlyZero())
-        {
-            FRotator NewRotation = Direction.Rotation();
-            PlayerCharacter->SetActorRotation(NewRotation);
-            Server_SetActorRotation(NewRotation);
-        }
-
-        // 마우스 밑에 있는 오브젝트가 드롭 아이템 액터인가 (재호출 없이 재사용)
-        APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
-        if (TargetItem)
-        {
-            // 캐릭터와 아이템 간의 평면(2D) 거리 확인
-            float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
-
-            if (Distance2D <= 250.0f) // 범위 판정
-            {
-                // ⭕ 로컬에서 판단을 내리지 않고, 서버 RPC를 전송합니다.
-                Server_TryPickupItem(TargetItem);
-            }
-            else
-            {
-                UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
-            }
-            return; // 아이템 클릭 시 공격 차단
-        }
+        PC->SetActorRotation(NewRotation);
     }
-
-    // 아이템 아닐 때만 공격
-    if (PlayerCharacter->bIsAttacking)
-    {
-        if (PlayerCharacter->bCanCombo)
-        {
-            PlayerCharacter->bCanCombo = false;
-            PlayAttackMontage();
-        }
-        return;
-    }
-    PlayAttackMontage();
 }
 
 // 서버에서 아이템 획득 시도 처리
@@ -245,9 +272,9 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
-    // 서버에서도 캐릭터와 아이템 간의 거리가 유효한지 검증 
+    // 서버에서도 캐릭터와 아이템 간의 거리가 유효한지 검증
     float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
-    if (Distance2D > 250.0f) // 범위 판정 
+    if (Distance2D > 250.0f)
     {
         UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있거나, 잘못된 위치에서 획득 요청이 들어왔습니다."));
         return;
@@ -257,8 +284,8 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     if (PlayerCharacter->GetInventoryComponent() &&
         PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
     {
-        // 서버에서 아이템 동기화 소멸 
-        TargetItem->Destroy(); // 월드에서 아이템 에셋 삭제
+        // 서버에서 아이템 동기화 소멸
+        TargetItem->Destroy();
         UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
     }
     else
@@ -274,39 +301,15 @@ bool APTPlayerController::Server_TryPickupItem_Validate(APTDropItemActorBase* Ta
     return true;
 }
 
-void APTPlayerController::OnInteractPressed() // F 상호작용 구현부
-{
-    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
-    if (PlayerCharacter)
-    {
-        // 캐릭터에게 주변 스캔 및 상호작용 처리를 위임합니다.
-        // (다음 작업 때 PTPlayerCharacter 클래스 내부에 TryInteract() 함수를 구현해 주면 연동)
-        PlayerCharacter->TryInteract();
-        UE_LOG(LogTemp, Log, TEXT("컨트롤러: F키 입력 감지 -> 캐릭터에게 상호작용 명령 전달"));
-    }
-}
-
-void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-    RemoveUIInputMapping();
-    Super::EndPlay(EndPlayReason);
-}
-
 void APTPlayerController::OnInventoryPressed()
 {
     if (!IsLocalPlayerController()) return;
 
     ULocalPlayer* LP = GetLocalPlayer();
-    if (!LP)
-    {
-        return;
-    }
+    if (!LP) return;
 
     UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
-    if (!UI || !InventoryClass)
-    {
-        return;
-    }
+    if (!UI || !InventoryClass) return;
 
     UI->ToggleInventory(InventoryClass);
 }
@@ -314,11 +317,7 @@ void APTPlayerController::OnInventoryPressed()
 void APTPlayerController::PushInitialHUD()
 {
     if (!IsLocalPlayerController()) return;
-
-    if (!InitialHUDClass)
-    {
-        return;
-    }
+    if (!InitialHUDClass) return;
 
     if (ULocalPlayer* LP = GetLocalPlayer())
     {
@@ -332,17 +331,10 @@ void APTPlayerController::PushInitialHUD()
 void APTPlayerController::AddUIInputMapping()
 {
     if (!IsLocalPlayerController()) return;
-
-    if (bUIInputMappingAdded || !IMC_UI)
-    {
-        return;
-    }
+    if (bUIInputMappingAdded || !IMC_UI) return;
 
     ULocalPlayer* LocalPlayer = GetLocalPlayer();
-    if (!LocalPlayer)
-    {
-        return;
-    }
+    if (!LocalPlayer) return;
 
     UEnhancedInputLocalPlayerSubsystem* InputSubsystem =
         ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
@@ -356,51 +348,19 @@ void APTPlayerController::AddUIInputMapping()
     bUIInputMappingAdded = true;
 
     UE_LOG(LogTemp, Warning, TEXT("UI Input Mapping Added: %s / Priority=100"), *IMC_UI->GetName());
-
 }
 
 void APTPlayerController::RemoveUIInputMapping()
 {
-    if (!bUIInputMappingAdded || !IMC_UI)
-    {
-        return;
-    }
+    if (!bUIInputMappingAdded || !IMC_UI) return;
 
     ULocalPlayer* LocalPlayer = GetLocalPlayer();
-    if (!LocalPlayer)
-    {
-        return;
-    }
+    if (!LocalPlayer) return;
 
     UEnhancedInputLocalPlayerSubsystem* InputSubsystem =
         ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
-    if (!InputSubsystem)
-    {
-        return;
-    }
+    if (!InputSubsystem) return;
 
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
-}
-
-void APTPlayerController::Tick(float DeltaTime)
-{
-    Super::Tick(DeltaTime);
-
-    if (!bMoveToDestination) return;
-
-    ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
-    if (!MyCharacter) return;
-
-    FVector Direction = MoveDestination - MyCharacter->GetActorLocation();
-    Direction.Z = 0.f;
-
-    if (Direction.Size2D() <= AcceptanceRadius)
-    {
-        bMoveToDestination = false;
-        MyCharacter->GetCharacterMovement()->StopMovementImmediately();
-        return;
-    }
-
-    MyCharacter->AddMovementInput(Direction.GetSafeNormal(), 1.f);
 }
