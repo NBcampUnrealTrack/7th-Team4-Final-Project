@@ -1,9 +1,6 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "PTMonsterHealthBarWidget.h"
+﻿#include "PTMonsterHealthBarWidget.h"
+#include "Character/Monsters/PTMonsterCharacter.h"
 #include "Components/ProgressBar.h"
-#include "Character/Player/PTBasePlayerState.h"
 
 void UPTMonsterHealthBarWidget::NativeConstruct()
 {
@@ -15,17 +12,48 @@ void UPTMonsterHealthBarWidget::NativeConstruct()
     }
 }
 
-void UPTMonsterHealthBarWidget::HandleHealthChanged(float Current, float Max)
+void UPTMonsterHealthBarWidget::NativeDestruct()
 {
-    UE_LOG(LogTemp, Warning, TEXT("HandleHealthChanged %f / %f"), Current, Max);
-    SetValue(Current, Max);
+    if (APTMonsterCharacter* Monster = BoundMonster.Get())
+    {
+        OnMonsterUnbound(Monster);
+        Monster->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    }
+    BoundMonster.Reset();
+
+    Super::NativeDestruct();
 }
 
-void UPTMonsterHealthBarWidget::BindToPlayerState(APTBasePlayerState* PS)
+void UPTMonsterHealthBarWidget::SetupMonster(APTMonsterCharacter* InMonster)
 {
-    PS->OnHealthChanged.AddUniqueDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    if (!InMonster)
+    {
+        return;
+    }
+
+    if (APTMonsterCharacter* Old = BoundMonster.Get())
+    {
+        if (Old == InMonster)
+        {
+            // 동일 몬스터: 값만 즉시 동기화하고 종료
+            SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
+            return;
+        }
+
+        OnMonsterUnbound(Old);
+        Old->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    }
+
+    BoundMonster = InMonster;
+    InMonster->OnHPChanged.AddUniqueDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+
+    OnMonsterBound(InMonster);
+
+    SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
 }
-void UPTMonsterHealthBarWidget::UnbindFromPlayerState(APTBasePlayerState* PS)
+
+void UPTMonsterHealthBarWidget::HandleHealthChanged(float Current, float Max)
 {
-    PS->OnHealthChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    SetValue(Current, Max);
+    OnHealthChangedNative(Current, Max);
 }
