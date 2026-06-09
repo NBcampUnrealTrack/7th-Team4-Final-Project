@@ -1,11 +1,11 @@
-﻿#include "AN_SkillHit.h"
+﻿#include "PTAnimNotify_SkillHit.h"
 
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/Skill/PTSkillRow.h"
 #include "Character/Player/Skill/PTSkillComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-void UAN_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
                           const FAnimNotifyEventReference& EventReference)
 {
     Super::Notify(MeshComp, Animation, EventReference);

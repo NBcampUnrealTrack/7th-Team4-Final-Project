@@ -23,7 +23,4 @@ protected:
     virtual bool NativeOnHandleBackAction() override;
     //~ End UCommonActivatableWidget
 
-    // 뒤로가기 여부
-    UPROPERTY(BlueprintReadOnly, Category = "PT|Inventory")
-    bool bIsBackHandler = false;
 };

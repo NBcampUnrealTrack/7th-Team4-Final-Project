@@ -1,9 +1,9 @@
-#include "Character/Player/Anim/AN_AttackEnd.h"
+#include "Character/Player/Anim/PTAnimNotify_AttackEnd.h"
 
 #include "Character/Player/PTPlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-void UAN_AttackEnd::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+void UPTAnimNotify_AttackEnd::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
                            const FAnimNotifyEventReference& EventReference)
 {
     Super::Notify(MeshComp, Animation, EventReference);

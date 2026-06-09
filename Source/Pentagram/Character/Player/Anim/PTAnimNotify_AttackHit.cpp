@@ -1,10 +1,10 @@
-#include "Character/Player/Anim/AN_AttackHit.h"
+#include "Character/Player/Anim/PTAnimNotify_AttackHit.h"
 
 #include "Character/PTBaseCharacter.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-void UAN_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
     Super::Notify(MeshComp, Animation, EventReference);
 

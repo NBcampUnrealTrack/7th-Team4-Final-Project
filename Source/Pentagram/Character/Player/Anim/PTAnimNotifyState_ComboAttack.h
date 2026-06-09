@@ -2,10 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
-#include "ANS_ComboAttack.generated.h"
+#include "PTAnimNotifyState_ComboAttack.generated.h"
 
 UCLASS()
-class PENTAGRAM_API UANS_ComboAttack : public UAnimNotifyState
+class PENTAGRAM_API UPTAnimNotifyState_ComboAttack : public UAnimNotifyState
 {
 	GENERATED_BODY()
 
