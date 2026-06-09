@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "UI/Data/PTDelegates.h"
 #include "PTSkillRow.h"
 #include "PTSkillComponent.generated.h"
 
@@ -18,7 +17,7 @@ public:
 
     // 스킬 발동 시도
     UFUNCTION(BlueprintCallable, Category = "Skill")
-    void TryActivateSkill(FName SkillID);
+    virtual void TryActivateSkill(FName SkillID);
 
     // 스킬 슬롯에 배치
     UFUNCTION(BlueprintCallable, Category = "Skill")
@@ -35,12 +34,6 @@ public:
     // DT에서 스킬 데이터 조회
     FPTSkillRow* GetSkillData(FName SkillID) const;
 
-    // ── RPC 함수 ─────────────────────────────────────────────────────────────
-
-    // 쿨다운 시작을 소유 클라이언트에게 통지
-    UFUNCTION(Client, Reliable)
-    void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
-
     // 스킬 몽타주 및 이펙트/사운드를 전체 클라이언트에 전파
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlaySkillMontage(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound);
@@ -53,7 +46,7 @@ protected:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 쿨다운 종료 처리
-    void OnCooldownEnd(int32 SlotIndex);
+    virtual void OnCooldownEnd(int32 SlotIndex);
 
 public:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
@@ -78,15 +71,4 @@ protected:
 
     // 쿨다운 중인 슬롯 플래그
     TArray<bool> bIsCooldown;
-
-public:
-    // ── 델리게이트 (최하단) ──────────────────────────────────────────────────
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);
-
-    UPROPERTY(BlueprintAssignable)
-    FPTOnSkillCooldownEnd OnSkillCooldownEnd;
-
-    UPROPERTY(BlueprintAssignable)
-    FPTOnSkillCooldownStart OnSkillCooldownStart;
 };
