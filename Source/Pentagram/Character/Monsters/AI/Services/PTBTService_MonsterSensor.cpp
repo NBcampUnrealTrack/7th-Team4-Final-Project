@@ -1,4 +1,4 @@
-﻿#include "Character/Monsters/AI/Services/PTBTService_MonsterSensor.h"
+#include "Character/Monsters/AI/Services/PTBTService_MonsterSensor.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "BehaviorTree/BlackboardComponent.h"
@@ -14,19 +14,19 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
     Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
     AAIController* AIC = OwnerComp.GetAIOwner();
-    if (!AIC)
+    if (!IsValid(AIC))
     {
         return;
     }
 
     APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn());
-    if (!Monster)
+    if (!IsValid(Monster))
     {
         return;
     }
 
     UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
-    if (!BB)
+    if (!IsValid(BB))
     {
         return;
     }

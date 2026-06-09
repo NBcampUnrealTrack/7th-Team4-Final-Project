@@ -1,4 +1,4 @@
-﻿#include "Character/Monsters/Animation/PTMonsterAnimInstance.h"
+#include "Character/Monsters/Animation/PTMonsterAnimInstance.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 
 void UPTMonsterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -6,7 +6,7 @@ void UPTMonsterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     Super::NativeUpdateAnimation(DeltaSeconds);
 
     APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(TryGetPawnOwner());
-    if (!Monster)
+    if (!IsValid(Monster))
     {
         Speed        = 0.f;
         CurrentState = EMonsterState::Idle;

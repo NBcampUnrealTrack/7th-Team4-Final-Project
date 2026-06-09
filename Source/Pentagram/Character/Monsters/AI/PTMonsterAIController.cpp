@@ -1,4 +1,4 @@
-﻿#include "Character/Monsters/AI/PTMonsterAIController.h"
+#include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Perception/AIPerceptionComponent.h"
@@ -24,7 +24,7 @@ APTMonsterAIController::APTMonsterAIController()
 
 void APTMonsterAIController::UpdateSightConfig(float InSightRange, float InLoseSightRange, float InSightAngle)
 {
-    if (!SightConfig)
+    if (!IsValid(SightConfig))
     {
         return;
     }
