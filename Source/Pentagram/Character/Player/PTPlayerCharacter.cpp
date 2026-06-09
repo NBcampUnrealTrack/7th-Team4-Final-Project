@@ -2,6 +2,7 @@
 
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
+#include "Character/PTCharacterRow.h"
 #include "Character/Skill/PTSkillComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -45,6 +46,8 @@ APTPlayerCharacter::APTPlayerCharacter()
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
     GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
     bUseControllerRotationYaw = false;
+
+    CharacterType = ECharacterType::Player;
 }
 
 void APTPlayerCharacter::PossessedBy(AController* NewController)

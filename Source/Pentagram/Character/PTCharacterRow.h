@@ -82,3 +82,11 @@ struct FPTCharacterRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Monster|Drop")
     int32 RewardExp = 0;
 };
+
+UENUM(BlueprintType)
+enum class ECharacterType : uint8
+{
+    Player,
+    NormalMonster,
+    BossMonster
+};

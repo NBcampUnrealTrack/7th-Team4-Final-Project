@@ -40,6 +40,8 @@ protected:
 
 public:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character")
+    ECharacterType CharacterType;
 
     UPROPERTY(EditAnywhere, Category = "Data")
     FDataTableRowHandle CharacterDataHandle;
