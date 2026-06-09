@@ -3,7 +3,7 @@
 #include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
-#include "Core/PTRewardSubsystem.h"
+#include "Core/Subsystems/PTRewardSubsystem.h"
 #include "AIController.h"
 #include "BrainComponent.h"
 #include "Animation/AnimInstance.h"
