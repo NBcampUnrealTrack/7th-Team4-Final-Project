@@ -5,82 +5,31 @@
 #include "Components/TextBlock.h"
 #include "Character/Player/PTBasePlayerState.h"
 
-void UPTStatBarWidget::NativeConstruct()
+void UPTStatBarWidget::NativeDestruct()
 {
-    Super::NativeConstruct();
-
-    // 초기화 및 즉시 UI 반영
-    DisplayCurrent = TargetCurrent;
-    ApplyDisplay();
-}
-
-void UPTStatBarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
-{
-    Super::NativeTick(MyGeometry, InDeltaTime);
-
-    // 목표값에 도달했으면 종료
-    if (FMath::IsNearlyEqual(DisplayCurrent, TargetCurrent, 0.01f))
+    if (APTBasePlayerState* PS = BoundPS.Get())
     {
-        if (DisplayCurrent != TargetCurrent)
-        {
-            DisplayCurrent = TargetCurrent;
-            ApplyDisplay();
-        }
-        return;
+        UnbindFromPlayerState(PS);
     }
-
-    // 목표값을 향해 부드럽게 수치 변경 (보간)
-    if (InterpSpeed > 0.f)
-    {
-        DisplayCurrent = FMath::FInterpTo(DisplayCurrent, TargetCurrent, InDeltaTime, InterpSpeed);
-    }
-    else
-    {
-        DisplayCurrent = TargetCurrent;
-    }
-
-    // 변경된 수치 화면에 표시
-    ApplyDisplay();
+    BoundPS = nullptr;
+    Super::NativeDestruct();
 }
 
 void UPTStatBarWidget::SetValue(float Current, float Max)
 {
-    // 새 목표치 설정 (애니메이션 O)
+    // 목표치 설정
     MaxValue      = FMath::Max(Max, KINDA_SMALL_NUMBER);
     TargetCurrent = FMath::Clamp(Current, 0.f, MaxValue);
 }
 
 void UPTStatBarWidget::SetValueInstant(float Current, float Max)
 {
-    // 애니메이션 없이 즉시 값 변경 (애니메이션 X)
+    // 즉시 적용
     SetValue(Current, Max);
     DisplayCurrent = TargetCurrent;
     ApplyDisplay();
 }
 
-void UPTStatBarWidget::ApplyDisplay()
-{
-    // 게이지 비율 계산
-    const float Percent = (MaxValue > 0.f) ? (DisplayCurrent / MaxValue) : 0.f;
-
-    // 프로그레스 바 갱신
-    if (PB_Bar)
-    {
-        PB_Bar->SetPercent(Percent);
-    }
-
-    // 텍스트(예: 120 / 200) 갱신
-    if (Txt_Value)
-    {
-        const FString Str = FString::Printf(TEXT("%d / %d"),
-            FMath::RoundToInt(DisplayCurrent),
-            FMath::RoundToInt(MaxValue));
-        Txt_Value->SetText(FText::FromString(Str));
-    }
-
-    // 블루프린트 이벤트 호출
-    OnDisplayValueUpdated(DisplayCurrent, MaxValue, Percent);
-}
 void UPTStatBarWidget::SetupPlayerState(APTBasePlayerState* PS)
 {
     if (!PS || BoundPS.Get() == PS) return;
@@ -93,12 +42,64 @@ void UPTStatBarWidget::SetupPlayerState(APTBasePlayerState* PS)
     BindToPlayerState(PS);
 }
 
-void UPTStatBarWidget::NativeDestruct()
+void UPTStatBarWidget::NativeConstruct()
 {
-    if (APTBasePlayerState* PS = BoundPS.Get())
+    Super::NativeConstruct();
+
+    // 초기 반영
+    DisplayCurrent = TargetCurrent;
+    ApplyDisplay();
+}
+
+void UPTStatBarWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // 도달 시 종료
+    if (FMath::IsNearlyEqual(DisplayCurrent, TargetCurrent, 0.01f))
     {
-        UnbindFromPlayerState(PS);
+        if (DisplayCurrent != TargetCurrent)
+        {
+            DisplayCurrent = TargetCurrent;
+            ApplyDisplay();
+        }
+        return;
     }
-    BoundPS = nullptr;
-    Super::NativeDestruct();
+
+    // 값 보간
+    if (InterpSpeed > 0.f)
+    {
+        DisplayCurrent = FMath::FInterpTo(DisplayCurrent, TargetCurrent, InDeltaTime, InterpSpeed);
+    }
+    else
+    {
+        DisplayCurrent = TargetCurrent;
+    }
+
+    // 화면 표시
+    ApplyDisplay();
+}
+
+void UPTStatBarWidget::ApplyDisplay()
+{
+    // 비율 계산
+    const float Percent = (MaxValue > 0.f) ? (DisplayCurrent / MaxValue) : 0.f;
+
+    // 바 갱신
+    if (PB_Bar)
+    {
+        PB_Bar->SetPercent(Percent);
+    }
+
+    // 텍스트 갱신
+    if (Txt_Value)
+    {
+        const FString Str = FString::Printf(TEXT("%d / %d"),
+            FMath::RoundToInt(DisplayCurrent),
+            FMath::RoundToInt(MaxValue));
+        Txt_Value->SetText(FText::FromString(Str));
+    }
+
+    // BP 이벤트
+    OnDisplayValueUpdated(DisplayCurrent, MaxValue, Percent);
 }
