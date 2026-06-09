@@ -13,6 +13,7 @@ class PENTAGRAM_API UPTMonsterAnimInstance : public UAnimInstance
 public:
     virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
+protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|Anim")
     float Speed = 0.f;
 

@@ -19,9 +19,9 @@ public:
     float GetDamageMultiplierForPhase(int32 Phase) const;
 
     /**
-    * 반환값이 null일 수 있음 (BP에서 AttackMontage 미설정 시).
-    * 호출부에서 반드시 null 체크 후 사용할 것.
-    */
+     * 반환값이 null일 수 있음 (BP에서 AttackMontage 미설정 시).
+     * 호출부에서 반드시 null 체크 후 사용할 것.
+     */
     UAnimMontage* GetAttackMontageForPhase(int32 Phase) const;
 
     UPROPERTY(BlueprintAssignable, Category = "PT|Boss|UI")

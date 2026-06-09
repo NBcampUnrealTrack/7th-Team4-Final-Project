@@ -44,9 +44,9 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
 
     const float AttackDuration = Monster->StartAttack();
 
-    TWeakObjectPtr<UPTBTTask_Attack>       WeakThis(this);
+    TWeakObjectPtr<UPTBTTask_Attack> WeakThis(this);
     TWeakObjectPtr<UBehaviorTreeComponent> WeakOwnerComp(&OwnerComp);
-    TWeakObjectPtr<UBlackboardComponent>   WeakBlackboard(BB);
+    TWeakObjectPtr<UBlackboardComponent> WeakBlackboard(BB);
 
     World->GetTimerManager().SetTimer(
         Memory->CooldownTimer,
@@ -59,8 +59,8 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
                     return;
                 }
 
-                UBehaviorTreeComponent* OwnerCompPtr  = WeakOwnerComp.Get();
-                UBlackboardComponent*   BlackboardPtr = WeakBlackboard.Get();
+                UBehaviorTreeComponent* OwnerCompPtr = WeakOwnerComp.Get();
+                UBlackboardComponent* BlackboardPtr = WeakBlackboard.Get();
 
                 BlackboardPtr->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
                 WeakThis->FinishLatentTask(*OwnerCompPtr, EBTNodeResult::Succeeded);
