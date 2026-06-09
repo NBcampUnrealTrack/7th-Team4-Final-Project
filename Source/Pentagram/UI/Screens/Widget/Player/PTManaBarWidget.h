@@ -3,21 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "../PTStatBarWidget.h"
+#include "PTStatBarWidget.h"
 #include "UI/Data/PTDelegates.h"
-#include "PTHealthBarwidget.generated.h"
+#include "PTManaBarWidget.generated.h"
 
 class APTBasePlayerState;
 
 UCLASS()
-class PENTAGRAM_API UPTHealthBarwidget : public UPTStatBarWidget
+class PENTAGRAM_API UPTManaBarWidget : public UPTStatBarWidget
 {
     GENERATED_BODY()
 
 public:
-    // HP 콜백
+    // MP 콜백
     UFUNCTION()
-    void HandleHealthChanged(float Current, float Max);
+    void HandleManaChanged(float Current, float Max);
 
 protected:
     // 오버라이드

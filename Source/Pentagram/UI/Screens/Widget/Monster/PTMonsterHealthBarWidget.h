@@ -1,11 +1,12 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "../PTStatBarWidget.h"
+#include "../Player/PTStatBarWidget.h"
 #include "UI/Data/PTDelegates.h"
 #include "PTMonsterHealthBarWidget.generated.h"
 
 class APTMonsterCharacter;
+class UTextBlock;
 
 UCLASS()
 class PENTAGRAM_API UPTMonsterHealthBarWidget : public UPTStatBarWidget
@@ -20,6 +21,9 @@ public:
     // HP 콜백
     UFUNCTION()
     void HandleHealthChanged(float Current, float Max);
+    //이름 바인딩
+    UFUNCTION(BlueprintCallable, Category = "PT|UI|Monster")
+    void SetDisplayName(const FText& InName);
 
 protected:
     // 오버라이드
@@ -38,4 +42,8 @@ protected:
     // 바인딩 대상
     UPROPERTY(Transient)
     TWeakObjectPtr<APTMonsterCharacter> BoundMonster;
+
+    //몬스터 이름
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    TObjectPtr<UTextBlock> Txt_Name;
 };

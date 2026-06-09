@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Screens/Main/PTHUDWidget.h"
+#include "UI/HUD/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
