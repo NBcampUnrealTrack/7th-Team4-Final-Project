@@ -9,7 +9,7 @@ APTDropItemActorBase::APTDropItemActorBase()
 { 
 	PrimaryActorTick.bCanEverTick = false;
 
-    // 충돌 체 구축 (기획서 상 1미터 이내 접근을 위함, 반경 100cm 설정)
+
     CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
     RootComponent = CollisionSphere;
     CollisionSphere->SetSphereRadius(100.0f);

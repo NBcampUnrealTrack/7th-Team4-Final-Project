@@ -14,7 +14,7 @@
 #include "PTEquipmentComponent.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
-#include "Core/Interface/PTInteractableInterface.h"
+#include "Interface/PTInteractableInterface.h"
 
 APTPlayerCharacter::APTPlayerCharacter()
 {
