@@ -33,12 +33,18 @@ void APTNPCCharacter::BeginPlay()
 
 void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 {
-    if (!HasAuthority() || !InteractorCharacter) return;
+    if (!HasAuthority() || !InteractorCharacter)
+    {
+        return;
+    }
 
     APawn* InteractPawn = Cast<APawn>(InteractorCharacter);
     APlayerController* InteractPlayerController = InteractPawn ? Cast<APlayerController>(InteractPawn->GetController()) : nullptr;
 
-    if (InteractPlayerController == nullptr) return;
+    if (InteractPlayerController == nullptr)
+    {
+        return;
+    }
 
     // 해당 플레이어의 퀘스트 진척도 업데이트
     if (!NPCID.IsNone())
@@ -57,7 +63,10 @@ void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 // 퀘스트 수락
 void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
 {
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID)) return;
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
+    {
+        return;
+    }
 
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem)
@@ -69,7 +78,10 @@ void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
 // 퀘스트 보상 
 void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
 {
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID)) return;
+    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
+    {
+        return;
+    }
 
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem)
@@ -85,7 +97,10 @@ const TArray<FName>& APTNPCCharacter::GetQuestIDs() const { return QuestIDs; }
 void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (!HasAuthority()) return;
+    if (!HasAuthority())
+    {
+        return;
+    }
 
     APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
     if (PC)
@@ -97,7 +112,10 @@ void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* Overla
 void APTNPCCharacter::OnInteractionRangeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    if (!HasAuthority()) return;
+    if (!HasAuthority())
+    {
+        return;
+    }
 
     APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
     if (PC)
