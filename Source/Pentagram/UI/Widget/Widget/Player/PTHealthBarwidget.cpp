@@ -1,6 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "UI/Screens/Widget/Player/PTHealthBarwidget.h"
+#include "UI/Widget/Widget/Player/PTHealthBarwidget.h"
 #include "Components/ProgressBar.h"
 #include "Character/Player/PTBasePlayerState.h"
 

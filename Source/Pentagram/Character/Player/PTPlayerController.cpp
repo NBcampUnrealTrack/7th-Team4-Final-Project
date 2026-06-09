@@ -5,11 +5,13 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
-#include "UI/Screens/LayOut/PTPrimaryLayout.h"
+#include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "Skill/PTSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
+#include "Character/Monsters/PTMonsterCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "UI/HUD/PTHUDWidget.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -290,7 +292,7 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("[획득 실패] 인벤토리 공간 부족 또는 아이템 ID 누락")); 
+        UE_LOG(LogTemp, Warning, TEXT("[획득 실패] 인벤토리 공간 부족 또는 아이템 ID 누락"));
     }
 }
 
@@ -363,4 +365,8 @@ void APTPlayerController::RemoveUIInputMapping()
 
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
+}
+void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
+{
+    OnMonsterTargeted.Broadcast(Monster);
 }

@@ -8,7 +8,7 @@
 
 class UPTPlayerStatusWidget;
 class UPTSkillSlotWidget;
-
+class UPTMonsterHealthBarWidget;
 UCLASS()
 class PENTAGRAM_API UPTHUDWidget : public UCommonActivatableWidget
 {
@@ -17,6 +17,10 @@ class PENTAGRAM_API UPTHUDWidget : public UCommonActivatableWidget
 public:
     UPTHUDWidget(const FObjectInitializer& ObjectInitializer);
 
+
+    //몬스터 타겟 확인
+    UFUNCTION()
+    void HandleMonsterTargeted(AActor* TargetMonster);
 protected:
     // 오버라이드
     virtual void NativeOnActivated() override;
@@ -30,4 +34,8 @@ protected:
     // 스킬 슬롯
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     TObjectPtr<UPTSkillSlotWidget> SkillSlots;
+
+    // 몬스터 체크
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    TObjectPtr<UPTMonsterHealthBarWidget> MonsterTargetFrame;
 };
