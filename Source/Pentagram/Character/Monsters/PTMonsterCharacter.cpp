@@ -37,7 +37,10 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 void APTMonsterCharacter::InitializeMonster()
 {
     const FPTCharacterRow* Row = CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("InitializeMonster"));
-    if (!Row) return;
+    if (!Row)
+    {
+        return;
+    }
 
     SightAngle       = Row->SightAngle;
     SightRange       = Row->SightRange;
@@ -127,8 +130,7 @@ float APTMonsterCharacter::StartAttack()
 {
     HitActors.Empty();
 
-    USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!IsValid(MeshComp))
+    if (!IsValid(AttackMontage))
     {
         return 1.f;
     }
@@ -250,7 +252,7 @@ void APTMonsterCharacter::OnDeath()
     GetWorldTimerManager().SetTimer(
         DestroyTimerHandle,
         this,
-        &APTMonsterCharacter::HandleDestroyAfterDeath,
+        &APTMonsterCharacter::DestroyAfterDeath,
         ActualDelay,
         false
     );
@@ -289,7 +291,7 @@ void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
     ExpContributors.Add(PS);
 }
 
-void APTMonsterCharacter::HandleDestroyAfterDeath()
+void APTMonsterCharacter::DestroyAfterDeath()
 {
     Destroy();
 }
