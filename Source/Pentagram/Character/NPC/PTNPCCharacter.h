@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/Interface/PTInteractableInterface.h"
+#include "Interface/PTInteractableInterface.h"
 #include "GameFramework/Actor.h"
 #include "PTNPCCharacter.generated.h"
 

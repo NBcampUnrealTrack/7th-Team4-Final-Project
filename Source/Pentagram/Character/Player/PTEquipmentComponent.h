@@ -6,14 +6,14 @@
 #include "PTEquipmentComponent.generated.h"
 
 UENUM(BlueprintType)
-enum class EEquipSlotType : uint8  // 장비 슬롯 타입
+enum class EEquipSlotType : uint8 
 {
     Weapon  UMETA(DisplayName = "Weapon"),
     Chest   UMETA(DisplayName = "Chest")
 };
 
 USTRUCT(BlueprintType)
-struct FEquipmentSlot // 장비 슬롯 구조체
+struct FEquipmentSlot
 {
     GENERATED_BODY()
 
