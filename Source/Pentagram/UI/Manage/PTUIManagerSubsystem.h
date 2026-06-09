@@ -53,8 +53,16 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> InventoryInstance;
 
+<<<<<<< HEAD
 private:
     // 베이스 레이아웃
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
+=======
+
+public:
+    /** 인벤토리 열기/닫기 토글. 컨트롤러에서 클래스 넘김. */
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass);
+>>>>>>> parent of 2fcee51 (Revert "Merge branch 'develop' into feature/gamemode/gamestate-conversion")
 };

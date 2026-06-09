@@ -1,14 +1,8 @@
 ﻿#include "PTInventoryWidget.h"
-#include "Input/CommonUIInputTypes.h"
 
 void UPTInventoryWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
-}
-
-TOptional<FUIInputConfig> UPTInventoryWidget::GetDesiredInputConfig() const
-{
-    return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
 }
 
 void UPTInventoryWidget::NativeOnActivated()

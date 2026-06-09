@@ -17,7 +17,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnExpChanged, float, CurrentExp,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnGoldChanged, int64, NewAmount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnSkillCooldownStart, int32, SlotIndex, float, Duration);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnMonsterHealthChanged, float, CurrentHP, float, MaxHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnBossSpawned, AActor*, BossActor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnBossPhaseChanged, int32, NewPhase);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnBossHealthChanged, float, CurrentHP, float, MaxHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnBossDefeated);
+

@@ -5,7 +5,6 @@
 #include "Character/PTCharacterRow.h"
 #include "PTBaseCharacter.generated.h"
 
-
 UCLASS()
 class PENTAGRAM_API APTBaseCharacter : public ACharacter
 {
@@ -14,39 +13,58 @@ class PENTAGRAM_API APTBaseCharacter : public ACharacter
 public:
     APTBaseCharacter();
 
-    //데미지 적용
-    UFUNCTION(BlueprintCallable, Category = "Combat")
-    virtual float ApplyDamage(float DamageAmount, AActor* Attacker);
+    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
+
     void PostInitializeComponents();
 
-    //사망 처리
+    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
+
+    // 데미지 적용
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    virtual float ApplyDamage(float DamageAmount, AActor* Attacker);
+
+    // 사망 처리
     UFUNCTION(BlueprintCallable, Category = "Combat")
     virtual void OnDeath();
 
-    UPROPERTY(EditAnywhere, Category = "Data")
-    FDataTableRowHandle CharacterDataHandle;
-
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float CurrentHP;   // 현재 체력
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float MaxHP;       // 최대 체력
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float CurrentMP;   // 현재 마나
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float MaxMP;      // 최대 마나
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float BaseDef;     // 방어력
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float BaseAtk;     // 공격력
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float AttackSpeed; // 공격 속도
-    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float MoveSpeed;   // 이동 속도
+    UFUNCTION()
+    virtual void OnRep_CurrentHP();
 
     float GetAttackSpeed() const { return AttackSpeed; }
 
 protected:
-    virtual void BeginPlay() override;
+    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
+    virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+public:
+    // ── 멤버 변수 ────────────────────────────────────────────────────────────
+
+    UPROPERTY(EditAnywhere, Category = "Data")
+    FDataTableRowHandle CharacterDataHandle;
+
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, VisibleAnywhere, Category = "Stats")
+    float CurrentHP;    // 현재 체력
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float MaxHP;        // 최대 체력
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float CurrentMP;    // 현재 마나
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float MaxMP;        // 최대 마나
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float BaseDef;      // 방어력
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float BaseAtk;      // 공격력
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float AttackSpeed;  // 공격 속도
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
+    float MoveSpeed;    // 이동 속도
 };

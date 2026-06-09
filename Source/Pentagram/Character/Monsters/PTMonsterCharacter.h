@@ -46,10 +46,16 @@ public:
     UFUNCTION(NetMulticast, Unreliable)
     void Multicast_PlayAttackMontage(UAnimMontage* MontageToPlay);
 
+<<<<<<< HEAD
     /**
      * 몬스터의 보상 데이터를 스냅샷으로 반환합니다.
      * Destroy 후에도 안전하게 참조할 수 있습니다.
      */
+=======
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayAttackMontage(UAnimMontage* MontageToPlay);
+
+>>>>>>> parent of 2fcee51 (Revert "Merge branch 'develop' into feature/gamemode/gamestate-conversion")
     FPTMonsterRewardData GetRewardData() const;
 
     void ClearExpContributors();
