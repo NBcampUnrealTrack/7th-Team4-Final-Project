@@ -45,10 +45,11 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
     const float DistFromSpawnSq = FVector::DistSquared(MonsterLocation, Monster->GetSpawnLocation());
 
 #if !UE_BUILD_SHIPPING
-    UE_LOG(LogTemp, Warning, TEXT("[Sensor] Dist: %.1f / AttackRange: %.1f / InRange: %s"),
-        FMath::Sqrt(DistToTargetSq),
+    const float DistToTarget = FMath::Sqrt(DistToTargetSq);
+    UE_LOG(LogTemp, Log, TEXT("[Sensor] Dist: %.1f / AttackRange: %.1f / InRange: %s"),
+        DistToTarget,
         Monster->GetAttackRange(),
-        (FMath::Sqrt(DistToTargetSq) <= Monster->GetAttackRange()) ? TEXT("TRUE") : TEXT("false"));
+        (DistToTarget <= Monster->GetAttackRange()) ? TEXT("TRUE") : TEXT("FALSE"));
 #endif
 
     const float AttackRangeSq = FMath::Square(Monster->GetAttackRange());
