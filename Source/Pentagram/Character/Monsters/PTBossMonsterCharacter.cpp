@@ -3,6 +3,7 @@
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
+    CharacterType = ECharacterType::BossMonster;
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
@@ -30,19 +31,34 @@ int32 APTBossMonsterCharacter::GetCurrentPhase() const
     return 0;
 }
 
+float APTBossMonsterCharacter::GetDamageMultiplierForPhase(int32 Phase) const
+{
+    if (Phase >= 2)
+    {
+        return Phase2DamageMultiplier;
+    }
+
+    if (Phase >= 1)
+    {
+        return Phase1DamageMultiplier;
+    }
+
+    return 1.f;
+}
+
 UAnimMontage* APTBossMonsterCharacter::GetAttackMontageForPhase(int32 Phase) const
 {
-    if (Phase >= 2 && BerserkAttackMontage)
+    if (Phase >= 2 && IsValid(BerserkAttackMontage))
     {
         return BerserkAttackMontage;
     }
 
-    if (Phase >= 1 && EnragedAttackMontage)
+    if (Phase >= 1 && IsValid(EnragedAttackMontage))
     {
         return EnragedAttackMontage;
     }
 
-    if (!AttackMontage)
+    if (!IsValid(AttackMontage))
     {
         UE_LOG(LogTemp, Warning, TEXT("[BossMonster] AttackMontage가 설정되지 않았습니다."));
     }
@@ -56,7 +72,7 @@ float APTBossMonsterCharacter::StartAttack()
 
     const int32 Phase = GetCurrentPhase();
     UAnimMontage* Montage = GetAttackMontageForPhase(Phase);
-    if (!Montage)
+    if (!IsValid(Montage))
     {
         return 1.f;
     }
@@ -85,11 +101,11 @@ void APTBossMonsterCharacter::StopAttack()
         return;
     }
 
-    if (BerserkAttackMontage && AnimInstance->Montage_IsPlaying(BerserkAttackMontage))
+    if (IsValid(BerserkAttackMontage) && AnimInstance->Montage_IsPlaying(BerserkAttackMontage))
     {
         AnimInstance->Montage_Stop(0.f, BerserkAttackMontage);
     }
-    else if (EnragedAttackMontage && AnimInstance->Montage_IsPlaying(EnragedAttackMontage))
+    else if (IsValid(EnragedAttackMontage) && AnimInstance->Montage_IsPlaying(EnragedAttackMontage))
     {
         AnimInstance->Montage_Stop(0.f, EnragedAttackMontage);
     }
@@ -102,19 +118,4 @@ void APTBossMonsterCharacter::StopAttack()
 float APTBossMonsterCharacter::GetAttackDamage() const
 {
     return BaseAtk * GetDamageMultiplierForPhase(GetCurrentPhase());
-}
-
-float APTBossMonsterCharacter::GetDamageMultiplierForPhase(int32 Phase) const
-{
-    if (Phase >= 2)
-    {
-        return Phase2DamageMultiplier;
-    }
-
-    if (Phase >= 1)
-    {
-        return Phase1DamageMultiplier;
-    }
-
-    return 1.f;
 }

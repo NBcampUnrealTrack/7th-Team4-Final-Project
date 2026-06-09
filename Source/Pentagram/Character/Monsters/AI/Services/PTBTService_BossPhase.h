@@ -7,7 +7,7 @@
 UCLASS()
 class PENTAGRAM_API UPTBTService_BossPhase : public UBTService
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
     UPTBTService_BossPhase();

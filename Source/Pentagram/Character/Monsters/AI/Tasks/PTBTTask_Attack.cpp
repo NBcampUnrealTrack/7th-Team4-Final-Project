@@ -1,4 +1,4 @@
-﻿#include "Character/Monsters/AI/Tasks/PTBTTask_Attack.h"
+#include "Character/Monsters/AI/Tasks/PTBTTask_Attack.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Character/Monsters/PTMonsterState.h"
@@ -16,25 +16,25 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
     FPTAttackTaskMemory* Memory = CastInstanceNodeMemory<FPTAttackTaskMemory>(NodeMemory);
 
     AAIController* AIC = OwnerComp.GetAIOwner();
-    if (!AIC)
+    if (!IsValid(AIC))
     {
         return EBTNodeResult::Failed;
     }
 
     APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn());
-    if (!Monster)
+    if (!IsValid(Monster))
     {
         return EBTNodeResult::Failed;
     }
 
     UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
-    if (!BB)
+    if (!IsValid(BB))
     {
         return EBTNodeResult::Failed;
     }
 
     UWorld* World = OwnerComp.GetWorld();
-    if (!World)
+    if (!IsValid(World))
     {
         return EBTNodeResult::Failed;
     }

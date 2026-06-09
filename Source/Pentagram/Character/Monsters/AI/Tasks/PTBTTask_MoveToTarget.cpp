@@ -1,4 +1,4 @@
-﻿#include "Character/Monsters/AI/Tasks/PTBTTask_MoveToTarget.h"
+#include "Character/Monsters/AI/Tasks/PTBTTask_MoveToTarget.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "AIController.h"
@@ -12,13 +12,13 @@ UPTBTTask_MoveToTarget::UPTBTTask_MoveToTarget()
 EBTNodeResult::Type UPTBTTask_MoveToTarget::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
     AAIController* AIC = OwnerComp.GetAIOwner();
-    if (!AIC)
+    if (!IsValid(AIC))
     {
         return EBTNodeResult::Failed;
     }
 
     APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn());
-    if (!Monster)
+    if (!IsValid(Monster))
     {
         return EBTNodeResult::Failed;
     }

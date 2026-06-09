@@ -2,8 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Character/PTBaseCharacter.h"
-#include "PTMonsterState.h"
-#include "PTMonsterRewardData.h"
+#include "Character/Monsters/PTMonsterState.h"
+#include "Character/Monsters/PTMonsterRewardData.h"
 #include "UI/Data/PTDelegates.h"
 #include "PTMonsterCharacter.generated.h"
 
@@ -74,7 +74,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     FVector SpawnLocation = FVector::ZeroVector;
 
-    UPROPERTY()
+    UPROPERTY(Transient)
     TSet<AActor*> HitActors;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Animation")
