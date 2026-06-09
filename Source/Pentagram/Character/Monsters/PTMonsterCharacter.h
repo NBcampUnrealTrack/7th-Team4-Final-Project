@@ -4,10 +4,13 @@
 #include "Character/PTBaseCharacter.h"
 #include "PTMonsterState.h"
 #include "PTMonsterRewardData.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTMonsterCharacter.generated.h"
 
 class UAnimMontage;
+struct FDataTableRowHandle;
 class APTBasePlayerState;
+class APTGoldPickup;
 
 UCLASS()
 class PENTAGRAM_API APTMonsterCharacter : public APTBaseCharacter
@@ -40,19 +43,30 @@ public:
     virtual float StartAttack();
     virtual void StopAttack();
 
-    UFUNCTION()
-    void OnRep_CurrentState();
+    UFUNCTION(NetMulticast, Unreliable)
+    void Multicast_PlayAttackMontage(UAnimMontage* MontageToPlay);
 
+    /**
+     * 몬스터의 보상 데이터를 스냅샷으로 반환합니다.
+     * Destroy 후에도 안전하게 참조할 수 있습니다.
+     */
     FPTMonsterRewardData GetRewardData() const;
 
     void ClearExpContributors();
 
+    UPROPERTY(BlueprintAssignable, Category = "PT|Monster|UI")
+    FPTOnBossHealthChanged OnHPChanged;
+
 protected:
+    UFUNCTION()
+    void OnRep_CurrentState();
+
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void OnDeath() override;
     virtual float GetAttackDamage() const;
+    virtual void OnRep_CurrentHP() override;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentState, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     EMonsterState CurrentState = EMonsterState::Idle;
@@ -115,6 +129,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
     TSubclassOf<AActor> EquipmentDropClass;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
+    FDataTableRowHandle ItemRowHandle;
+
     TSet<TWeakObjectPtr<APTBasePlayerState>> ExpContributors;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
@@ -123,6 +140,6 @@ private:
     FTimerHandle DestroyTimerHandle;
 
     void RegisterDamageContributor(AActor* DamageCauser);
-    void HandleDestroyAfterDeath();
+    void DestroyAfterDeath();
     float PlayDeathMontage();
 };

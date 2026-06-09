@@ -3,7 +3,6 @@
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
-
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
@@ -81,13 +80,13 @@ float APTBossMonsterCharacter::StartAttack()
 void APTBossMonsterCharacter::StopAttack()
 {
     USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!MeshComp)
+    if (!IsValid(MeshComp))
     {
         return;
     }
 
     UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-    if (!AnimInstance)
+    if (!IsValid(AnimInstance))
     {
         return;
     }

@@ -7,12 +7,11 @@
 #include "UI/Data/PTDelegates.h"
 #include "PTPlayerStatusWidget.generated.h"
 
-
 class UPTHealthBarwidget;
 class UPTManaBarWidget;
 class UPTExpBarWidget;
 class APTPlayerCharacter;
-class APTBaseCharacter;     // ← 팀원의 캐릭터 클래스. 실제 이름이 다르면 변경
+class APTBaseCharacter;     // 캐릭터 클래스
 class APlayerController;
 class APawn;
 
@@ -22,15 +21,34 @@ class PENTAGRAM_API UPTPlayerStatusWidget : public UCommonUserWidget
     GENERATED_BODY()
 
 public:
-    /** 테스트/디버그용: 캐릭터 없이도 값 강제 갱신 */
+    // 디버그 갱신
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Status|Debug")
     void DebugSetAll(float Hp, float MaxHp, float Mp, float MaxMp, float Exp, float ReqExp);
 
-    bool bInitialStatsApplied = false;
 protected:
+    // 오버라이드
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
 
+private:
+    // 폰 바인딩
+    void TryBindFromOwningPawn();
+
+    // 바인딩
+    void BindToCharacter(APTBaseCharacter* InCharacter);
+    void UnbindFromCharacter();
+
+    // 폰 변경
+    UFUNCTION()
+    void HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
+
+    void RefreshStatsUntilValid();
+
+public:
+    // 최초 1회
+    bool bInitialStatsApplied = false;
+
+protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UPTHealthBarwidget> HealthBar;
 
@@ -41,18 +59,6 @@ protected:
     TObjectPtr<UPTExpBarWidget> ExpBar;
 
 private:
-    /** 현재 빙의된 폰에서 캐릭터를 찾아 바인딩 시도 */
-    void TryBindFromOwningPawn();
-
-    /** 실제 바인딩/언바인딩 */
-    void BindToCharacter(APTBaseCharacter* InCharacter);
-    void UnbindFromCharacter();
-
-    /** 빙의된 폰이 바뀔 때 호출 (위젯이 떴는데 폰이 아직 없거나 교체된 경우) */
-    UFUNCTION()
-    void HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
-    void RefreshStatsUntilValid();
-
     UPROPERTY(Transient)
     TWeakObjectPtr<APTBaseCharacter> BoundCharacter;
 

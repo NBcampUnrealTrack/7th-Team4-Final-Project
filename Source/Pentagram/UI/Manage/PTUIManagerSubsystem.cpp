@@ -1,5 +1,4 @@
-﻿
-
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 #include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/Screens/Main/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
@@ -16,7 +15,7 @@ void UPTUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTUIManagerSubsystem::Deinitialize()
 {
-    // 참조 안전 해제
+    // 참조 해제
     PrimaryLayout.Reset();
     Super::Deinitialize();
 }
@@ -24,8 +23,10 @@ void UPTUIManagerSubsystem::Deinitialize()
 void UPTUIManagerSubsystem::RegisterPrimaryLayout(UPTPrimaryLayout* InLayout)
 {
     if (!InLayout) return;
+
     UE_LOG(LogTemp, Warning, TEXT(">> Register: Subsystem=%p, InLayout=%p"), this, InLayout);
-    // 베이스 레이아웃 등록
+
+    // 레이아웃 등록
     PrimaryLayout = InLayout;
 }
 
@@ -37,14 +38,14 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
         UE_LOG(LogTemp, Warning, TEXT("PushWidget: WidgetClass가 null"));
         return nullptr;
     }
-    if(!PrimaryLayout.IsValid())
+    if (!PrimaryLayout.IsValid())
     {
         UE_LOG(LogTemp, Warning, TEXT("PushWidget: PrimaryLayout.가 null"));
         return nullptr;
     }
 
     UE_LOG(LogTemp, Warning, TEXT(">> PushWidget: Layer=%d, Subsystem=%p, PrimaryLayout=%p"),
-          (int32)Layer, this, PrimaryLayout.Get());
+        (int32)Layer, this, PrimaryLayout.Get());
 
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
     if (!Stack)
@@ -55,13 +56,11 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
     return Stack->AddWidget(WidgetClass);
 }
 
-
-
 void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemove)
 {
     if (!WidgetToRemove) return;
 
-    // 위젯 종료 (스택 및 화면에서 자동 제거)
+    // 위젯 종료
     WidgetToRemove->DeactivateWidget();
 }
 
@@ -74,15 +73,19 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
         return;
     }
 
-    // 2. 인벤토리가 없거나, 닫혀 있는 경우 (열기)
-    // 인벤토리가 닫혀있다면(IsValid()가 false이거나 Deactivated 상태) 새로 Push
-    InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
-
-    // [중요] 생성된 후 바로 활성화해주어야 Common UI가 입력을 받습니다.
+    // 열림 판정
     if (InventoryInstance)
     {
-        InventoryInstance->ActivateWidget();
-        UE_LOG(LogTemp, Warning, TEXT(">> 인벤토리 활성화 완료!"));
+        if (InventoryInstance->IsActivated() || InventoryInstance->IsInViewport())
+        {
+            bIsInventoryOpen = true;
+        }
+    }
+
+    if (bIsInventoryOpen)
+    {
+        RemoveWidget(InventoryInstance);
+        InventoryInstance = nullptr;
     }
     else
     {
