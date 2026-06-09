@@ -1,6 +1,6 @@
 ﻿#include "PTSkillSlotWidget.h"
 #include "PTSkillSlotEntryWidget.h"
-#include "Character/Player/Skill/PTSkillComponent.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 
 void UPTSkillSlotWidget::SetSlotIcon(int32 SlotIndex, UTexture2D* Icon)
 {
@@ -20,7 +20,7 @@ void UPTSkillSlotWidget::SetSlotUsable(int32 SlotIndex, bool bUsable)
     if (UPTSkillSlotEntryWidget* E = GetEntry(SlotIndex)) E->SetUsable(bUsable);
 }
 
-void UPTSkillSlotWidget::InitWithSkillComponent(UPTSkillComponent* InSkillComp)
+void UPTSkillSlotWidget::InitWithSkillComponent(UPTPlayerSkillComponent* InSkillComp)
 {
     if (!InSkillComp) return;
 
@@ -45,7 +45,7 @@ void UPTSkillSlotWidget::NativeConstruct()
 
     if (APawn* P = GetOwningPlayerPawn())
     {
-        if (UPTSkillComponent* SC = P->FindComponentByClass<UPTSkillComponent>())
+        if (UPTPlayerSkillComponent* SC = P->FindComponentByClass<UPTPlayerSkillComponent>())
         {
             InitWithSkillComponent(SC);
         }

@@ -16,15 +16,11 @@ class PENTAGRAM_API APTPlayerCharacter : public APTBaseCharacter
 public:
     APTPlayerCharacter();
 
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
-
     virtual void PossessedBy(AController* NewController) override;
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void OnDeath() override;
-
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // F키 입력 시 상호작용 시도
     void TryInteract();
@@ -32,7 +28,6 @@ public:
     // 체력 재생
     void RegenHP();
 
-    // ── RPC 함수 ─────────────────────────────────────────────────────────────
 
     // 상호작용 실제 처리 담당
     UFUNCTION(Server, Reliable, WithValidation)
@@ -54,13 +49,11 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayDodgeMontage();
 
-    // ── Getter 함수 ──────────────────────────────────────────────────────────
 
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
     FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 
 public:
-    // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "SpringArm")
     TObjectPtr<class USpringArmComponent> SpringArmComp;
@@ -69,15 +62,13 @@ public:
     TObjectPtr<class UCameraComponent> CameraComp;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
-    TObjectPtr<class UPTSkillComponent> SkillComp;
+    TObjectPtr<class UPTPlayerSkillComponent> SkillComp;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
     TObjectPtr<UPTInventoryComponent> InventoryComponent;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
     TObjectPtr<UPTEquipmentComponent> EquipmentComponent;
-
-    // ── 일반 공격 관련 ───────────────────────────────────────────────────────
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     int32 ComboIndex = 0;       // 현재 콤보 단계 (연속 공격 단계)
@@ -91,7 +82,7 @@ public:
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
 
-    // ── 닷지 관련 ────────────────────────────────────────────────────────────
+    // 닷지 관련
 
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     bool bIsInvincible = false; // 무적 여부 (데미지 판정에서 참조)
@@ -99,16 +90,16 @@ public:
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DodgeMontage;
 
-    // ── 애니메이션 ───────────────────────────────────────────────────────────
+    // 애니메이션
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
 
-    // ── 체력 재생 타이머 ─────────────────────────────────────────────────────
+    // 체력 재생 타이머
 
     FTimerHandle HPRegenTimerHandle;
 
-    // ── 델리게이트 (최하단) ──────────────────────────────────────────────────
+    // 델리게이트 (최하단)
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 

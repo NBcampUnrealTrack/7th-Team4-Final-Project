@@ -6,7 +6,7 @@
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
-#include "Character/Skill/PTSkillComponent.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -192,7 +192,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
             {
                 UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
             }
-            return; // 아이템 클릭 시 공격 차단
+            return;
         }
     }
 
@@ -297,7 +297,6 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
 // Server RPC 패킷 위변조 검증부
 bool APTPlayerController::Server_TryPickupItem_Validate(APTDropItemActorBase* TargetItem)
 {
-    // 포인터가 오염되지 않았는지 검증
     return true;
 }
 

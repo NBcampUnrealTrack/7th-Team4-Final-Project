@@ -3,7 +3,7 @@
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTCharacterRow.h"
-#include "Character/Skill/PTSkillComponent.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -38,7 +38,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
     CameraComp->bUsePawnControlRotation = false;
 
-    SkillComp          = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+    SkillComp          = CreateDefaultSubobject<UPTPlayerSkillComponent>(TEXT("Skill"));
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 

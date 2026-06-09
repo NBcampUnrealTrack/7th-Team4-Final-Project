@@ -13,11 +13,7 @@ class PENTAGRAM_API APTBaseCharacter : public ACharacter
 public:
     APTBaseCharacter();
 
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
-
     void PostInitializeComponents();
-
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 데미지 적용
     UFUNCTION(BlueprintCallable, Category = "Combat")
@@ -33,13 +29,10 @@ public:
     float GetAttackSpeed() const { return AttackSpeed; }
 
 protected:
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
-
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 public:
-    // ── 멤버 변수 ────────────────────────────────────────────────────────────
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character")
     ECharacterType CharacterType;
 
@@ -47,26 +40,26 @@ public:
     FDataTableRowHandle CharacterDataHandle;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, VisibleAnywhere, Category = "Stats")
-    float CurrentHP;    // 현재 체력
+    float CurrentHP;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float MaxHP;        // 최대 체력
+    float MaxHP;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float CurrentMP;    // 현재 마나
+    float CurrentMP;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float MaxMP;        // 최대 마나
+    float MaxMP;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float BaseDef;      // 방어력
+    float BaseDef;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float BaseAtk;      // 공격력
+    float BaseAtk;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float AttackSpeed;  // 공격 속도
+    float AttackSpeed;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Stats")
-    float MoveSpeed;    // 이동 속도
+    float MoveSpeed;
 };

@@ -20,6 +20,10 @@ void UPTSkillComponent::BeginPlay()
     Super::BeginPlay();
 }
 
+void UPTSkillComponent::TryActivateSkill(FName SkillID)
+{
+}
+
 FPTSkillRow* UPTSkillComponent::GetSkillData(FName SkillID) const
 {
     if (!SkillDataTable) return nullptr;

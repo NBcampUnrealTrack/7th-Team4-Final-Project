@@ -8,7 +8,7 @@ struct FPTCharacterRow : public FTableRowBase
 {
     GENERATED_BODY()
 
-    // ── 공통 스탯 ( 플레이어 / 몬스터 / 보스 ) ──────────────────────────────
+    // * 공통 스탯 ( 플레이어 / 몬스터 / 보스 ) *
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Stats")
     float MaxHP = 0.f;
@@ -26,7 +26,7 @@ struct FPTCharacterRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Stats")
     float MoveSpeed = 0.f;
 
-    // ── 플레이어 전용 (몬스터 미사용 → 0) ────────────────────────────────
+    // * 플레이어 전용 (몬스터 미사용 → 0) *
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Player")
     float MaxMP = 0.f;
@@ -42,7 +42,7 @@ struct FPTCharacterRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Player")
     int32 RequiredEXP = 0;
 
-    // ── 몬스터 전용 AI (플레이어 미사용 → 0) ─────────────────────────────
+    // * 몬스터 전용 AI (플레이어 미사용 → 0) *
 
     // AIPerception 시야 각도 (도 단위). 쫄몹 140 / 보스 180
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Monster|AI")
@@ -68,7 +68,7 @@ struct FPTCharacterRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Monster|AI")
     float MaxChaseDistance = 0.f;
 
-    // ── 몬스터 전용 드롭·보상 (플레이어 미사용 → 0) ──────────────────────
+    // * 몬스터 전용 드롭·보상 (플레이어 미사용 → 0) *
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Character|Monster|Drop")
     int32 GoldDropMin = 0;

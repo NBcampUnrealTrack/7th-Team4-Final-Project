@@ -5,7 +5,7 @@
 #include "PTSkillSlotWidget.generated.h"
 
 class UPTSkillSlotEntryWidget;
-class UPTSkillComponent;
+class UPTPlayerSkillComponent;
 
 UCLASS()
 class PENTAGRAM_API UPTSkillSlotWidget : public UCommonUserWidget
@@ -27,7 +27,7 @@ public:
 
     // 컴포넌트 연결
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
-    void InitWithSkillComponent(UPTSkillComponent* InSkillComp);
+    void InitWithSkillComponent(UPTPlayerSkillComponent* InSkillComp);
 
 protected:
     // 오버라이드
@@ -69,5 +69,5 @@ private:
     TArray<TObjectPtr<UPTSkillSlotEntryWidget>> Entries;
 
     UPROPERTY()
-    TWeakObjectPtr<UPTSkillComponent> SkillComp;
+    TWeakObjectPtr<UPTPlayerSkillComponent> SkillComp;
 };

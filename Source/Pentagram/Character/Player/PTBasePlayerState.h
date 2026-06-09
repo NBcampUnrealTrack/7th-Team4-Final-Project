@@ -11,8 +11,6 @@ class PENTAGRAM_API APTBasePlayerState : public APlayerState
     GENERATED_BODY()
 
 public:
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
-
     // 모든 스탯 델리게이트를 한 번에 브로드캐스트 (UI 초기화용)
     UFUNCTION(BlueprintCallable, Category = "PT|Delegates")
     void BroadcastAllStats();
@@ -28,11 +26,8 @@ public:
     bool HasRespawnLocation() const { return bHasRespawnLocation; }
 
 protected:
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
-
-    // ── RepNotify 함수 ───────────────────────────────────────────────────────
 
     UFUNCTION()
     void OnRep_CurrentHP();
@@ -59,7 +54,6 @@ protected:
     void OnRep_PlayerLevel();
 
 public:
-    // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentHP, VisibleAnywhere, Category = "PT|Stat")
     float CurrentHP;
@@ -86,7 +80,6 @@ public:
     int32 RequiredExp = 100;
 
 private:
-    // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 
     // 실제 리스폰 위치 데이터가 저장될 곳 (서버에서만 안전하게 관리)
     UPROPERTY()
@@ -96,7 +89,6 @@ private:
     bool bHasRespawnLocation = false;
 
 public:
-    // ── 델리게이트 (최하단) ──────────────────────────────────────────────────
 
     UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
     FPTOnHealthChanged OnHealthChanged;
