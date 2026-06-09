@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PTStatBarWidget.h"
+#include "../PTStatBarWidget.h"
 #include "UI/Data/PTDelegates.h"
 #include "PTExpBarWidget.generated.h"
 

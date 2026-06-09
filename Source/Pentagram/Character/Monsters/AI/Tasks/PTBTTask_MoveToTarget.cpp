@@ -1,5 +1,5 @@
-#include "Character/Monsters/PTBTTask_MoveToTarget.h"
-#include "Character/Monsters/PTMonsterBlackboardKeys.h"
+﻿#include "Character/Monsters/AI/Tasks/PTBTTask_MoveToTarget.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "AIController.h"
 

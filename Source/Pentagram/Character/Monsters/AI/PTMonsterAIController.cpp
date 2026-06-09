@@ -1,6 +1,6 @@
-#include "Character/Monsters/PTMonsterAIController.h"
+﻿#include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
-#include "Character/Monsters/PTMonsterBlackboardKeys.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -42,13 +42,13 @@ void APTMonsterAIController::UpdateSightConfig(float InSightRange, float InLoseS
 
 void APTMonsterAIController::UpdateMonsterBlackboard(APTMonsterCharacter* Monster)
 {
-    if (!Monster)
+    if (!IsValid(Monster))
     {
         return;
     }
 
     UBlackboardComponent* BB = GetBlackboardComponent();
-    if (!BB)
+    if (!IsValid(BB))
     {
         return;
     }
@@ -62,7 +62,7 @@ void APTMonsterAIController::OnPossess(APawn* InPawn)
     Super::OnPossess(InPawn);
 
     APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(InPawn);
-    if (!Monster)
+    if (!IsValid(Monster))
     {
         return;
     }
@@ -76,7 +76,7 @@ void APTMonsterAIController::OnPossess(APawn* InPawn)
 void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
 {
     UBlackboardComponent* BB = GetBlackboardComponent();
-    if (!BB)
+    if (!IsValid(BB))
     {
         return;
     }
