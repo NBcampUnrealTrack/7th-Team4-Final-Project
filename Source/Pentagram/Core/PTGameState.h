@@ -18,7 +18,7 @@ public:
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 
-    // 서버에서 호출. CurrentPhase 갱신 후 OnRep 경유로 클라이언트에 전파됨.
+
     UFUNCTION(BlueprintCallable, Category = "PT|GameState")
     void SetCurrentPhase(EGamePhase NewPhase);      //페이즈 설정
 
