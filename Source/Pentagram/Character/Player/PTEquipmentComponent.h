@@ -8,8 +8,8 @@
 UENUM(BlueprintType)
 enum class EEquipSlotType : uint8  // 장비 슬롯 타입
 {
-    Weapon    UMETA(DisplayName = "Weapon"),
-    Chest     UMETA(DisplayName = "Chest")
+    Weapon  UMETA(DisplayName = "Weapon"),
+    Chest   UMETA(DisplayName = "Chest")
 };
 
 USTRUCT(BlueprintType)
@@ -17,59 +17,82 @@ struct FEquipmentSlot // 장비 슬롯 구조체
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment") // 슬롯 타입
+    // 슬롯 타입
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment")
     EEquipSlotType EquippedSlotType;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment") // 장착 여부
+    // 장착 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment")
     bool bIsEquipped;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment") // 장착된 아이템 데이터
+    // 장착된 아이템 데이터
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Equipment")
     FItemData MountedItem;
 
     FEquipmentSlot() : EquippedSlotType(EEquipSlotType::Weapon), bIsEquipped(false) {}
     FEquipmentSlot(EEquipSlotType InType) : EquippedSlotType(InType), bIsEquipped(false) {}
 };
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
-class PENTAGRAM_API UPTEquipmentComponent : public UActorComponent // 장비창 컴포넌트 클래스
+// 장비창 컴포넌트 클래스
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+class PENTAGRAM_API UPTEquipmentComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UPTEquipmentComponent();
+    UPTEquipmentComponent();
 
-protected:
-	virtual void BeginPlay() override;
+    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
-    // 네트워크 프로퍼티 복제를 위한 함수 오버라이드 
-    virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override; 
-
-public:
-    // 장착 및 해제 함수 (서버 권한이 있으면 직접 연산, 클라이언트면 Server RPC 호출)
+    // 장착 함수 (기존에 장착되어 있던 아이템 데이터를 OutOldItem, true 반환)
+    // 서버 권한이 있으면 직접 연산, 클라이언트면 Server RPC 호출
     UFUNCTION(BlueprintCallable, Category = "Equipment")
-    bool EquipItem(const FItemData& NewItem, FItemData& OutOldItem); // 장착 함수 (기존에 장착되어 있던 아이템 데이터를 OutOldItem, true 전부 반환)
+    bool EquipItem(const FItemData& NewItem, FItemData& OutOldItem);
 
+    // 해제 함수 (해제된 아이템 데이터를 OutUnequippedItem, true 반환)
+    // 서버 권한이 있으면 직접 연산, 클라이언트면 Server RPC 호출
     UFUNCTION(BlueprintCallable, Category = "Equipment")
-    bool UnequipItem(EEquipSlotType SlotType, FItemData& OutUnequippedItem); // 해제 함수 (해제된 아이템 데이터를 OutOldItem, true 전부 반환)
+    bool UnequipItem(EEquipSlotType SlotType, FItemData& OutUnequippedItem);
 
-    // 클라이언트의 요청을 서버로 전달할 Server RPC 함수들 
+    // ── RPC 함수 ─────────────────────────────────────────────────────────────
+
+    // 클라이언트의 장착 요청을 서버로 전달
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_EquipItem(const FItemData& NewItem);
 
+    // 클라이언트의 해제 요청을 서버로 전달
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_UnequipItem(EEquipSlotType SlotType);
 
-    // 실시간 보너스 스탯 게터(Getter) 함수들
+    // ── Getter 함수 ──────────────────────────────────────────────────────────
+
     FORCEINLINE int32 GetTotalBonusStr() const { return TotalBonusStr; }
     FORCEINLINE int32 GetTotalBonusDef() const { return TotalBonusDef; }
-    FORCEINLINE int32 GetTotalBonusHp() const { return TotalBonusHp; }
+    FORCEINLINE int32 GetTotalBonusHp()  const { return TotalBonusHp;  }
 
 protected:
-    // 슬롯 데이터
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment") // 장착된 무기 슬롯 저장
+    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
+
+    virtual void BeginPlay() override;
+
+    // 네트워크 프로퍼티 복제를 위한 함수 오버라이드
+    virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
+private:
+    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
+
+    // 헬퍼 함수 : 장착/해제 시 실시간으로 보너스 스탯 스냅샷을 갱신
+    void UpdateTotalBonusStats();
+
+protected:
+    // ── 멤버 변수 (protected) ────────────────────────────────────────────────
+
+    // 장착된 무기 슬롯
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
     FEquipmentSlot EquippedWeapon;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment") // 장착된 갑옷 슬롯 저장
+    // 장착된 갑옷 슬롯
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
     FEquipmentSlot EquippedChest;
 
     // 장착 중인 모든 장비의 스탯 합산
@@ -81,8 +104,4 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment Stats")
     int32 TotalBonusHp;
-
-private:
-    // 헬퍼함수 : 장착/해제 시 실시간으로 캐릭터 스탯 스냅샷을 갱신
-    void UpdateTotalBonusStats();
 };

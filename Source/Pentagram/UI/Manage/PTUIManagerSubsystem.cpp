@@ -1,6 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
+
 #include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Screens/Main/PTHUDWidget.h"
+#include "UI/HUD/PTHUDWidget.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
@@ -35,12 +36,10 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
 {
     if (!WidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PushWidget: WidgetClass가 null"));
         return nullptr;
     }
     if (!PrimaryLayout.IsValid())
     {
-        UE_LOG(LogTemp, Warning, TEXT("PushWidget: PrimaryLayout.가 null"));
         return nullptr;
     }
 
@@ -50,7 +49,6 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
     if (!Stack)
     {
-        UE_LOG(LogTemp, Warning, TEXT("PushWidget: Stack가 null"));
         return nullptr;
     }
     return Stack->AddWidget(WidgetClass);
@@ -66,12 +64,9 @@ void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemov
 
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
 {
+    if (!InventoryClass) return;
 
-    if (InventoryInstance && InventoryInstance->IsActivated())
-    {
-        InventoryInstance->DeactivateWidget();
-        return;
-    }
+    bool bIsInventoryOpen = false;
 
     // 열림 판정
     if (InventoryInstance)
@@ -89,6 +84,6 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT(">> 인벤토리 Push 실패!"));
+        InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
     }
 }

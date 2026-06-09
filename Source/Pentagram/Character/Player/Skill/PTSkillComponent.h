@@ -1,11 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "UI/Data/PTDelegates.h"
 #include "PTSkillRow.h"
 #include "PTSkillComponent.generated.h"
-
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTSkillComponent : public UActorComponent
@@ -15,11 +14,13 @@ class PENTAGRAM_API UPTSkillComponent : public UActorComponent
 public:
     UPTSkillComponent();
 
+    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
+
     // 스킬 발동 시도
     UFUNCTION(BlueprintCallable, Category = "Skill")
     void TryActivateSkill(FName SkillID);
 
-    // 스킬슬롯에 배치
+    // 스킬 슬롯에 배치
     UFUNCTION(BlueprintCallable, Category = "Skill")
     void AssignSkillToSlot(FName SkillID, int32 SlotIndex);
 
@@ -27,7 +28,37 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Skill")
     FName GetSkillAtSlot(int32 SlotIndex) const;
 
-    //DT 참조
+    // 슬롯의 남은 쿨다운 시간을 반환
+    UFUNCTION(BlueprintCallable)
+    float GetCooldownRemaining(int32 SlotIndex) const;
+
+    // DT에서 스킬 데이터 조회
+    FPTSkillRow* GetSkillData(FName SkillID) const;
+
+    // ── RPC 함수 ─────────────────────────────────────────────────────────────
+
+    // 쿨다운 시작을 소유 클라이언트에게 통지
+    UFUNCTION(Client, Reliable)
+    void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
+
+    // 스킬 몽타주 및 이펙트/사운드를 전체 클라이언트에 전파
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlaySkillMontage(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound);
+
+protected:
+    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
+
+    virtual void BeginPlay() override;
+
+    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
+
+    // 쿨다운 종료 처리
+    void OnCooldownEnd(int32 SlotIndex);
+
+public:
+    // ── 멤버 변수 ────────────────────────────────────────────────────────────
+
+    // DT 참조
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TObjectPtr<UDataTable> SkillDataTable;
 
@@ -35,41 +66,27 @@ public:
     UPROPERTY(EditAnywhere, Category = "Skill")
     TArray<FName> SkillSlots;
 
+    // 현재 발동 중인 스킬 ID
     UPROPERTY()
     FName CurrentSkillID = NAME_None;
 
+protected:
+    // ── 멤버 변수 (protected) ────────────────────────────────────────────────
+
+    // 쿨다운 타이머 (슬롯 당 하나)
+    TArray<FTimerHandle> CooldownTimers;
+
+    // 쿨다운 중인 슬롯 플래그
+    TArray<bool> bIsCooldown;
+
+public:
+    // ── 델리게이트 (최하단) ──────────────────────────────────────────────────
+
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);
 
-    //델리게이트의 인스턴스
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillCooldownEnd OnSkillCooldownEnd;
 
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillCooldownStart OnSkillCooldownStart;
-
-    UFUNCTION(Client, Reliable)
-    void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
-
-    // 슬롯의 남은 쿨다운 시간을 반환
-    UFUNCTION(BlueprintCallable)
-    float GetCooldownRemaining(int32 SlotIndex) const;
-
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_PlaySkillMontage(UAnimMontage* Montage);
-
-    //DT에서 스킬 데이터 조회
-    FPTSkillRow* GetSkillData(FName SkillID) const;
-
-protected:
-    virtual void BeginPlay() override;
-
-    //쿨타운 타이머 (슬롯 당 하나)
-    TArray<FTimerHandle> CooldownTimers;
-
-    //쿨다운 스킬 체크
-    TArray<bool> bIsCooldown;
-
-    //쿨다운 중인 슬롯 체크
-    void OnCooldownEnd(int32 SlotIndex);
-
 };

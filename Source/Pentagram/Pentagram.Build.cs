@@ -32,12 +32,6 @@ public class Pentagram : ModuleRules
 
 		PublicIncludePaths.AddRange(new string[] {
 			"Pentagram",
-			"Pentagram/Variant_Strategy",
-			"Pentagram/Variant_Strategy/UI",
-			"Pentagram/Variant_TwinStick",
-			"Pentagram/Variant_TwinStick/AI",
-			"Pentagram/Variant_TwinStick/Gameplay",
-			"Pentagram/Variant_TwinStick/UI"
 		});
 
 		// Uncomment if you are using Slate UI
