@@ -75,11 +75,6 @@ void APTBaseCharacter::OnRep_CurrentHP()
 {
 }
 
-void APTBaseCharacter::OnRep_CurrentHP()
-{
-    
-}
-
 void APTBaseCharacter::BeginPlay()
 {
     Super::BeginPlay();
