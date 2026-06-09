@@ -18,6 +18,7 @@
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
+    CharacterType = ECharacterType::NormalMonster;
     PrimaryActorTick.bCanEverTick = false;
 }
 

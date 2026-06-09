@@ -3,6 +3,7 @@
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
+    CharacterType = ECharacterType::BossMonster;
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
