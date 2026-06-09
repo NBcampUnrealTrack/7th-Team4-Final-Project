@@ -14,7 +14,6 @@ public:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 스킬 발동 시도
-    UFUNCTION(BlueprintCallable, Category = "Skill")
     virtual void TryActivateSkill(FName SkillID) override;
 
     // ── RPC 함수 ─────────────────────────────────────────────────────────────

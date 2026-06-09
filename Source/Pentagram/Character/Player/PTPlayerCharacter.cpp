@@ -2,7 +2,7 @@
 
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
-#include "Skill/PTSkillComponent.h"
+#include "Character/Skill/PTSkillComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"

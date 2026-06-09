@@ -6,7 +6,7 @@
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Screens/LayOut/PTPrimaryLayout.h"
-#include "Skill/PTSkillComponent.h"
+#include "Character/Skill/PTSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -290,7 +290,7 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("[획득 실패] 인벤토리 공간 부족 또는 아이템 ID 누락")); 
+        UE_LOG(LogTemp, Warning, TEXT("[획득 실패] 인벤토리 공간 부족 또는 아이템 ID 누락"));
     }
 }
 
