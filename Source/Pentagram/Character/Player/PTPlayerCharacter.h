@@ -69,7 +69,7 @@ public:
     TObjectPtr<class UCameraComponent> CameraComp;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
-    TObjectPtr<class UPTSkillComponent> SkillComp;
+    TObjectPtr<class UPTPlayerSkillComponent> SkillComp;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
     TObjectPtr<UPTInventoryComponent> InventoryComponent;
