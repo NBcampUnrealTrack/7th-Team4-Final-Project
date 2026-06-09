@@ -1,6 +1,7 @@
 ﻿#include "PTMonsterHealthBarWidget.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 
 void UPTMonsterHealthBarWidget::SetupMonster(APTMonsterCharacter* InMonster)
 {
@@ -13,7 +14,6 @@ void UPTMonsterHealthBarWidget::SetupMonster(APTMonsterCharacter* InMonster)
     {
         if (Old == InMonster)
         {
-            // 값만 동기화
             SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
             return;
         }
@@ -43,6 +43,14 @@ void UPTMonsterHealthBarWidget::NativeConstruct()
     if (PB_Bar)
     {
         PB_Bar->SetBarFillType(EProgressBarFillType::LeftToRight);
+    }
+}
+
+void UPTMonsterHealthBarWidget::SetDisplayName(const FText& InName)
+{
+    if (Txt_Name)
+    {
+        Txt_Name->SetText(InName);
     }
 }
 
