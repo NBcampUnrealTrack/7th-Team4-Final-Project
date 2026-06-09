@@ -6,7 +6,7 @@
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
-#include "Skill/PTSkillComponent.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
