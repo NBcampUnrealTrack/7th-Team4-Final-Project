@@ -1,7 +1,7 @@
-#include "Character/Monsters/PTBTService_BossPhase.h"
+﻿#include "Character/Monsters/AI/Services/PTBTService_BossPhase.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "Character/Monsters/PTMonsterBlackboardKeys.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Character/Monsters/PTBossMonsterCharacter.h"
 
 UPTBTService_BossPhase::UPTBTService_BossPhase()
@@ -40,5 +40,6 @@ void UPTBTService_BossPhase::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
     if (NewPhase > CurrentPhase)
     {
         BB->SetValueAsInt(PTMonsterBlackboardKeys::BossPhase, NewPhase);
+        Boss->OnPhaseChanged.Broadcast(NewPhase);
     }
 }
