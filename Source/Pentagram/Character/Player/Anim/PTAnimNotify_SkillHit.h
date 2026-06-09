@@ -2,10 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
-#include "AN_SkillHit.generated.h"
+#include "PTAnimNotify_SkillHit.generated.h"
 
 UCLASS()
-class PENTAGRAM_API UAN_SkillHit : public UAnimNotify
+class PENTAGRAM_API UPTAnimNotify_SkillHit : public UAnimNotify
 {
     GENERATED_BODY()
 

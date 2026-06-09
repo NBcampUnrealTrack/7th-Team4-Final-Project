@@ -2,8 +2,12 @@
 #include "UI/Data/PTDelegates.h"
 #include "Net/UnrealNetwork.h"
 
-
 void APTBasePlayerState::OnRep_CurrentHP()
+{
+    OnHealthChanged.Broadcast(CurrentHP, MaxHP);
+}
+
+void APTBasePlayerState::OnRep_MaxHP()
 {
     OnHealthChanged.Broadcast(CurrentHP, MaxHP);
 }
@@ -13,14 +17,9 @@ void APTBasePlayerState::OnRep_CurrentMP()
     OnManaChanged.Broadcast(CurrentMP, MaxMP);
 }
 
-void APTBasePlayerState::OnRep_RequiredExp()
+void APTBasePlayerState::OnRep_MaxMP()
 {
-    OnExpChanged.Broadcast(CurrentExp, RequiredExp);
-}
-
-void APTBasePlayerState::OnRep_PlayerLevel()
-{
-    OnLevelChanged.Broadcast(PlayerLevel);
+    OnManaChanged.Broadcast(CurrentMP, MaxMP);
 }
 
 void APTBasePlayerState::OnRep_CurrentGold()
@@ -33,14 +32,14 @@ void APTBasePlayerState::OnRep_CurrentExp()
     OnExpChanged.Broadcast(CurrentExp, RequiredExp);
 }
 
-void APTBasePlayerState::OnRep_MaxHP()
+void APTBasePlayerState::OnRep_RequiredExp()
 {
-    OnHealthChanged.Broadcast(CurrentHP, MaxHP);
+    OnExpChanged.Broadcast(CurrentExp, RequiredExp);
 }
 
-void APTBasePlayerState::OnRep_MaxMP()
+void APTBasePlayerState::OnRep_PlayerLevel()
 {
-    OnManaChanged.Broadcast(CurrentMP, MaxMP);
+    OnLevelChanged.Broadcast(PlayerLevel);
 }
 
 void APTBasePlayerState::BroadcastAllStats()

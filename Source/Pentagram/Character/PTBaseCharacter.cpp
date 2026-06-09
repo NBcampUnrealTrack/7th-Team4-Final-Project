@@ -4,10 +4,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/Player/PTBasePlayerState.h"
+#include "Player/PTPlayerCharacter.h"
 
 APTBaseCharacter::APTBaseCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
     bReplicates = true;
 }
 
@@ -15,12 +16,19 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 {
     if (!HasAuthority()) return 0.f;
 
+    // 플레이어가 닷지 상태일 때 무적 판정을 체크함
+    if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(this))
+    {
+        if (Player->bIsInvincible) return 0.f;
+    }
+
     // 데미지 계산
     float FinalDamage = FMath::Max(DamageAmount - BaseDef, 1.f);
-    //HP 감소
-    CurrentHP = FMath::Max(CurrentHP - FinalDamage,0.f);
 
-    //PlayerState에 결과 반영 (플레이어만)
+    // HP 감소
+    CurrentHP = FMath::Max(CurrentHP - FinalDamage, 0.f);
+
+    // PlayerState에 결과 반영 (플레이어만)
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
     if (PS)
     {
@@ -43,10 +51,11 @@ void APTBaseCharacter::PostInitializeComponents()
 
     if (const FPTCharacterRow* Row = CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("Load")))
     {
-        MaxHP = Row->MaxHP;   CurrentHP = Row->MaxHP;
-        MaxMP = Row->MaxMP;   CurrentMP = Row->MaxMP;
-        BaseDef = Row->BaseDef; BaseAtk = Row->BaseAtk;
-        AttackSpeed = Row->AttackSpeed; MoveSpeed = Row->MoveSpeed;
+        MaxHP = Row->MaxHP;         CurrentHP = Row->MaxHP;
+        MaxMP = Row->MaxMP;         CurrentMP = Row->MaxMP;
+        BaseDef = Row->BaseDef;     BaseAtk = Row->BaseAtk;
+        AttackSpeed = Row->AttackSpeed;
+        MoveSpeed = Row->MoveSpeed;
         GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
     }
 }
@@ -56,10 +65,14 @@ void APTBaseCharacter::OnDeath()
     // 이동 불가
     GetCharacterMovement()->DisableMovement();
 
-    // 콜리전 비활성화(액터끼리 충돌 안함, 나중에 리스폰 시에 활성화 시켜줘야 할 수 있음.)
+    // 콜리전 비활성화 (액터끼리 충돌 안함, 나중에 리스폰 시에 활성화 시켜줘야 할 수 있음.)
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-    //사망 애니메이션 재생은 각 파생 클래스에서 구현해주세요.
+    // 사망 애니메이션 재생은 각 파생 클래스에서 구현해주세요.
+}
+
+void APTBaseCharacter::OnRep_CurrentHP()
+{
 }
 
 void APTBaseCharacter::OnRep_CurrentHP()
@@ -69,7 +82,7 @@ void APTBaseCharacter::OnRep_CurrentHP()
 
 void APTBaseCharacter::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
     // DT에서 캐릭터 스탯을 로드
     if (const FPTCharacterRow* Row = CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("BeginPlay")))

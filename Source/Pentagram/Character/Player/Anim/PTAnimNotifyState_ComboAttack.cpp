@@ -1,9 +1,9 @@
-#include "Character/Player/Anim/ANS_ComboAttack.h"
+#include "Character/Player/Anim/PTAnimNotifyState_ComboAttack.h"
 
 #include "Character/Player/PTPlayerCharacter.h"
 
 
-void UANS_ComboAttack::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
+void UPTAnimNotifyState_ComboAttack::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
     Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
 
@@ -13,7 +13,7 @@ void UANS_ComboAttack::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
     }
 }
 
-void UANS_ComboAttack::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
+void UPTAnimNotifyState_ComboAttack::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
     const FAnimNotifyEventReference& EventReference)
 {
     Super::NotifyEnd(MeshComp, Animation, EventReference);
