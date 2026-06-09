@@ -25,17 +25,28 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void SetSlotUsable(int32 SlotIndex, bool bUsable);
 
+    // 컴포넌트 연결
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void InitWithSkillComponent(UPTSkillComponent* InSkillComp);
 
 protected:
+    // 오버라이드
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
 
+    // 쿨다운 시작
     UFUNCTION()
     void HandleCooldownStart(int32 SlotIndex, float Duration);
+
+    // 쿨다운 종료
     UFUNCTION()
     void HandleCooldownEnd(int32 SlotIndex);
+
+private:
+    // 슬롯 찾기
+    UPTSkillSlotEntryWidget* GetEntry(int32 SlotIndex) const;
+
+protected:
     // 슬롯 Q
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UPTSkillSlotEntryWidget> Slot_Q;
@@ -53,9 +64,6 @@ protected:
     TObjectPtr<UPTSkillSlotEntryWidget> Slot_R;
 
 private:
-    // 슬롯 찾기
-    UPTSkillSlotEntryWidget* GetEntry(int32 SlotIndex) const;
-
     // 슬롯 배열
     UPROPERTY()
     TArray<TObjectPtr<UPTSkillSlotEntryWidget>> Entries;

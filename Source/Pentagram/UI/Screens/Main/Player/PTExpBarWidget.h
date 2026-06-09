@@ -7,9 +7,6 @@
 #include "UI/Data/PTDelegates.h"
 #include "PTExpBarWidget.generated.h"
 
-/**
- *
- */
 class APTBasePlayerState;
 
 UCLASS()
@@ -18,18 +15,21 @@ class PENTAGRAM_API UPTExpBarWidget : public UPTStatBarWidget
     GENERATED_BODY()
 
 public:
+    // EXP 콜백
     UFUNCTION()
     void HandleExpChanged(float Current, float Required);
 
+    // 레벨 콜백
     UFUNCTION()
     void HandleLevelChanged(int32 NewLevel);
 
 protected:
+    // 오버라이드
     virtual void NativeConstruct() override;
-
-    UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|StatBar")
-    void OnLevelUpVisual(int32 NewLevel);
-
     virtual void BindToPlayerState(APTBasePlayerState* PS) override;
     virtual void UnbindFromPlayerState(APTBasePlayerState* PS) override;
+
+    // 레벨업 연출
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|StatBar")
+    void OnLevelUpVisual(int32 NewLevel);
 };

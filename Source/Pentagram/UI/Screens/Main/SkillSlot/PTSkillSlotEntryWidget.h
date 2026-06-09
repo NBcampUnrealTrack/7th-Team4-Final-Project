@@ -33,6 +33,25 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void SetKeyLabel(const FText& Key);
 
+protected:
+    // 오버라이드
+    virtual void NativePreConstruct() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+    // BP 이벤트
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|Skill")
+    void OnCooldownUpdated(float Percent, float RemainingSeconds);
+
+    // BP 이벤트
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|Skill")
+    void OnUsableChanged(bool bUsable);
+
+private:
+    // UI 갱신
+    void ApplyCooldown(float Remaining);
+
+public:
     // 기본 아이콘
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PT|UI|Skill")
     TObjectPtr<UTexture2D> DefaultIcon;
@@ -46,18 +65,6 @@ public:
     FLinearColor IconTint = FLinearColor::White;
 
 protected:
-    virtual void NativePreConstruct() override;
-    virtual void NativeConstruct() override;
-    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-
-    // BP 이벤트
-    UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|Skill")
-    void OnCooldownUpdated(float Percent, float RemainingSeconds);
-
-    // BP 이벤트
-    UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|Skill")
-    void OnUsableChanged(bool bUsable);
-
     // UI 이미지
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     TObjectPtr<UImage> Img_Icon;
@@ -75,9 +82,6 @@ protected:
     TObjectPtr<UTextBlock> Txt_Key;
 
 private:
-    // UI 갱신
-    void ApplyCooldown(float Remaining);
-
     float CooldownDuration = 0.f;
     float CooldownEndTime  = 0.f;
     bool  bOnCooldown      = false;

@@ -2,28 +2,6 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Components/ProgressBar.h"
 
-void UPTMonsterHealthBarWidget::NativeConstruct()
-{
-    Super::NativeConstruct();
-
-    if (PB_Bar)
-    {
-        PB_Bar->SetBarFillType(EProgressBarFillType::LeftToRight);
-    }
-}
-
-void UPTMonsterHealthBarWidget::NativeDestruct()
-{
-    if (APTMonsterCharacter* Monster = BoundMonster.Get())
-    {
-        OnMonsterUnbound(Monster);
-        Monster->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
-    }
-    BoundMonster.Reset();
-
-    Super::NativeDestruct();
-}
-
 void UPTMonsterHealthBarWidget::SetupMonster(APTMonsterCharacter* InMonster)
 {
     if (!InMonster)
@@ -35,7 +13,7 @@ void UPTMonsterHealthBarWidget::SetupMonster(APTMonsterCharacter* InMonster)
     {
         if (Old == InMonster)
         {
-            // 동일 몬스터: 값만 즉시 동기화하고 종료
+            // 값만 동기화
             SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
             return;
         }
@@ -56,4 +34,26 @@ void UPTMonsterHealthBarWidget::HandleHealthChanged(float Current, float Max)
 {
     SetValue(Current, Max);
     OnHealthChangedNative(Current, Max);
+}
+
+void UPTMonsterHealthBarWidget::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    if (PB_Bar)
+    {
+        PB_Bar->SetBarFillType(EProgressBarFillType::LeftToRight);
+    }
+}
+
+void UPTMonsterHealthBarWidget::NativeDestruct()
+{
+    if (APTMonsterCharacter* Monster = BoundMonster.Get())
+    {
+        OnMonsterUnbound(Monster);
+        Monster->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    }
+    BoundMonster.Reset();
+
+    Super::NativeDestruct();
 }

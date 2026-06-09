@@ -15,10 +15,13 @@ class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget
     GENERATED_BODY()
 
 protected:
-
+    // 오버라이드
     virtual void NativeOnInitialized() override;
     virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
 
+    // 뒤로가기 여부
+    UPROPERTY(BlueprintReadOnly, Category = "PT|Inventory")
+    bool bIsBackHandler = false;
 };

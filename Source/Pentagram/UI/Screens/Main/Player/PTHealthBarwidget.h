@@ -7,23 +7,21 @@
 #include "UI/Data/PTDelegates.h"
 #include "PTHealthBarwidget.generated.h"
 
-/**
- *
- */
 class APTBasePlayerState;
+
 UCLASS()
 class PENTAGRAM_API UPTHealthBarwidget : public UPTStatBarWidget
 {
     GENERATED_BODY()
 
 public:
-   //델리게이트 변수 선언
+    // HP 콜백
     UFUNCTION()
     void HandleHealthChanged(float Current, float Max);
 
 protected:
+    // 오버라이드
     virtual void NativeConstruct() override;
-
     virtual void BindToPlayerState(APTBasePlayerState* PS) override;
     virtual void UnbindFromPlayerState(APTBasePlayerState* PS) override;
 };

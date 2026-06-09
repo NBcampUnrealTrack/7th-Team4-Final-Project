@@ -18,6 +18,6 @@ void UPTInventoryWidget::NativeOnDeactivated()
 bool UPTInventoryWidget::NativeOnHandleBackAction()
 {
     bIsBackHandler = true;
-    DeactivateWidget(); // ESC/B로 닫기
+    DeactivateWidget(); // 닫기
     return true;
 }

@@ -3,29 +3,6 @@
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 
-void UPTSkillSlotEntryWidget::NativePreConstruct()
-{
-    Super::NativePreConstruct();
-
-    // 에디터 초기화
-    SetIcon(DefaultIcon);
-    SetKeyLabel(KeyText);
-    FLinearColor Tint = IconTint;
-    if (Tint.A <= 0.f) Tint.A = 1.f;
-    if (Img_Icon) Img_Icon->SetColorAndOpacity(Tint);
-
-    // 쿨다운 숨김
-    ApplyCooldown(0.f);
-}
-
-void UPTSkillSlotEntryWidget::NativeConstruct()
-{
-    Super::NativeConstruct();
-
-    // 준비 완료
-    ApplyCooldown(0.f);
-}
-
 void UPTSkillSlotEntryWidget::SetIcon(UTexture2D* Icon)
 {
     if (!Img_Icon) return;
@@ -77,6 +54,29 @@ void UPTSkillSlotEntryWidget::SetKeyLabel(const FText& Key)
 {
     // 단축키 설정
     if (Txt_Key) Txt_Key->SetText(Key);
+}
+
+void UPTSkillSlotEntryWidget::NativePreConstruct()
+{
+    Super::NativePreConstruct();
+
+    // 에디터 초기화
+    SetIcon(DefaultIcon);
+    SetKeyLabel(KeyText);
+    FLinearColor Tint = IconTint;
+    if (Tint.A <= 0.f) Tint.A = 1.f;
+    if (Img_Icon) Img_Icon->SetColorAndOpacity(Tint);
+
+    // 쿨다운 숨김
+    ApplyCooldown(0.f);
+}
+
+void UPTSkillSlotEntryWidget::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    // 준비 완료
+    ApplyCooldown(0.f);
 }
 
 void UPTSkillSlotEntryWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
