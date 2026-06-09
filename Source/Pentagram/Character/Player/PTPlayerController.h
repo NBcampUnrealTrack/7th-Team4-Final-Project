@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
+#include "UI/Data/PTDelegates.h"
 #include "PTPlayerController.generated.h"
 
 class UCommonActivatableWidget;
@@ -46,6 +47,8 @@ public:
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_TryPickupItem(APTDropItemActorBase* TargetItem);
 
+    UFUNCTION(Client, Reliable)
+    void Client_ShowMonsterHealth(APTMonsterCharacter* Monster);
 protected:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
@@ -111,6 +114,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UPTPrimaryLayout> PrimaryLayoutClass;
+
+    UPROPERTY(BlueprintAssignable, Category = "PT|UI")
+    FPTOnMonsterTargeted OnMonsterTargeted;
 
 private:
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────

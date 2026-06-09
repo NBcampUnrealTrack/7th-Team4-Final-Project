@@ -5,11 +5,13 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "PTPlayerCharacter.h"
-#include "UI/Screens/LayOut/PTPrimaryLayout.h"
-#include "Character/Skill/PTSkillComponent.h"
+#include "UI/Widget/LayOut/PTPrimaryLayout.h"
+#include "Skill/PTSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
+#include "Character/Monsters/PTMonsterCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "UI/HUD/PTHUDWidget.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -360,4 +362,8 @@ void APTPlayerController::RemoveUIInputMapping()
 
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
+}
+void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
+{
+    OnMonsterTargeted.Broadcast(Monster);
 }

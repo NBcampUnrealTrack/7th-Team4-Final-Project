@@ -2,7 +2,7 @@
 
 #include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/HUD/PTHUDWidget.h"
-#include "UI/Screens/LayOut/PTPrimaryLayout.h"
+#include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
 UPTUIManagerSubsystem::UPTUIManagerSubsystem()

@@ -21,3 +21,5 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnBossSpawned, AActor*, BossActo
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnBossPhaseChanged, int32, NewPhase);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnBossHealthChanged, float, CurrentHP, float, MaxHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnBossDefeated);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnMonsterTargeted, AActor*, TargetMonster);
