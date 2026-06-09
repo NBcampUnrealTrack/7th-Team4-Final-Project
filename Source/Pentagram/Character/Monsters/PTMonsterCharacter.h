@@ -74,7 +74,7 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     FVector SpawnLocation = FVector::ZeroVector;
 
-    UPROPERTY()
+    UPROPERTY(Transient)
     TSet<AActor*> HitActors;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Animation")
