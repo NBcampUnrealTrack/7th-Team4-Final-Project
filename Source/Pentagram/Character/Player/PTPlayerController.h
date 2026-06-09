@@ -42,7 +42,7 @@ public:
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);
 
-    // 아이템 획득을 서버에 요청하는 Server RPC
+    // 아이템 획득을 서버에 요청 Server RPC
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_TryPickupItem(APTDropItemActorBase* TargetItem);
 

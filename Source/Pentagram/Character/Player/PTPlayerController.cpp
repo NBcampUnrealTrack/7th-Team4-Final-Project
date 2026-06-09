@@ -176,7 +176,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
             Server_SetActorRotation(NewRotation);
         }
 
-        // 마우스 밑에 있는 오브젝트가 드롭 아이템 액터인지 확인 (재호출 없이 재사용)
+        // 마우스 지정 대상이 오브젝트가 드롭 아이템 액터인지 판별
         APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
         if (TargetItem)
         {
@@ -185,7 +185,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 
             if (Distance2D <= 250.0f) // 범위 판정
             {
-                // 로컬에서 판단을 내리지 않고, 서버 RPC를 전송합니다.
+                // 로컬에서 판단을 내리지 않고, 서버 RPC 전송
                 Server_TryPickupItem(TargetItem);
             }
             else
@@ -290,7 +290,7 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     }
     else
     {
-        UE_LOG(LogTemp, Warning, TEXT("인벤토리가 가득 찼습니다."));
+        UE_LOG(LogTemp, Warning, TEXT("[획득 실패] 인벤토리 공간 부족 또는 아이템 ID 누락")); 
     }
 }
 
