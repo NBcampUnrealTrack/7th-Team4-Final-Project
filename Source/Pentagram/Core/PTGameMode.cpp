@@ -4,9 +4,9 @@
 
 #include "Character/Player/PTBasePlayerState.h"
 #include "PTGameState.h"
-#include "PTPlayerLevelSubsystem.h"
-#include "PTQuestSubsystem.h"
-#include "PTSaveSubsystem.h"
+#include "Subsystems/PTPlayerLevelSubsystem.h"
+#include "Subsystems/PTQuestSubsystem.h"
+#include "Subsystems/PTSaveSubsystem.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -85,41 +85,41 @@ void APTGameMode::OnAllPlayersDead()
     SetGamePhase(EGamePhase::GameOver);
 }
 
-void APTGameMode::RespawnPlayer(AController* NewPlayer)
+void APTGameMode::RespawnPlayer(AController* PlayerController)
 {
-    if (NewPlayer == nullptr)
+    if (PlayerController == nullptr)
     {
         return;
     }
 
     if (RespawnDelaySeconds <= 0.f)
     {
-        RestartPlayer(NewPlayer);
+        RestartPlayer(PlayerController);
         return;
     }
 
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, NewPlayer]()
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, PlayerController]()
         {
-            if (NewPlayer == nullptr)
+            if (PlayerController == nullptr)
             {
                 return;
             }
 
-            RestartPlayer(NewPlayer);
+            RestartPlayer(PlayerController);
         }, RespawnDelaySeconds, false);
 }
 
-void APTGameMode::RespawnPlayer(AController* NewPlayer, const FVector& RespawnLoc, bool bHasCheckpoint)
+void APTGameMode::RespawnPlayer(AController* PlayerController, const FVector& RespawnLoc, bool bHasCheckpoint)
 {
-    if (NewPlayer == nullptr)
+    if (PlayerController == nullptr)
     {
         return;
     }
 
     if (!bHasCheckpoint)
     {
-        RespawnPlayer(NewPlayer);
+        RespawnPlayer(PlayerController);
         return;
     }
 
@@ -129,19 +129,19 @@ void APTGameMode::RespawnPlayer(AController* NewPlayer, const FVector& RespawnLo
     const FTransform RespawnTransform(FRotator::ZeroRotator, RespawnLocation);
     if (RespawnDelaySeconds <= 0.f)
     {
-        RestartPlayerAtTransform(NewPlayer, RespawnTransform);
+        RestartPlayerAtTransform(PlayerController, RespawnTransform);
         return;
     }
 
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, NewPlayer, RespawnTransform]()
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, PlayerController, RespawnTransform]()
         {
-            if (NewPlayer == nullptr)
+            if (PlayerController == nullptr)
             {
                 return;
             }
 
-            RestartPlayerAtTransform(NewPlayer, RespawnTransform);
+            RestartPlayerAtTransform(PlayerController, RespawnTransform);
         }, RespawnDelaySeconds, false);
 }
 
@@ -167,13 +167,10 @@ void APTGameMode::DistributeExp(int32 ExpAmount)
 
     for (APlayerState* PlayerState : PTGameState->PlayerArray)
     {
-        APTBasePlayerState* PTPlayerState = Cast<APTBasePlayerState>(PlayerState);
-        if (PTPlayerState == nullptr)
+        if (APTBasePlayerState* PTPlayerState = Cast<APTBasePlayerState>(PlayerState))
         {
-            continue;
+            PlayerLevelSubsystem->AddExp(PTPlayerState, ExpAmount);
         }
-
-        PlayerLevelSubsystem->AddExp(PTPlayerState, ExpAmount);
     }
 }
 
@@ -229,16 +226,16 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
     PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
 }
 
-void APTGameMode::RestartPlayerAtTransform(AController* NewPlayer, const FTransform& SpawnTransform)
+void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)
 {
-    if (NewPlayer == nullptr)
+    if (PlayerController == nullptr)
     {
         return;
     }
 
     FTransform FinalSpawnTransform = SpawnTransform;
 
-    APTBasePlayerState* PlayerState = NewPlayer->GetPlayerState<APTBasePlayerState>();
+    APTBasePlayerState* PlayerState = PlayerController->GetPlayerState<APTBasePlayerState>();
     if (PlayerState != nullptr && PlayerState->HasRespawnLocation())
     {
         FVector RespawnLocation = PlayerState->GetSavedRespawnLocation();
@@ -246,5 +243,5 @@ void APTGameMode::RestartPlayerAtTransform(AController* NewPlayer, const FTransf
         FinalSpawnTransform.SetLocation(RespawnLocation);
     }
 
-    Super::RestartPlayerAtTransform(NewPlayer, FinalSpawnTransform);
+    Super::RestartPlayerAtTransform(PlayerController, FinalSpawnTransform);
 }

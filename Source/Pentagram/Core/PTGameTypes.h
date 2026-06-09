@@ -1,4 +1,3 @@
-﻿
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,9 +6,9 @@
 UENUM(BlueprintType)
 enum class EGamePhase : uint8
 {
-    Waiting,   // 게임 진입 전
-    Playing,   // 게임 진행
-    BossFight, // 보스 진행
-    GameClear, // 보스 클리어
-    GameOver   // 보스 전멸
+    Waiting,
+    Playing,
+    BossFight,
+    GameClear,
+    GameOver
 };

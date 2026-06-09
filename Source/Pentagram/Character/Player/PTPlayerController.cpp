@@ -166,7 +166,6 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     FHitResult HitResult;
     bool bGotHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
 
-    // 회전 처리
     if (bGotHit && HitResult.bBlockingHit)
     {
         FVector Direction = HitResult.Location - PlayerCharacter->GetActorLocation();
@@ -198,7 +197,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         }
     }
 
-    // 아이템 아닐 때만 공격
+
     if (PlayerCharacter->bIsAttacking)
     {
         if (PlayerCharacter->bCanCombo)
@@ -211,7 +210,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     PlayAttackMontage();
 }
 
-void APTPlayerController::OnInteractPressed() // F 상호작용 구현부
+void APTPlayerController::OnInteractPressed()
 {
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (PlayerCharacter)
@@ -286,7 +285,6 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     if (PlayerCharacter->GetInventoryComponent() &&
         PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
     {
-        // 서버에서 아이템 동기화 소멸
         TargetItem->Destroy();
         UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
     }
@@ -299,7 +297,6 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
 // Server RPC 패킷 위변조 검증부
 bool APTPlayerController::Server_TryPickupItem_Validate(APTDropItemActorBase* TargetItem)
 {
-    // 포인터가 오염되지 않았는지 검증
     return true;
 }
 

@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "PTPlayerLevelSubsystem.h"
@@ -26,11 +26,6 @@ void UPTPlayerLevelSubsystem::RebuildLevelDataMap()
 
     for (const FPTLevelDataRow* LevelRow : LevelRows)
     {
-        if (LevelRow == nullptr)
-        {
-            continue;
-        }
-
         const int32 PlayerLevel = FMath::Max(LevelRow->PlayerLevel, 1);
         const int32 RequiredExp = FMath::Max(LevelRow->RequiredExp, 1);
         RequiredExpByLevel.Add(PlayerLevel, RequiredExp);
