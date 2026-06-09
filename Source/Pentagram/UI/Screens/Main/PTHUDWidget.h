@@ -22,7 +22,6 @@ protected:
     virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
-    //~ End UCommonActivatableWidget Interface
 
     // HP/MP/EXP 묶음
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
