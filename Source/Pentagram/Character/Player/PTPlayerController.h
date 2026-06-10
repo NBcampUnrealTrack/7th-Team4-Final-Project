@@ -36,6 +36,7 @@ public:
     void OnSkill4(const FInputActionValue& Value);
     void OnDodge(const FInputActionValue& Value);
     void OnInventoryPressed();
+    void OnShopPressed();
     void PushInitialHUD();
 
     // ── RPC 함수 ─────────────────────────────────────────────────────────────
@@ -89,6 +90,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Inventory;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    TObjectPtr<UInputAction> IA_Shop;
+
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill1;
 
@@ -117,6 +121,11 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "PT|UI")
     FPTOnMonsterTargeted OnMonsterTargeted;
+
+    // 상점 클래스
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> ShopClass;
+
 
 private:
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────

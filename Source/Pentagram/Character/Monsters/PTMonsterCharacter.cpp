@@ -13,6 +13,7 @@
 #include "GameFramework/PlayerController.h"
 #include "CollisionShape.h"
 #include "DrawDebugHelpers.h"
+#include "Character/Player/PTPlayerController.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 
@@ -41,6 +42,17 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
         if (IsValid(Attacker))
         {
             RegisterDamageContributor(Attacker);
+
+            APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Attacker);
+            if (Player)
+            {
+                APTPlayerController* PC = Cast<APTPlayerController>(Player->GetController());
+
+                if (PC)
+                {
+                    PC->Client_ShowMonsterHealth(this);
+                }
+            }
         }
 
         OnHPChanged.Broadcast(CurrentHP, MaxHP);

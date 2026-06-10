@@ -1,125 +1,120 @@
 ﻿#include "PTMonsterHealthBarWidget.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
-#include "Components/ProgressBar.h"
-#include "Components/TextBlock.h"
+#include "Engine/World.h"
 #include "TimerManager.h"
-
-void UPTMonsterHealthBarWidget::SetupMonster(APTMonsterCharacter* InMonster)
-{
-    if (!InMonster)
-    {
-        return;
-    }
-
-    if (APTMonsterCharacter* Old = BoundMonster.Get())
-    {
-        if (Old == InMonster)
-        {
-            SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
-            return;
-        }
-
-        OnMonsterUnbound(Old);
-        Old->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
-    }
-
-    BoundMonster = InMonster;
-    InMonster->OnHPChanged.AddUniqueDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
-
-    OnMonsterBound(InMonster);
-
-    SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
-}
-
-void UPTMonsterHealthBarWidget::ActivateForMonster(APTMonsterCharacter* InMonster, float HideAfterSeconds)
-{
-    if (!InMonster)
-    {
-        return;
-    }
-
-    SetupMonster(InMonster);
-
-    // 클릭 통과
-    SetVisibility(ESlateVisibility::HitTestInvisible);
-
-    bUseAutoHide = HideAfterSeconds > 0.0f;
-
-    if (UWorld* World = GetWorld())
-    {
-        World->GetTimerManager().ClearTimer(AutoHideTimerHandle);
-
-        if (bUseAutoHide)
-        {
-            World->GetTimerManager().SetTimer(
-                AutoHideTimerHandle, this,
-                &UPTMonsterHealthBarWidget::HandleAutoHide,
-                HideAfterSeconds, false);
-        }
-    }
-}
-
-void UPTMonsterHealthBarWidget::HandleHealthChanged(float Current, float Max)
-{
-    SetValue(Current, Max);
-    OnHealthChangedNative(Current, Max);
-
-    // 사망 시 숨김
-    if (bUseAutoHide && Current <= 0.0f)
-    {
-        if (UWorld* World = GetWorld())
-        {
-            World->GetTimerManager().SetTimer(
-                AutoHideTimerHandle, this,
-                &UPTMonsterHealthBarWidget::HandleAutoHide,
-                1.0f, false);
-        }
-    }
-}
-
-void UPTMonsterHealthBarWidget::HandleAutoHide()
-{
-    SetVisibility(ESlateVisibility::Collapsed);
-
-    if (APTMonsterCharacter* Monster = BoundMonster.Get())
-    {
-        OnMonsterUnbound(Monster);
-        Monster->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
-    }
-    BoundMonster.Reset();
-}
 
 void UPTMonsterHealthBarWidget::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    if (PB_Bar)
-    {
-        PB_Bar->SetBarFillType(EProgressBarFillType::LeftToRight);
-    }
-}
-
-void UPTMonsterHealthBarWidget::SetDisplayName(const FText& InName)
-{
-    if (Txt_Name)
-    {
-        Txt_Name->SetText(InName);
-    }
+    // 최초 숨김
+    SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void UPTMonsterHealthBarWidget::NativeDestruct()
 {
-    if (UWorld* World = GetWorld())
+    // 잔여 정리
+    ClearTarget();
+    Super::NativeDestruct();
+}
+
+void UPTMonsterHealthBarWidget::ActivateForMonster(APTMonsterCharacter* InMonster)
+{
+    if (!InMonster)
     {
-        World->GetTimerManager().ClearTimer(AutoHideTimerHandle);
+        return;
+    }
+    // 같은 타겟이면 표시/타이머만 갱신
+    if (BoundMonster.Get() == InMonster)
+    {
+        SetVisibility(ESlateVisibility::HitTestInvisible);
+        StartHideTimer();
+        return;
     }
 
-    if (APTMonsterCharacter* Monster = BoundMonster.Get())
+    // 새 타겟 → 기존 정리
+    ClearTarget();
+
+    BoundMonster = InMonster;
+    BindToMonster(InMonster);
+
+    // 현재 HP 즉시 반영 후 표시
+    SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
+    SetVisibility(ESlateVisibility::HitTestInvisible);
+
+    StartHideTimer();
+}
+
+void UPTMonsterHealthBarWidget::ClearTarget()
+{
+    // 타이머 정리
+    ClearHideTimer();
+
+    // 화면 숨김
+    SetVisibility(ESlateVisibility::Collapsed);
+
+    // 바인딩 해제
+    if (APTMonsterCharacter* OldMonster = BoundMonster.Get())
     {
-        OnMonsterUnbound(Monster);
-        Monster->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+        UnbindFromMonster(OldMonster);
     }
     BoundMonster.Reset();
+}
 
-    Super::NativeDestruct();
+void UPTMonsterHealthBarWidget::BindToMonster(APTMonsterCharacter* Monster)
+{
+    if (Monster)
+    {
+        Monster->OnHPChanged.AddUniqueDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    }
+}
+
+void UPTMonsterHealthBarWidget::UnbindFromMonster(APTMonsterCharacter* Monster)
+{
+    if (Monster)
+    {
+        Monster->OnHPChanged.RemoveDynamic(this, &UPTMonsterHealthBarWidget::HandleHealthChanged);
+    }
+}
+
+void UPTMonsterHealthBarWidget::StartHideTimer()
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    // 공격마다 리셋
+    World->GetTimerManager().SetTimer(
+        HideTimerHandle, this, &UPTMonsterHealthBarWidget::HandleHideTimeout, HideDelay, false);
+    
+}
+
+void UPTMonsterHealthBarWidget::ClearHideTimer()
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(HideTimerHandle);
+    }
+}
+
+void UPTMonsterHealthBarWidget::HandleHideTimeout()
+{
+    UE_LOG(LogTemp, Log, TEXT("[MonsterHP] Hide by timeout"));
+    ClearTarget();
+}
+
+void UPTMonsterHealthBarWidget::HandleHealthChanged(float Current, float Max)
+{
+    UE_LOG(LogTemp, Log, TEXT("[MonsterHP] HP %.0f/%.0f"), Current, Max);
+
+    // 보간 반영
+    SetValue(Current, Max);
+
+    // 사망 즉시 숨김
+    if (Current <= 0.0f)
+    {
+        ClearTarget();
+    }
 }

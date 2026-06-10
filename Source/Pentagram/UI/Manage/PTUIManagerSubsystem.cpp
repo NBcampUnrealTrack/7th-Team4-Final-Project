@@ -3,6 +3,7 @@
 #include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/HUD/PTHUDWidget.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
+#include "UI/Widget/Shop/PTShopWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 
 UPTUIManagerSubsystem::UPTUIManagerSubsystem()
@@ -85,5 +86,29 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
     else
     {
         InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
+    }
+}
+void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass)
+{
+    if (!ShopClass)return;
+
+    bool bIsShopOpen = false;
+
+    if (ShopInstance)
+    {
+        if (ShopInstance->IsActivated() || ShopInstance->IsInViewport())
+        {
+            bIsShopOpen = true;
+        }
+    }
+
+    if (bIsShopOpen)
+    {
+        RemoveWidget(ShopInstance);
+        ShopInstance = nullptr;
+    }
+    else
+    {
+        ShopInstance = PushWidget(ShopClass, EPTUILayer::GameMenu);
     }
 }

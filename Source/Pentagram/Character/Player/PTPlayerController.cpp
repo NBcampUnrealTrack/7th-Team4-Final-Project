@@ -80,6 +80,7 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Move)      EnhancedInput->BindAction(IA_Move,      ETriggerEvent::Triggered, this, &APTPlayerController::OnRightClick);
         if (IA_Attack)    EnhancedInput->BindAction(IA_Attack,    ETriggerEvent::Started,   this, &APTPlayerController::OnLeftClick);
         if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started,   this, &APTPlayerController::OnInventoryPressed);
+        if (IA_Shop)      EnhancedInput->BindAction(IA_Shop,      ETriggerEvent::Started,   this, &APTPlayerController::OnShopPressed);
         if (IA_Dodge)     EnhancedInput->BindAction(IA_Dodge,     ETriggerEvent::Started,   this, &APTPlayerController::OnDodge);
         if (IA_Skill1)    EnhancedInput->BindAction(IA_Skill1,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill1);
         if (IA_Skill2)    EnhancedInput->BindAction(IA_Skill2,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
@@ -310,6 +311,19 @@ void APTPlayerController::OnInventoryPressed()
     if (!UI || !InventoryClass) return;
 
     UI->ToggleInventory(InventoryClass);
+}
+
+void APTPlayerController::OnShopPressed()
+{
+    if (!IsLocalPlayerController()) return;
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP) return;
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI || !ShopClass) return;
+
+    UI->ToggleShop(ShopClass);
 }
 
 void APTPlayerController::PushInitialHUD()

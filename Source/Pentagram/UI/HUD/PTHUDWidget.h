@@ -15,6 +15,7 @@ class PENTAGRAM_API UPTHUDWidget : public UCommonActivatableWidget
     GENERATED_BODY()
 
 public:
+
     UPTHUDWidget(const FObjectInitializer& ObjectInitializer);
 
 
