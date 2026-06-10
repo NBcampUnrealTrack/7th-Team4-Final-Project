@@ -39,6 +39,32 @@ enum class EItemGrade : uint8
     Rare         UMETA(DisplayName = "Rare")
 };
 
+// 부위별 추가 옵션의 종류, 확률 가중치, 수치 범위를 정하는 구조체
+USTRUCT(BlueprintType)
+struct FItemOptionPoolData
+{
+    GENERATED_BODY()
+
+    // 옵션의 종류 (예: "STR", "DEF", "MaxHP")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Option")
+    FString OptionType;
+
+    // 이 옵션이 선택될 확률 가중치 (백분율)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Option")
+    int32 Weight;
+
+    // 옵션 확정 시 주사위 굴릴 최소 수치 (음수 입력 가능)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Option")
+    int32 MinValue;
+
+    // 옵션 확정 시 주사위 굴릴 최대 수치
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Option")
+    int32 MaxValue;
+
+    // 값을 정하지 않았을 때 기본값
+    FItemOptionPoolData() : OptionType(TEXT("STR")), Weight(10), MinValue(1), MaxValue(5) {}
+};
+
 
 // ItemData 구조체 명세 
 USTRUCT(BlueprintType)
@@ -61,14 +87,24 @@ struct FItemData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EItemGrade Item_Grade;
 
-    // 기본 성능 (무기/장갑: STR, 갑옷/신발: DEF, 모자: HP)
+    // 기본 성능 (무기/장갑: STR, 갑옷/신발: DEF, 모자: HP 등으로 장비 컴포넌트에서 매칭)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     int32 Item_Base_Stat;
 
-    // Rare 등급 옵션 목록
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+    // 아이템(혹은 부위)에 붙을 수 있는 랜덤 옵션 후보 목록
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Random Option")
+    TArray<FItemOptionPoolData> OptionPool;
+
+    // 아이템이 생성 시, 최대 몇 개의 무작위 옵션이 붙을 수 있는지 지정 (예: 1~2개 랜덤이면 기획에 따라 처리)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Random Option")
+    int32 MaxOptionCount;
+
+    // 서버가 주사위를 굴려 확정 지은 최종 추가 옵션 리스트 (런타임 생성 데이터)
+    // 음수가 나오면 자동으로 "STR-5", 양수가 나오면 "STR+7" 형태로 저장되어 인벤토리/장비창에 동기화됩니다.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Runtime Result")
     TArray<FString> Item_Bonus_Options;
 };
+
 
 // 인벤토리 한 칸을 담당할 구조체 
 USTRUCT(BlueprintType)
@@ -81,7 +117,6 @@ struct FInventorySlot
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     int32 Quantity;
-
 
     // 빈 슬롯인지 확인하는 헬퍼 함수 
     bool IsEmpty() const { return Quantity <= 0 || ItemData.Item_ID.IsNone(); }
