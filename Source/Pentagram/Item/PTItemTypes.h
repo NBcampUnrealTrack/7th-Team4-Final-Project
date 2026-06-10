@@ -21,8 +21,11 @@ enum class EItemCategory : uint8
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
-    Weapon       UMETA(DisplayName = "Weapon"),
-    Chest        UMETA(DisplayName = "Chest"),
+    Weapon       UMETA(DisplayName = "Weapon"), 
+    Chest        UMETA(DisplayName = "Chest"), 
+    Helmet       UMETA(DisplayName = "Helmet"), 
+    Gloves       UMETA(DisplayName = "Gloves"), 
+    Boots        UMETA(DisplayName = "Boots"), 
     Potion       UMETA(DisplayName = "Potion")
 };
 
@@ -31,13 +34,13 @@ enum class EItemType : uint8
 UENUM(BlueprintType)
 enum class EItemGrade : uint8
 {
-    None         UMETA(DisplayName = "None"), // 소비 아이템용
+    None         UMETA(DisplayName = "None"), 
     Common       UMETA(DisplayName = "Common"),
     Rare         UMETA(DisplayName = "Rare")
 };
 
 
-// 기획서의 ItemData 구조체 명세 
+// ItemData 구조체 명세 
 USTRUCT(BlueprintType)
 struct FItemData : public FTableRowBase
 {
@@ -58,7 +61,7 @@ struct FItemData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EItemGrade Item_Grade;
 
-    // 기본 성능 (무기: STR, 갑옷: DEF)
+    // 기본 성능 (무기/장갑: STR, 갑옷/신발: DEF, 모자: HP)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     int32 Item_Base_Stat;
 
@@ -80,7 +83,7 @@ struct FInventorySlot
     int32 Quantity;
 
 
-    // 빈 슬롯인지 확인하는 "헬퍼 함수" 
+    // 빈 슬롯인지 확인하는 헬퍼 함수 
     bool IsEmpty() const { return Quantity <= 0 || ItemData.Item_ID.IsNone(); }
 
     FInventorySlot() : Quantity(0) {}
