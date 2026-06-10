@@ -29,6 +29,12 @@ public:
     // F키 입력 시 상호작용 시도
     void TryInteract();
 
+    // AnimNotify: 닷지 무적 구간 시작
+    void OnDodgeInvincibleStart();
+
+    // AnimNotify: 닷지 무적 구간 종료
+    void OnDodgeInvincibleEnd();
+
     // 체력 재생
     void RegenHP();
 
@@ -47,12 +53,6 @@ public:
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttackMontage(int32 MontageIndex);
-
-    UFUNCTION(Server, Reliable)
-    void Server_Dodge();
-
-    UFUNCTION(NetMulticast, Reliable)
-    void Multicast_PlayDodgeMontage();
 
     // ── Getter 함수 ──────────────────────────────────────────────────────────
 
@@ -95,9 +95,6 @@ public:
 
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     bool bIsInvincible = false; // 무적 여부 (데미지 판정에서 참조)
-
-    UPROPERTY(EditAnywhere, Category = "Anim")
-    TObjectPtr<UAnimMontage> DodgeMontage;
 
     // ── 애니메이션 ───────────────────────────────────────────────────────────
 

@@ -73,7 +73,7 @@ void UPTPlayerSkillComponent::TryActivateSkill(FName SkillID)
         false
     );
 
-    // ★ 발동 성공한 이 시점에 소유 클라로 "쿨다운 시작" 통지
+    // 발동 성공 시점에 소유 클라로 "쿨다운 시작" 통지
     Client_NotifyCooldownStarted(SlotIndex, SkillData->Cooldown);
 
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
@@ -82,20 +82,103 @@ void UPTPlayerSkillComponent::TryActivateSkill(FName SkillID)
         if (PlayerCharacter)
         {
             PlayerCharacter->bIsAttacking = false;
-            PlayerCharacter->bCanCombo = false;
-            PlayerCharacter->ComboIndex = 0;
+            PlayerCharacter->bCanCombo    = false;
+            PlayerCharacter->ComboIndex   = 0;
             Owner->StopAnimMontage();
         }
 
         // 이펙트/사운드 에셋 로드 (서버에서 한 번만 로드 후 Multicast로 전달)
         UNiagaraSystem* Effect = SkillData->SkillEffect.LoadSynchronous();
-        USoundBase* Sound = SkillData->SkillSound.LoadSynchronous();
+        USoundBase*     Sound  = SkillData->SkillSound.LoadSynchronous();
         Multicast_PlaySkillMontage(Montage, Effect, Sound);
     }
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
     }
+}
+
+void UPTPlayerSkillComponent::TryDodge()
+{
+    // 쿨다운 중이면 차단
+    if (bIsDodgeCooldown) return;
+
+    // DT에서 닷지 데이터 조회
+    const FPTSkillRow* DodgeData = GetSkillData(DodgeSkillID);
+    if (!DodgeData)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("TryDodge: DT에 Dodge 데이터 없음 (ID: %s)"), *DodgeSkillID.ToString());
+        return;
+    }
+
+    // 몽타주 없으면 차단
+    UAnimMontage* Montage = DodgeData->SkillMontage.LoadSynchronous();
+    if (!Montage) return;
+
+    // 로컬 클라이언트 선처리: 즉시 몽타주 재생 (입력 반응성)
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (PC && PC->IsLocallyControlled())
+    {
+        PC->PlayAnimMontage(Montage);
+    }
+
+    // 서버 RPC 호출
+    Server_Dodge();
+
+    // 로컬 쿨다운 시작 및 UI 통지
+    bIsDodgeCooldown = true;
+    OnDodgeCooldownStart.Broadcast(DodgeData->Cooldown);
+
+    GetWorld()->GetTimerManager().SetTimer(
+        DodgeCooldownTimer,
+        [this]()
+        {
+            bIsDodgeCooldown = false;
+            OnDodgeCooldownEnd.Broadcast();
+        },
+        DodgeData->Cooldown,
+        false
+    );
+}
+
+void UPTPlayerSkillComponent::Server_Dodge_Implementation()
+{
+    const FPTSkillRow* DodgeData = GetSkillData(DodgeSkillID);
+    if (!DodgeData) return;
+
+    UAnimMontage* Montage = DodgeData->SkillMontage.LoadSynchronous();
+    if (!Montage) return;
+
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    // 무적 ON/OFF는 AnimNotify(AN_DodgeInvincibleStart/End)가 담당
+    // → Server_SetInvincible() RPC로 서버에 전달됨
+
+    // 전체 클라에 몽타주 전파
+    Multicast_PlayDodgeMontage(Montage);
+}
+
+void UPTPlayerSkillComponent::Server_SetInvincible_Implementation(bool bInvincible)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    PC->bIsInvincible = bInvincible;
+    UE_LOG(LogTemp, Warning, TEXT("무적 상태 변경: %s"), bInvincible ? TEXT("ON") : TEXT("OFF"));
+}
+
+void UPTPlayerSkillComponent::Multicast_PlayDodgeMontage_Implementation(UAnimMontage* Montage)
+{
+    if (!Montage) return;
+
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    // 로컬 클라이언트는 TryDodge()에서 이미 재생했으므로 스킵
+    if (PC->IsLocallyControlled()) return;
+
+    PC->PlayAnimMontage(Montage);
 }
 
 void UPTPlayerSkillComponent::OnCooldownEnd(int32 SlotIndex)
