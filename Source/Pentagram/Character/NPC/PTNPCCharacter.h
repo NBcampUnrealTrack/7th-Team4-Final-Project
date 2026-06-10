@@ -8,6 +8,8 @@
 class USphereComponent;
 class USkeletalMeshComponent;
 class USceneComponent;
+class UUserWidget;
+class UWidgetComponent;
 class APlayerController;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTNPCPlayerControllerDelegate, APlayerController*, PlayerController);
@@ -50,14 +52,27 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
     TObjectPtr<USphereComponent> InteractionRangeSphere;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
+    TObjectPtr<UWidgetComponent> InteractionPromptWidgetComponent;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC")
     FName NPCID = NAME_None;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Quest")
     TArray<FName> QuestIDs;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
+    float InteractionRadius = 200.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
+    TSubclassOf<UUserWidget> InteractionPromptWidgetClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
+    FVector InteractionPromptRelativeLocation = FVector(0.f, 80.f, 140.f);
+
 private:
-    static constexpr float InteractionRadius = 200.f;
+    void ShowInteractionPrompt(APlayerController* PlayerController);
+    void HideInteractionPrompt(APlayerController* PlayerController);
 
 public:
     UPROPERTY(BlueprintAssignable, Category = "PT|NPC|Interaction")
