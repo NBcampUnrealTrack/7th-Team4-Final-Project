@@ -10,6 +10,9 @@ UPTEquipmentComponent::UPTEquipmentComponent()
 
     EquippedWeapon = FEquipmentSlot(EEquipSlotType::Weapon);
     EquippedChest  = FEquipmentSlot(EEquipSlotType::Chest);
+    EquippedHelmet = FEquipmentSlot(EEquipSlotType::Helmet); 
+    EquippedGloves = FEquipmentSlot(EEquipSlotType::Gloves); 
+    EquippedBoots = FEquipmentSlot(EEquipSlotType::Boots); 
 
     TotalBonusStr = 0;
     TotalBonusDef = 0;
@@ -28,6 +31,9 @@ void UPTEquipmentComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 
     DOREPLIFETIME(UPTEquipmentComponent, EquippedWeapon);
     DOREPLIFETIME(UPTEquipmentComponent, EquippedChest);
+    DOREPLIFETIME(UPTEquipmentComponent, EquippedHelmet);
+    DOREPLIFETIME(UPTEquipmentComponent, EquippedGloves);
+    DOREPLIFETIME(UPTEquipmentComponent, EquippedBoots);
 
     DOREPLIFETIME(UPTEquipmentComponent, TotalBonusStr);
     DOREPLIFETIME(UPTEquipmentComponent, TotalBonusDef);
@@ -49,17 +55,15 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
     // 여기서부터 오직 '서버' 권한으로만 실행
     FEquipmentSlot* TargetSlot = nullptr;
 
-    // 아이템 세부 타입에 따라 대상 슬롯 지정
-    if (NewItem.Item_Type == EItemType::Weapon)
-    {
-        TargetSlot = &EquippedWeapon;
-    }
-    else if (NewItem.Item_Type == EItemType::Chest)
-    {
-        TargetSlot = &EquippedChest;
-    }
 
+    // 아이템 세부 타입에 따라 대상 슬롯 지정
+    if (NewItem.Item_Type == EItemType::Weapon)     TargetSlot = &EquippedWeapon;
+    else if (NewItem.Item_Type == EItemType::Chest)  TargetSlot = &EquippedChest;
+    else if (NewItem.Item_Type == EItemType::Helmet) TargetSlot = &EquippedHelmet;
+    else if (NewItem.Item_Type == EItemType::Gloves) TargetSlot = &EquippedGloves; 
+    else if (NewItem.Item_Type == EItemType::Boots)  TargetSlot = &EquippedBoots;
     if (!TargetSlot) return false;
+
 
     // 이미 장착 중이라면 기존 장비를 꺼내서 반환용 변수에 저장
     if (TargetSlot->bIsEquipped)
@@ -96,7 +100,15 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
     }
 
     // 여기서부터 오직 '서버' 권한으로만 실행
-    FEquipmentSlot* TargetSlot = (SlotType == EEquipSlotType::Weapon) ? &EquippedWeapon : &EquippedChest;
+    FEquipmentSlot* TargetSlot = nullptr;
+    switch (SlotType)
+    {
+        case EEquipSlotType::Weapon: TargetSlot = &EquippedWeapon; break;
+        case EEquipSlotType::Chest:  TargetSlot = &EquippedChest;  break;
+        case EEquipSlotType::Helmet: TargetSlot = &EquippedHelmet; break;
+        case EEquipSlotType::Gloves: TargetSlot = &EquippedGloves; break;
+        case EEquipSlotType::Boots:  TargetSlot = &EquippedBoots;  break;
+    }
 
     if (!TargetSlot || !TargetSlot->bIsEquipped) return false;
 
@@ -156,16 +168,22 @@ void UPTEquipmentComponent::UpdateTotalBonusStats()
 
     for (FEquipmentSlot* Slot : Slots)
     {
-        if (Slot && Slot->bIsEquipped)
+        if (Slot && Slot->bIsEquipped) // 기본 옵션 파싱 
         {
-            // 기본 옵션 파싱 (무기: STR, 갑옷: DEF)
-            if (Slot->EquippedSlotType == EEquipSlotType::Weapon)
+            // (무기/장갑: STR)
+            if (Slot->EquippedSlotType == EEquipSlotType::Weapon || Slot->EquippedSlotType == EEquipSlotType::Gloves)
             {
                 TotalBonusStr += Slot->MountedItem.Item_Base_Stat;
             }
-            else if (Slot->EquippedSlotType == EEquipSlotType::Chest)
+            // (갑옷/신발: DEF)
+            else if (Slot->EquippedSlotType == EEquipSlotType::Chest || Slot->EquippedSlotType == EEquipSlotType::Boots)
             {
                 TotalBonusDef += Slot->MountedItem.Item_Base_Stat;
+            }
+            // (모자: MaxHP)
+            else if (Slot->EquippedSlotType == EEquipSlotType::Helmet)
+            {
+                TotalBonusHp += Slot->MountedItem.Item_Base_Stat;
             }
 
             // 등급 추가 옵션 파싱 (간단한 문자열 매칭 검증)
@@ -173,9 +191,21 @@ void UPTEquipmentComponent::UpdateTotalBonusStats()
             {
                 for (const FString& Option : Slot->MountedItem.Item_Bonus_Options)
                 {
-                    if (Option.Contains(TEXT("STR+5")))   TotalBonusStr += 5;
-                    if (Option.Contains(TEXT("DEF+5")))   TotalBonusDef += 5;
-                    if (Option.Contains(TEXT("MaxHP+20"))) TotalBonusHp += 20;
+                    if (Option.Contains(TEXT("STR+")))
+                    {
+                        FString NumberPart = Option.RightChop(Option.Find(TEXT("STR+")) + 4);
+                        TotalBonusStr += FCString::Atoi(*NumberPart);
+                    }
+                    if (Option.Contains(TEXT("DEF+")))
+                    {
+                        FString NumberPart = Option.RightChop(Option.Find(TEXT("DEF+")) + 4);
+                        TotalBonusDef += FCString::Atoi(*NumberPart);
+                    }
+                    if (Option.Contains(TEXT("MaxHP+")))
+                    {
+                        FString NumberPart = Option.RightChop(Option.Find(TEXT("MaxHP+")) + 6);
+                        TotalBonusHp += FCString::Atoi(*NumberPart);
+                    }
                 }
             }
         }

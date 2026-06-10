@@ -8,8 +8,11 @@
 UENUM(BlueprintType)
 enum class EEquipSlotType : uint8 
 {
-    Weapon  UMETA(DisplayName = "Weapon"),
-    Chest   UMETA(DisplayName = "Chest")
+    Weapon  UMETA(DisplayName = "Weapon"), 
+    Chest   UMETA(DisplayName = "Chest"), 
+    Helmet  UMETA(DisplayName = "Helmet"), 
+    Gloves  UMETA(DisplayName = "Gloves"), 
+    Boots   UMETA(DisplayName = "Boots")
 };
 
 USTRUCT(BlueprintType)
@@ -94,6 +97,18 @@ protected:
     // 장착된 갑옷 슬롯
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
     FEquipmentSlot EquippedChest;
+
+    // 장착된 모자 슬롯
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    FEquipmentSlot EquippedHelmet;
+
+    // 장착된 장갑 슬롯
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    FEquipmentSlot EquippedGloves;
+
+    // 장착된 신발 슬롯
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    FEquipmentSlot EquippedBoots;
 
     // 장착 중인 모든 장비의 스탯 합산
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment Stats")
