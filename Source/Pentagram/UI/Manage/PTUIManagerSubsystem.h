@@ -47,6 +47,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass);
 
+    // 상점 토글
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass);
+
     // 레이아웃 조회
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
 
@@ -54,6 +58,9 @@ protected:
     // 인벤 핸들
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> InventoryInstance;
+    //상점 핸들
+    UPROPERTY(Transient)
+    TObjectPtr<UCommonActivatableWidget> ShopInstance;
 
 private:
     // 베이스 레이아웃

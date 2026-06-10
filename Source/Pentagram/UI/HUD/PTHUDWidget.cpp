@@ -27,12 +27,19 @@ void UPTHUDWidget::HandleMonsterTargeted(AActor* TargetMonster)
     }
 }
 
+
 void UPTHUDWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
 
+    APTPlayerController* PC = Cast<APTPlayerController>(GetOwningPlayer());
 
+    if (PC)
+    {
+        PC->OnMonsterTargeted.AddUniqueDynamic(this, &UPTHUDWidget::HandleMonsterTargeted);
+    }
 }
+
 
 void UPTHUDWidget::NativeOnDeactivated()
 {

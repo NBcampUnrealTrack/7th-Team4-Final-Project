@@ -4,14 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
-#include "Item/PTItemTypes.h"
-#include "PTInventoryWidget.generated.h"
+#include "PTShopWidget.generated.h"
 
-class UPTInventorySlotWidget;
-class UPTEquipSlotWidget;
-
+/**
+ *
+ */
 UCLASS()
-class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget
+class PENTAGRAM_API UPTShopWidget : public UCommonActivatableWidget
 {
     GENERATED_BODY()
 
@@ -21,5 +20,4 @@ protected:
     virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
-
 };

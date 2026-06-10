@@ -23,3 +23,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnBossHealthChanged, float, Curr
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnBossDefeated);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnMonsterTargeted, AActor*, TargetMonster);
+
+// 상점
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnShopBuyRequested, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnShopSellRequested, int32, SlotIndex);
