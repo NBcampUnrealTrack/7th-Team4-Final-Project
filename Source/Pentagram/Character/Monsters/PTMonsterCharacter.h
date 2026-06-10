@@ -137,6 +137,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
     float DestroyDelay = 3.f;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
+    float DestroyDelayAfterMontage = 1.5f;
+
     FTimerHandle DestroyTimerHandle;
 
     void RegisterDamageContributor(AActor* DamageCauser);
