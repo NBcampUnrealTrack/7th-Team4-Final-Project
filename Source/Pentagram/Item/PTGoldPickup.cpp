@@ -3,7 +3,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
-#include "Core/PTEconomySubsystem.h"
+#include "Core/Subsystems/PTEconomySubsystem.h"
 
 APTGoldPickup::APTGoldPickup()
 {

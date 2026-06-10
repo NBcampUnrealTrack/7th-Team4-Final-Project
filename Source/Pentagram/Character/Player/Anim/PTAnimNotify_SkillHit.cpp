@@ -2,7 +2,7 @@
 
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Skill/PTSkillRow.h"
-#include "Character/Skill/PTSkillComponent.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
@@ -13,7 +13,7 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
     APTPlayerCharacter* OwnerPlayer = Cast<APTPlayerCharacter>(MeshComp->GetOwner());
     if (!OwnerPlayer || !OwnerPlayer->HasAuthority()) return;
 
-    UPTSkillComponent* SkillComp = OwnerPlayer->SkillComp;
+    UPTPlayerSkillComponent* SkillComp = OwnerPlayer->SkillComp;
     if (!SkillComp) return;
 
     FPTSkillRow* SkillData = SkillComp->GetSkillData(SkillComp->CurrentSkillID);

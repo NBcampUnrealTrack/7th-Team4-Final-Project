@@ -3,7 +3,7 @@
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTCharacterRow.h"
-#include "Character/Skill/PTSkillComponent.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -28,21 +28,21 @@ APTPlayerCharacter::APTPlayerCharacter()
     SpringArmComp->SetRelativeRotation(FRotator(-55.f, 45.f, 0.f));
     SpringArmComp->bUsePawnControlRotation = false;
     SpringArmComp->bInheritPitch = false;
-    SpringArmComp->bInheritRoll = false;
-    SpringArmComp->bInheritYaw = false;
-    SpringArmComp->bEnableCameraLag = false;
-    SpringArmComp->bDoCollisionTest = false;
+    SpringArmComp->bInheritRoll  = false;
+    SpringArmComp->bInheritYaw   = false;
+    SpringArmComp->bEnableCameraLag  = false;
+    SpringArmComp->bDoCollisionTest  = false;
     SpringArmComp->SocketOffset = FVector(0.f, 0.f, 200.f);
 
     CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
     CameraComp->bUsePawnControlRotation = false;
 
-    SkillComp          = CreateDefaultSubobject<UPTSkillComponent>(TEXT("Skill"));
+    SkillComp          = CreateDefaultSubobject<UPTPlayerSkillComponent>(TEXT("Skill"));
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
 
-    GetCharacterMovement()->bOrientRotationToMovement = true;
+    GetCharacterMovement()->bOrientRotationToMovement    = true;
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
     GetCharacterMovement()->RotationRate = FRotator(0.f, 720.f, 0.f);
     bUseControllerRotationYaw = false;
@@ -121,19 +121,19 @@ void APTPlayerCharacter::OnDeath()
 
     // 멀티플레이어 환경에서의 사망 후 리스폰 처리 시스템 연동
     class APlayerController* PC = Cast<APlayerController>(GetController());
-    class APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
+    class APTGameMode* GM       = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
 
     if (GM && PC)
     {
         // 죽은 캐릭터와 분리되기 전, 기억해둔 데이터(리스폰 위치)를 백업한다
         FVector SavedLoc = FVector::ZeroVector;
-        bool bHasLoc = false;
+        bool bHasLoc     = false;
 
         class APTBasePlayerState* PS = PC->GetPlayerState<class APTBasePlayerState>();
         if (PS && PS->HasRespawnLocation())
         {
             SavedLoc = PS->GetSavedRespawnLocation();
-            bHasLoc = true;
+            bHasLoc  = true;
         }
 
         // 백업한 데이터를 게임모드 리스폰 함수 인자에 넣는다
@@ -187,7 +187,6 @@ void APTPlayerCharacter::TryInteract()
     }
 }
 
-// 상호작용 Server RPC 구현부
 void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
 {
     if (!TargetActor) return;
@@ -239,15 +238,22 @@ void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 Montag
     }
 }
 
-void APTPlayerCharacter::Server_Dodge_Implementation()
+void APTPlayerCharacter::OnDodgeInvincibleStart()
 {
-    Multicast_PlayDodgeMontage();
+    // 로컬 클라이언트에서 AnimNotify 발동 → 서버로 무적 ON 전달
+    if (SkillComp)
+    {
+        SkillComp->Server_SetInvincible(true);
+    }
 }
 
-void APTPlayerCharacter::Multicast_PlayDodgeMontage_Implementation()
+void APTPlayerCharacter::OnDodgeInvincibleEnd()
 {
-    if (IsLocallyControlled()) return;
-    PlayAnimMontage(DodgeMontage);
+    // 로컬 클라이언트에서 AnimNotify 발동 → 서버로 무적 OFF 전달
+    if (SkillComp)
+    {
+        SkillComp->Server_SetInvincible(false);
+    }
 }
 
 void APTPlayerCharacter::RegenHP()

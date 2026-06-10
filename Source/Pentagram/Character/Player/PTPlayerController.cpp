@@ -247,13 +247,12 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
 void APTPlayerController::OnDodge(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC || !PC->DodgeMontage) return;
+    if (!PC) return;
 
     bMoveToDestination = false;
     StopMovement();
 
-    PC->PlayAnimMontage(PC->DodgeMontage);
-    PC->Server_Dodge();
+    PC->SkillComp->TryDodge();
 }
 
 void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRotation)

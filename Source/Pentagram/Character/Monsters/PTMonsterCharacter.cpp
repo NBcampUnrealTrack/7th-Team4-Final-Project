@@ -1,9 +1,9 @@
-﻿#include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/Monsters/PTMonsterCharacter.h"
 
 #include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
-#include "Core/PTRewardSubsystem.h"
+#include "Core/Subsystems/PTRewardSubsystem.h"
 #include "AIController.h"
 #include "BrainComponent.h"
 #include "Animation/AnimInstance.h"
@@ -18,16 +18,31 @@
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
+    CharacterType = ECharacterType::NormalMonster;
     PrimaryActorTick.bCanEverTick = false;
 }
 
 float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 {
+    if (IsDead())
+    {
+        return 0.f;
+    }
+
     const float FinalDamage = Super::ApplyDamage(DamageAmount, Attacker);
+
+    if (FinalDamage <= 0.f)
+    {
+        return 0.f;
+    }
 
     if (HasAuthority())
     {
-        RegisterDamageContributor(Attacker);
+        if (IsValid(Attacker))
+        {
+            RegisterDamageContributor(Attacker);
+        }
+
         OnHPChanged.Broadcast(CurrentHP, MaxHP);
     }
 
@@ -80,7 +95,7 @@ void APTMonsterCharacter::PerformAttack()
     }
 
     UWorld* World = GetWorld();
-    if (!World)
+    if (!IsValid(World))
     {
         return;
     }
@@ -160,16 +175,6 @@ void APTMonsterCharacter::StopAttack()
     }
 }
 
-void APTMonsterCharacter::OnRep_CurrentState()
-{
-    if (CurrentState == EMonsterState::Dead)
-    {
-        GetCharacterMovement()->DisableMovement();
-        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-        PlayDeathMontage();
-    }
-}
-
 void APTMonsterCharacter::Multicast_PlayAttackMontage_Implementation(UAnimMontage* MontageToPlay)
 {
     USkeletalMeshComponent* MeshComp = GetMesh();
@@ -206,6 +211,16 @@ FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
 void APTMonsterCharacter::ClearExpContributors()
 {
     ExpContributors.Empty();
+}
+
+void APTMonsterCharacter::OnRep_CurrentState()
+{
+    if (CurrentState == EMonsterState::Dead)
+    {
+        GetCharacterMovement()->DisableMovement();
+        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        PlayDeathMontage();
+    }
 }
 
 void APTMonsterCharacter::BeginPlay()
@@ -252,17 +267,17 @@ void APTMonsterCharacter::OnDeath()
 
     if (AAIController* AIC = Cast<AAIController>(GetController()))
     {
-        if (AIC->BrainComponent)
+        if (IsValid(AIC->BrainComponent))
         {
             AIC->BrainComponent->StopLogic(TEXT("Monster Dead"));
         }
     }
 
     UWorld* World = GetWorld();
-    if (World)
+    if (IsValid(World))
     {
         UPTRewardSubsystem* RewardSys = World->GetSubsystem<UPTRewardSubsystem>();
-        if (RewardSys)
+        if (IsValid(RewardSys))
         {
             RewardSys->HandleMonsterDeathReward(this);
         }
@@ -289,25 +304,25 @@ void APTMonsterCharacter::OnRep_CurrentHP()
 
 void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
 {
-    if (!DamageCauser)
+    if (!IsValid(DamageCauser))
     {
         return;
     }
 
     APawn* Pawn = Cast<APawn>(DamageCauser);
-    if (!Pawn)
+    if (!IsValid(Pawn))
     {
         return;
     }
 
     APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-    if (!PC)
+    if (!IsValid(PC))
     {
         return;
     }
 
     APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
-    if (!PS)
+    if (!IsValid(PS))
     {
         return;
     }
@@ -323,13 +338,13 @@ void APTMonsterCharacter::DestroyAfterDeath()
 float APTMonsterCharacter::PlayDeathMontage()
 {
     USkeletalMeshComponent* MeshComp = GetMesh();
-    if (!MeshComp || !DeathMontage)
+    if (!IsValid(MeshComp) || !IsValid(DeathMontage))
     {
         return 0.f;
     }
 
     UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
-    if (!AnimInstance)
+    if (!IsValid(AnimInstance))
     {
         return 0.f;
     }

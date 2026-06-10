@@ -1,4 +1,4 @@
-﻿#include "Character/Monsters/AI/Services/PTBTService_BossPhase.h"
+#include "Character/Monsters/AI/Services/PTBTService_BossPhase.h"
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
@@ -17,19 +17,19 @@ void UPTBTService_BossPhase::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* 
     Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
     AAIController* AIC = OwnerComp.GetAIOwner();
-    if (!AIC)
+    if (!IsValid(AIC))
     {
         return;
     }
 
     APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(AIC->GetPawn());
-    if (!Boss)
+    if (!IsValid(Boss))
     {
         return;
     }
 
     UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent();
-    if (!BB)
+    if (!IsValid(BB))
     {
         return;
     }
