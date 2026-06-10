@@ -1,10 +1,13 @@
 #include "Character/NPC/PTNPCCharacter.h"
+
 #include "Components/SceneComponent.h"
-#include "Components/SphereComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SphereComponent.h"
+#include "Components/WidgetComponent.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "UI/Widget/NPC/PTNPCInteractionPromptWidget.h"
 
 APTNPCCharacter::APTNPCCharacter()
 {
@@ -21,11 +24,29 @@ APTNPCCharacter::APTNPCCharacter()
     InteractionRangeSphere->SetupAttachment(SceneRootComponent);
     InteractionRangeSphere->SetSphereRadius(InteractionRadius);
     InteractionRangeSphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
+
+    InteractionPromptWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractionPromptWidgetComponent"));
+    InteractionPromptWidgetComponent->SetupAttachment(SceneRootComponent);
+    InteractionPromptWidgetComponent->SetRelativeLocation(InteractionPromptRelativeLocation);
+    InteractionPromptWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+    InteractionPromptWidgetComponent->SetDrawAtDesiredSize(true);
+    InteractionPromptWidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    InteractionPromptWidgetComponent->SetGenerateOverlapEvents(false);
+    InteractionPromptWidgetComponent->SetVisibility(false);
 }
 
 void APTNPCCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    InteractionRangeSphere->SetSphereRadius(InteractionRadius);
+
+    InteractionPromptWidgetComponent->SetRelativeLocation(InteractionPromptRelativeLocation);
+    if (InteractionPromptWidgetClass != nullptr)
+    {
+        InteractionPromptWidgetComponent->SetWidgetClass(InteractionPromptWidgetClass);
+    }
+    InteractionPromptWidgetComponent->SetVisibility(false);
 
     InteractionRangeSphere->OnComponentBeginOverlap.AddDynamic(this, &APTNPCCharacter::OnInteractionRangeBeginOverlap);
     InteractionRangeSphere->OnComponentEndOverlap.AddDynamic(this, &APTNPCCharacter::OnInteractionRangeEndOverlap);
@@ -33,34 +54,32 @@ void APTNPCCharacter::BeginPlay()
 
 void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 {
-    if (!HasAuthority() || !InteractorCharacter)
+    if (!HasAuthority() || InteractorCharacter == nullptr)
     {
         return;
     }
 
     APawn* InteractPawn = Cast<APawn>(InteractorCharacter);
-    APlayerController* InteractPlayerController = InteractPawn ? Cast<APlayerController>(InteractPawn->GetController()) : nullptr;
+    APlayerController* InteractPlayerController =
+        InteractPawn ? Cast<APlayerController>(InteractPawn->GetController()) : nullptr;
 
     if (InteractPlayerController == nullptr)
     {
         return;
     }
 
-    // 해당 플레이어의 퀘스트 진척도 업데이트
     if (!NPCID.IsNone())
     {
         UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-        if (QuestSubsystem)
+        if (QuestSubsystem != nullptr)
         {
             QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
         }
     }
 
-    // 말을 건 플레이어만 대화창 브로드캐스트
     OnDialogueStarted.Broadcast(InteractPlayerController);
 }
 
-// 퀘스트 수락
 void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
 {
     if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
@@ -69,13 +88,12 @@ void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
     }
 
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem)
+    if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->AcceptQuest(QuestID);
     }
 }
 
-// 퀘스트 보상 
 void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
 {
     if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
@@ -84,42 +102,81 @@ void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
     }
 
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem)
+    if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->RewardQuest(QuestID);
     }
 }
 
-FName APTNPCCharacter::GetNPCID() const { return NPCID; }
-const TArray<FName>& APTNPCCharacter::GetQuestIDs() const { return QuestIDs; }
-
-// 안전을 위해 범위 진입/이탈 체크도 오직 '서버'에서만 판단하여 해당 유저에게 이벤트를 전송.
-void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+FName APTNPCCharacter::GetNPCID() const
 {
-    if (!HasAuthority())
+    return NPCID;
+}
+
+const TArray<FName>& APTNPCCharacter::GetQuestIDs() const
+{
+    return QuestIDs;
+}
+
+void APTNPCCharacter::ShowInteractionPrompt(APlayerController* PlayerController)
+{
+    if (PlayerController == nullptr || InteractionPromptWidgetComponent == nullptr)
     {
         return;
     }
 
-    APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
-    if (PC)
+    InteractionPromptWidgetComponent->SetVisibility(true);
+
+    UPTNPCInteractionPromptWidget* PromptWidget =
+        Cast<UPTNPCInteractionPromptWidget>(InteractionPromptWidgetComponent->GetWidget());
+    if (PromptWidget != nullptr)
     {
-        OnPlayerEnterRange.Broadcast(PC);
+        PromptWidget->SetupPrompt(this);
+        PromptWidget->ShowPrompt();
     }
+}
+
+void APTNPCCharacter::HideInteractionPrompt(APlayerController* PlayerController)
+{
+    if (PlayerController == nullptr || InteractionPromptWidgetComponent == nullptr)
+    {
+        return;
+    }
+
+    UPTNPCInteractionPromptWidget* PromptWidget =
+        Cast<UPTNPCInteractionPromptWidget>(InteractionPromptWidgetComponent->GetWidget());
+    if (PromptWidget != nullptr)
+    {
+        PromptWidget->HidePrompt();
+    }
+
+    InteractionPromptWidgetComponent->SetVisibility(false);
+}
+
+void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+    APawn* OtherPawn = Cast<APawn>(OtherActor);
+    APlayerController* PC = OtherPawn ? Cast<APlayerController>(OtherPawn->GetController()) : nullptr;
+    if (PC == nullptr || !PC->IsLocalController())
+    {
+        return;
+    }
+
+    ShowInteractionPrompt(PC);
+    OnPlayerEnterRange.Broadcast(PC);
 }
 
 void APTNPCCharacter::OnInteractionRangeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    if (!HasAuthority())
+    APawn* OtherPawn = Cast<APawn>(OtherActor);
+    APlayerController* PC = OtherPawn ? Cast<APlayerController>(OtherPawn->GetController()) : nullptr;
+    if (PC == nullptr || !PC->IsLocalController())
     {
         return;
     }
 
-    APlayerController* PC = OtherActor ? OtherActor->GetInstigatorController<APlayerController>() : nullptr;
-    if (PC)
-    {
-        OnPlayerExitRange.Broadcast(PC);
-    }
+    HideInteractionPrompt(PC);
+    OnPlayerExitRange.Broadcast(PC);
 }
