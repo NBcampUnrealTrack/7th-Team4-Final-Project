@@ -23,6 +23,7 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void OnDeath() override;
+    float GetTotalAttack() const;
 
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
