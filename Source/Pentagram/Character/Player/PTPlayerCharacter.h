@@ -21,6 +21,7 @@ public:
     virtual void Tick(float DeltaTime) override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void OnDeath() override;
+    float GetTotalAttack() const;
 
     // F키 입력 시 상호작용 시도
     void TryInteract();
