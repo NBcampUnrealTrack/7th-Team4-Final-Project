@@ -6,6 +6,7 @@
 #include "PTNPCCharacter.generated.h"
 
 class USphereComponent;
+class UBoxComponent;
 class USkeletalMeshComponent;
 class USceneComponent;
 class UUserWidget;
@@ -25,14 +26,7 @@ public:
     virtual void BeginPlay() override;
     virtual void Interact_Implementation(AActor* InteractorCharacter) override;
 
-    UFUNCTION(Server, Reliable)
-    void ServerAcceptQuest(FName QuestID);
-
-    UFUNCTION(Server, Reliable)
-    void ServerRewardQuest(FName QuestID);
-
     FName GetNPCID() const;
-    const TArray<FName>& GetQuestIDs() const;
 
 protected:
     UFUNCTION()
@@ -53,16 +47,19 @@ protected:
     TObjectPtr<USphereComponent> InteractionRangeSphere;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
+    TObjectPtr<UBoxComponent> InteractionCollision;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
     TObjectPtr<UWidgetComponent> InteractionPromptWidgetComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC")
     FName NPCID = NAME_None;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Quest")
-    TArray<FName> QuestIDs;
-
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
     float InteractionRadius = 200.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
+    FVector InteractionCollisionExtent = FVector(50.f, 50.f, 100.f);
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
     TSubclassOf<UUserWidget> InteractionPromptWidgetClass;
