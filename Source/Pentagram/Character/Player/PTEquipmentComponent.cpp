@@ -1,6 +1,6 @@
 #include "PTEquipmentComponent.h"
-
 #include "Net/UnrealNetwork.h"
+
 
 UPTEquipmentComponent::UPTEquipmentComponent()
 {
@@ -76,9 +76,14 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
         OutOldItem = FItemData();
     }
 
-    // 새 장비 장착 데이터 처리
-    TargetSlot->MountedItem = NewItem;
-    TargetSlot->bIsEquipped = true;
+    // 새 장비 장착 데이터 처리 (구조체 리플리케이션 안전 동기화를 위한 통대입 처리)
+    FEquipmentSlot UpdatedSlot = *TargetSlot;
+    UpdatedSlot.MountedItem = NewItem;
+    UpdatedSlot.bIsEquipped = true;
+
+    // 구조체 자체를 대입하여 RPC/네트워크 복제 유도
+    *TargetSlot = UpdatedSlot;
+
 
     // 실시간 보너스 스탯 누적 및 캐릭터 갱신 (리플리케이트로 인해 클라이언트로 전송될 것)
     UpdateTotalBonusStats();
@@ -114,8 +119,12 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
 
     // 데이터 해제 처리 흐름
     OutUnequippedItem = TargetSlot->MountedItem;
-    TargetSlot->bIsEquipped = false;
-    TargetSlot->MountedItem = FItemData();
+
+    FEquipmentSlot ClearedSlot = FEquipmentSlot(SlotType);
+    ClearedSlot.bIsEquipped = false;
+    ClearedSlot.MountedItem = FItemData();
+
+    *TargetSlot = ClearedSlot;
 
     UpdateTotalBonusStats(); // 스탯 차감 반영
 
@@ -131,8 +140,8 @@ void UPTEquipmentComponent::Server_EquipItem_Implementation(const FItemData& New
     FItemData DummyOldItem;
     EquipItem(NewItem, DummyOldItem);
 
-    /* 테스트 중 데이터 꼬임없이 서버와 클라이언트 간에 장착/해제 및 스탯계산이 완벽하다면
-    (장비 교체 시) 원래 장착중인 장비를 인벤토리에 다시 넣어주는 연동 처리를 나중에 여기에 구현하기. */
+    /* TODO : [테스트 중 데이터 꼬임없이 서버와 클라이언트 간에 장착/해제 및 스탯계산이 완벽하다면
+    (장비 교체 시) 원래 장착중인 장비의 ID가 None이 아니라면 인벤토리에 다시 넣어주는 연동 처리 구현하기] */
 }
 
 bool UPTEquipmentComponent::Server_EquipItem_Validate(const FItemData& NewItem)
@@ -164,7 +173,7 @@ void UPTEquipmentComponent::UpdateTotalBonusStats()
     TotalBonusDef = 0;
     TotalBonusHp  = 0;
 
-    TArray<FEquipmentSlot*> Slots = { &EquippedWeapon, &EquippedChest };
+    TArray<FEquipmentSlot*> Slots = { &EquippedWeapon, &EquippedChest, &EquippedHelmet, &EquippedGloves, &EquippedBoots };
 
     for (FEquipmentSlot* Slot : Slots)
     {
