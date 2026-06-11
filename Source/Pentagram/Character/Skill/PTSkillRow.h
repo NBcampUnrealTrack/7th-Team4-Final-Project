@@ -17,15 +17,12 @@ struct FPTSkillRow : public FTableRowBase
 {
     GENERATED_BODY()
 
-    // 스킬 식별자
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     FName SkillID;
 
-    // MP 소모량
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     float MPCost = 0.f;
 
-    // 쿨다운
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     float Cooldown = 0.f;
 
@@ -44,7 +41,6 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     FVector SkillOffset = FVector(0.f, 0.f, 0.f); //앞, 양옆, 위아래
 
-    // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;
 

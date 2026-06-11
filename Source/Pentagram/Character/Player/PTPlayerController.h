@@ -20,15 +20,11 @@ class PENTAGRAM_API APTPlayerController : public APlayerController
 public:
     APTPlayerController();
 
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
-
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
     virtual void AcknowledgePossession(class APawn* P) override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     void OnSkill1(const FInputActionValue& Value);
     void OnSkill2(const FInputActionValue& Value);
@@ -38,8 +34,6 @@ public:
     void OnInventoryPressed();
     void OnShopPressed();
     void PushInitialHUD();
-
-    // ── RPC 함수 ─────────────────────────────────────────────────────────────
 
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);
@@ -51,13 +45,10 @@ public:
     UFUNCTION(Client, Reliable)
     void Client_ShowMonsterHealth(APTMonsterCharacter* Monster);
 protected:
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
-
     void PlayAttackMontage();
 
 private:
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
-
+    void RotateTowardsMouse();
     void OnRightClick(const FInputActionValue& Value);
     void OnLeftClick(const FInputActionValue& Value);
     void OnInteractPressed();
@@ -65,10 +56,6 @@ private:
     void RemoveUIInputMapping();
 
 public:
-    // ── 멤버 변수 ────────────────────────────────────────────────────────────
-
-    // ── 입력 액션 ────────────────────────────────────────────────────────────
-
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputMappingContext> IMC_Default;
 
@@ -108,8 +95,6 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     FKey InventoryFallbackKey = EKeys::I;
 
-    // ── UI ───────────────────────────────────────────────────────────────────
-
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InitialHUDClass;
 
@@ -128,8 +113,6 @@ public:
 
 
 private:
-    // ── 멤버 변수 (private) ──────────────────────────────────────────────────
-
     FVector MoveDestination = FVector::ZeroVector;
     bool bMoveToDestination = false;
     static constexpr float AcceptanceRadius = 50.f;

@@ -10,9 +10,9 @@ UPTSkillComponent::UPTSkillComponent()
     SetIsReplicatedByDefault(true);
 
     // 스킬 슬롯 초기화
-    SkillSlots.Init(NAME_None, 4);
-    CooldownTimers.SetNum(4);
-    bIsCooldown.Init(false, 4);
+    SkillSlots.Init(NAME_None, 5);
+    CooldownTimers.SetNum(5);
+    bIsCooldown.Init(false, 5);
 }
 
 void UPTSkillComponent::BeginPlay()
