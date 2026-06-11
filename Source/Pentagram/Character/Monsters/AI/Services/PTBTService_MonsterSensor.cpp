@@ -31,6 +31,12 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
         return;
     }
 
+    const FVector MonsterLocation = Monster->GetActorLocation();
+    const float DistFromSpawnSq = FVector::DistSquared(MonsterLocation, Monster->GetSpawnLocation());
+    const float ReturnThresholdSq = FMath::Square(Monster->GetPatrolRadius());
+
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::ShouldReturnToSpawn, DistFromSpawnSq > ReturnThresholdSq);
+
     AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
     if (!IsValid(Target))
     {
@@ -40,9 +46,7 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
         return;
     }
 
-    const FVector MonsterLocation = Monster->GetActorLocation();
-    const float DistToTargetSq  = FVector::DistSquared(MonsterLocation, Target->GetActorLocation());
-    const float DistFromSpawnSq = FVector::DistSquared(MonsterLocation, Monster->GetSpawnLocation());
+    const float DistToTargetSq = FVector::DistSquared(MonsterLocation, Target->GetActorLocation());
 
 #if !UE_BUILD_SHIPPING
     const float DistToTarget = FMath::Sqrt(DistToTargetSq);
