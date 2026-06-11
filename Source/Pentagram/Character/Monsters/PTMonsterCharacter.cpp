@@ -275,7 +275,7 @@ void APTMonsterCharacter::OnDeath()
     SetMonsterState(EMonsterState::Dead);
 
     const float MontageLength = PlayDeathMontage();
-    const float ActualDelay   = MontageLength > 0.f ? MontageLength : DestroyDelay;
+    const float ActualDelay   = MontageLength > 0.f ? MontageLength + DestroyDelayAfterMontage : DestroyDelay;
 
     if (AAIController* AIC = Cast<AAIController>(GetController()))
     {
