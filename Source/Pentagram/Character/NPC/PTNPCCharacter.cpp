@@ -3,6 +3,7 @@
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/Pawn.h"
@@ -25,6 +26,14 @@ APTNPCCharacter::APTNPCCharacter()
     InteractionRangeSphere->SetSphereRadius(InteractionRadius);
     InteractionRangeSphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 
+    InteractionCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionCollision"));
+    InteractionCollision->SetupAttachment(SceneRootComponent);
+    InteractionCollision->SetBoxExtent(InteractionCollisionExtent);
+    InteractionCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    InteractionCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
+    InteractionCollision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
+    InteractionCollision->SetGenerateOverlapEvents(false);
+
     InteractionPromptWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractionPromptWidgetComponent"));
     InteractionPromptWidgetComponent->SetupAttachment(SceneRootComponent);
     InteractionPromptWidgetComponent->SetRelativeLocation(InteractionPromptRelativeLocation);
@@ -40,6 +49,7 @@ void APTNPCCharacter::BeginPlay()
     Super::BeginPlay();
 
     InteractionRangeSphere->SetSphereRadius(InteractionRadius);
+    InteractionCollision->SetBoxExtent(InteractionCollisionExtent);
 
     InteractionPromptWidgetComponent->SetRelativeLocation(InteractionPromptRelativeLocation);
     if (InteractionPromptWidgetClass != nullptr)
@@ -80,42 +90,9 @@ void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
     OnDialogueStarted.Broadcast(InteractPlayerController);
 }
 
-void APTNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
-{
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
-    {
-        return;
-    }
-
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem != nullptr)
-    {
-        QuestSubsystem->AcceptQuest(QuestID);
-    }
-}
-
-void APTNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
-{
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
-    {
-        return;
-    }
-
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem != nullptr)
-    {
-        QuestSubsystem->RewardQuest(QuestID);
-    }
-}
-
 FName APTNPCCharacter::GetNPCID() const
 {
     return NPCID;
-}
-
-const TArray<FName>& APTNPCCharacter::GetQuestIDs() const
-{
-    return QuestIDs;
 }
 
 void APTNPCCharacter::ShowInteractionPrompt(APlayerController* PlayerController)

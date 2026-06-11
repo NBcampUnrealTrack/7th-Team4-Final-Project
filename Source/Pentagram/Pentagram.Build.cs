@@ -28,7 +28,11 @@ public class Pentagram : ModuleRules
             "CommonInput"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { });
+		PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            "OnlineSubsystem",
+            "OnlineSubsystemUtils"
+        });
 
 		PublicIncludePaths.AddRange(new string[] {
 			"Pentagram",
