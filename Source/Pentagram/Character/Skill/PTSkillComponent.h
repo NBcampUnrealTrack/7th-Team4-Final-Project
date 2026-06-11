@@ -13,8 +13,6 @@ class PENTAGRAM_API UPTSkillComponent : public UActorComponent
 public:
     UPTSkillComponent();
 
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
-
     // 스킬 발동 시도
     UFUNCTION(BlueprintCallable, Category = "Skill")
     virtual void TryActivateSkill(FName SkillID);
@@ -39,17 +37,12 @@ public:
     void Multicast_PlaySkillMontage(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound);
 
 protected:
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
-
     virtual void BeginPlay() override;
-
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex);
 
 public:
-    // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
     // DT 참조
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
@@ -62,9 +55,6 @@ public:
     // 현재 발동 중인 스킬 ID
     UPROPERTY()
     FName CurrentSkillID = NAME_None;
-
-protected:
-    // ── 멤버 변수 (protected) ────────────────────────────────────────────────
 
     // 쿨다운 타이머 (슬롯 당 하나)
     TArray<FTimerHandle> CooldownTimers;

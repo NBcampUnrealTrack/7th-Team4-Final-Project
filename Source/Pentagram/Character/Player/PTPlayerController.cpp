@@ -140,11 +140,30 @@ void APTPlayerController::PlayAttackMontage()
     PlayerCharacter->ComboIndex++;
 }
 
+void APTPlayerController::RotateTowardsMouse()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    FHitResult HitResult;
+    if (!GetHitResultUnderCursor(ECC_Visibility, false, HitResult)) return;
+    if (!HitResult.bBlockingHit) return;
+
+    FVector Direction = HitResult.Location - PC->GetActorLocation();
+    Direction.Z = 0.f;
+    if (Direction.IsNearlyZero()) return;
+
+    FRotator Rotation = Direction.Rotation();
+    PC->SetActorRotation(Rotation);
+    Server_SetActorRotation(Rotation);
+}
+
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
     if (PC->bIsAttacking) return;
+    if (PC->bIsDodging) return;
 
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
@@ -158,6 +177,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
+    if (PlayerCharacter->bIsDodging) return;
 
     bMoveToDestination = false;
     StopMovement();
@@ -223,26 +243,47 @@ void APTPlayerController::OnInteractPressed()
 
 void APTPlayerController::OnSkill1(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[0]) return;
+
+    RotateTowardsMouse();
+
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
 }
 
 void APTPlayerController::OnSkill2(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[1]) return;
+
+    RotateTowardsMouse();
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
 }
 
 void APTPlayerController::OnSkill3(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[2]) return;
+
+    RotateTowardsMouse();
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
 }
 
 void APTPlayerController::OnSkill4(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[3]) return;
+
+    RotateTowardsMouse();
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
 }
 
 void APTPlayerController::OnDodge(const FInputActionValue& Value)
@@ -250,9 +291,12 @@ void APTPlayerController::OnDodge(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(4) > 0.f) return;
+
     bMoveToDestination = false;
     StopMovement();
 
+    RotateTowardsMouse();
     PC->SkillComp->TryDodge();
 }
 
