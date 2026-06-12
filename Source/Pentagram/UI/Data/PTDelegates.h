@@ -27,3 +27,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnMonsterTargeted, AActor*, Targ
 // 상점
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnShopBuyRequested, int32, SlotIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnShopSellRequested, int32, SlotIndex);
+
+//intro
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnIntroFinished);

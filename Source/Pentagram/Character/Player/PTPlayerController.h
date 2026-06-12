@@ -33,7 +33,7 @@ public:
     void OnDodge(const FInputActionValue& Value);
     void OnInventoryPressed();
     void OnShopPressed();
-    void PushInitialHUD();
+
 
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);
@@ -44,6 +44,14 @@ public:
 
     UFUNCTION(Client, Reliable)
     void Client_ShowMonsterHealth(APTMonsterCharacter* Monster);
+
+    // 죽을시 유다이 UI
+    UFUNCTION(Client, Reliable)
+    void Client_ShowDeathMenu();
+
+    // 부활 요청
+    UFUNCTION(Server, Reliable)
+    void Server_RequestRespawn();
 protected:
     void PlayAttackMontage();
 
@@ -96,9 +104,6 @@ public:
     FKey InventoryFallbackKey = EKeys::I;
 
     UPROPERTY(EditAnywhere, Category = "UI")
-    TSubclassOf<UCommonActivatableWidget> InitialHUDClass;
-
-    UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;
 
     UPROPERTY(EditAnywhere, Category = "UI")
@@ -110,6 +115,10 @@ public:
     // 상점 클래스
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> ShopClass;
+
+    // 데스 UI
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> DeathMenuClass;
 
 
 private:
