@@ -1,18 +1,15 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
-//#include  "UI/Data/PTDelegates.h"
 #include "PTUIManagerSubsystem.generated.h"
 
 UENUM(BlueprintType)
 enum class EPTUILayer : uint8
 {
-    HUD         UMETA(DisplayName = "HUD"),       // 게임
-    GameMenu    UMETA(DisplayName = "Game Menu"), // 메뉴
-    Modal       UMETA(DisplayName = "Modal"),     // 모달
+    HUD         UMETA(DisplayName = "HUD"),
+    GameMenu    UMETA(DisplayName = "Game Menu"),
+    Modal       UMETA(DisplayName = "Modal"),
 };
 
 class UPTPrimaryLayout;
@@ -27,43 +24,45 @@ class PENTAGRAM_API UPTUIManagerSubsystem : public ULocalPlayerSubsystem
 public:
     UPTUIManagerSubsystem();
 
-    // 오버라이드
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 
-    // 레이아웃 등록
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void RegisterPrimaryLayout(UPTPrimaryLayout* InLayout);
 
-    // 위젯 푸시
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     UCommonActivatableWidget* PushWidget(TSubclassOf<UCommonActivatableWidget> WidgetClass, EPTUILayer Layer);
 
-    // 위젯 제거
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void RemoveWidget(UCommonActivatableWidget* WidgetToRemove);
 
-    // 인벤 토글
+    // 레벨 UI 열기
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void OpenUILevel(FName LevelName);
+
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass);
 
-    // 상점 토글
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass);
 
-    // 레이아웃 조회
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
 
 protected:
-    // 인벤 핸들
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> InventoryInstance;
-    //상점 핸들
+
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> ShopInstance;
 
+    // 현재 UI
+    UPROPERTY(Transient)
+    TObjectPtr<UCommonActivatableWidget> CurrentUIWidget;
+
 private:
-    // 베이스 레이아웃
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
+
+    // 현재 스트림 레벨
+    FName CurrentStreamLevelName;
 };

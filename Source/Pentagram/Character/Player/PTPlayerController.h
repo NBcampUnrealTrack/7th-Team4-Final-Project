@@ -37,7 +37,7 @@ public:
     void OnDodge(const FInputActionValue& Value);
     void OnInventoryPressed();
     void OnShopPressed();
-    void PushInitialHUD();
+
 
     // ── RPC 함수 ─────────────────────────────────────────────────────────────
 
@@ -50,6 +50,14 @@ public:
 
     UFUNCTION(Client, Reliable)
     void Client_ShowMonsterHealth(APTMonsterCharacter* Monster);
+
+    // 죽을시 유다이 UI
+    UFUNCTION(Client, Reliable)
+    void Client_ShowDeathMenu();
+
+    // 부활 요청
+    UFUNCTION(Server, Reliable)
+    void Server_RequestRespawn();
 protected:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
@@ -111,9 +119,6 @@ public:
     // ── UI ───────────────────────────────────────────────────────────────────
 
     UPROPERTY(EditAnywhere, Category = "UI")
-    TSubclassOf<UCommonActivatableWidget> InitialHUDClass;
-
-    UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;
 
     UPROPERTY(EditAnywhere, Category = "UI")
@@ -125,6 +130,10 @@ public:
     // 상점 클래스
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> ShopClass;
+
+    // 데스 UI
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> DeathMenuClass;
 
 
 private:

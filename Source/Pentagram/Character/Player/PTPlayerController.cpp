@@ -10,7 +10,9 @@
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Core/PTGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
 
 APTPlayerController::APTPlayerController()
@@ -38,7 +40,10 @@ void APTPlayerController::BeginPlay()
                 if (UPTUIManagerSubsystem* UIMgr = LP->GetSubsystem<UPTUIManagerSubsystem>())
                 {
                     UIMgr->RegisterPrimaryLayout(PrimaryLayout);
-                    PushInitialHUD();
+
+                    // 현재 레벨에 맞는 UI
+                    const FString MapName = UGameplayStatics::GetCurrentLevelName(this, true);
+                    UIMgr->OpenUILevel(FName(*MapName));
                 }
             }
         }
@@ -125,6 +130,7 @@ void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
     RemoveUIInputMapping();
     Super::EndPlay(EndPlayReason);
 }
+
 
 void APTPlayerController::PlayAttackMontage()
 {
@@ -326,20 +332,6 @@ void APTPlayerController::OnShopPressed()
     UI->ToggleShop(ShopClass);
 }
 
-void APTPlayerController::PushInitialHUD()
-{
-    if (!IsLocalPlayerController()) return;
-    if (!InitialHUDClass) return;
-
-    if (ULocalPlayer* LP = GetLocalPlayer())
-    {
-        if (UPTUIManagerSubsystem* UIMgr = LP->GetSubsystem<UPTUIManagerSubsystem>())
-        {
-            UIMgr->PushWidget(InitialHUDClass, EPTUILayer::HUD);
-        }
-    }
-}
-
 void APTPlayerController::AddUIInputMapping()
 {
     if (!IsLocalPlayerController()) return;
@@ -379,4 +371,42 @@ void APTPlayerController::RemoveUIInputMapping()
 void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
 {
     OnMonsterTargeted.Broadcast(Monster);
+}
+
+// 유다이 UI
+void APTPlayerController::Client_ShowDeathMenu_Implementation()
+{
+    if (!IsLocalPlayerController()) return;
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP || !DeathMenuClass) return;
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI) return;
+
+    UI->PushWidget(DeathMenuClass,EPTUILayer::Modal);
+}
+
+// 부활 요청
+void APTPlayerController::Server_RequestRespawn_Implementation()
+{
+    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
+    if (!GM) return;
+
+    // 사망 검증
+    APawn* DeadPawn = GetPawn();
+
+    if (APTBaseCharacter* Dead = Cast<APTBaseCharacter>(DeadPawn))
+    {
+        if (Dead->CurrentHP > 0.f) return; // 생존 시 차단
+    }
+
+    // 시체 정리
+    if (DeadPawn)
+    {
+        UnPossess();
+        DeadPawn->Destroy();
+    }
+
+    GM->RespawnPlayer(this);
 }
