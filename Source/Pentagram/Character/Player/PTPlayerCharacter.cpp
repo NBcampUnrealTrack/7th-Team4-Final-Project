@@ -219,7 +219,11 @@ void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
 
     if (SkillComp)
     {
-        SkillComp->TryActivateSkill(SkillID);
+        FPTSkillActivationRequest Request;
+        Request.SkillRowName    = SkillID;
+        Request.SkillDataTable  = SkillComp->SkillDataTable;
+
+        SkillComp->TryActivateSkill(Request);
     }
 }
 

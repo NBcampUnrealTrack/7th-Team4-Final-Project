@@ -5,29 +5,36 @@
 #include "Character/Player/PTPlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
-void UPTPlayerSkillComponent::TryActivateSkill(FName SkillID)
+void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& Request)
 {
-    UE_LOG(LogTemp, Warning, TEXT("TryActivateSkill 호출 - SkillID: %s"), *SkillID.ToString());
+    AActor* OwnerActor = GetOwner();
+    if (!IsValid(OwnerActor))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Skill] TryActivateSkill 실패 - Owner 없음"));
+        return;
+    }
 
-    CurrentSkillID = SkillID;
+    UE_LOG(LogTemp, Warning, TEXT("[Skill] TryActivateSkill 호출 - SkillRowName: %s"),
+        *Request.SkillRowName.ToString());
 
-    if (!GetOwner()->HasAuthority())
+    if (!OwnerActor->HasAuthority())
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 권한 없음 - 서버가 아님"));
         return;
     }
 
     // DT에서 스킬 데이터 조회
-    const FPTSkillRow* SkillData = GetSkillData(SkillID);
+    const FPTSkillRow* SkillData = FindSkillRowFromRequest(Request);
     if (!SkillData)
     {
-        UE_LOG(LogTemp, Warning, TEXT("DT에서 스킬 데이터 없음 - SkillID: %s"), *SkillID.ToString());
+        UE_LOG(LogTemp, Warning, TEXT("[Skill] 실패 - 스킬 데이터 없음: %s"),
+            *Request.SkillRowName.ToString());
         return;
     }
     UE_LOG(LogTemp, Warning, TEXT("Skill 데이터 조회 성공 - MP소모: %.1f, 쿨다운: %.1f"), SkillData->MPCost, SkillData->Cooldown);
 
     // 슬롯 인덱스 찾기
-    int32 SlotIndex = SkillSlots.IndexOfByKey(SkillID);
+    int32 SlotIndex = SkillSlots.IndexOfByKey(Request.SkillRowName);
     if (SlotIndex == INDEX_NONE)
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 슬롯에 등록되지 않은 스킬"));
@@ -64,6 +71,8 @@ void UPTPlayerSkillComponent::TryActivateSkill(FName SkillID)
     {
         PS->CurrentMP = Owner->CurrentMP;
     }
+
+    CurrentSkillID = Request.SkillRowName;
 
     // 쿨다운 시작
     bIsCooldown[SlotIndex] = true;
