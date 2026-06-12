@@ -22,10 +22,19 @@ public class Pentagram : ModuleRules
 			"Slate",
             "GameplayTags",
 
+            //Setting
+            "DeveloperSettings",
+
             //UI
             "UMG",
             "CommonUI",
-            "CommonInput"
+            "CommonInput",
+
+            //Vidio
+            "MediaAssets",
+            "Slate",
+            "SlateCore"
+
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

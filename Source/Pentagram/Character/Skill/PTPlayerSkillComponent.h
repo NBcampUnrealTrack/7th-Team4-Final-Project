@@ -12,7 +12,7 @@ class PENTAGRAM_API UPTPlayerSkillComponent : public UPTSkillComponent
 
 public:
     // 스킬 발동 시도
-    virtual void TryActivateSkill(FName SkillID) override;
+    virtual void TryActivateSkill(const FPTSkillActivationRequest& Request) override;
 
     // 닷지 발동 시도 (로컬 클라이언트에서 호출)
     void TryDodge();

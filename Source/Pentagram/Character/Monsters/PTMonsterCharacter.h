@@ -11,6 +11,7 @@ class UAnimMontage;
 struct FDataTableRowHandle;
 class APTBasePlayerState;
 class APTGoldPickup;
+class UPTMonsterSkillComponent;
 
 UCLASS()
 class PENTAGRAM_API APTMonsterCharacter : public APTBaseCharacter
@@ -56,6 +57,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "PT|Monster|UI")
     FPTOnBossHealthChanged OnHPChanged;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|Combat")
+    TObjectPtr<UPTMonsterSkillComponent> SkillComponent;
 
 protected:
     UFUNCTION()

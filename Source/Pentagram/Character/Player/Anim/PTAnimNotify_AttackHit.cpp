@@ -68,11 +68,17 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     // 데미지는 서버에서
     if (!OwnerPlayer->HasAuthority()) return;
 
+    /* PTBaseCharacter::ApplyDamage 내부에서 따로 공격자(OwnerPlayer)의 장비창 스탯을 알아서 더해주기 때문에
+    복잡한 장비 스탯 계산 없이 기본 공격력만 넘겨줌 */ 
     for (AActor* HitActor : HitActors)
     {
-        if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
+        if (HitActor && HitActor != OwnerPlayer)
         {
-            Target->ApplyDamage(OwnerPlayer->BaseAtk, OwnerPlayer);
+            if (APTBaseCharacter* BaseChar = Cast<APTBaseCharacter>(HitActor))
+            {
+                // 부모의 ApplyDamage로 기본 공격력을 넘기면, 장비 보너스가 자동 합산됨
+                BaseChar->ApplyDamage(OwnerPlayer->BaseAtk, OwnerPlayer);
+            }
         }
     }
 }
