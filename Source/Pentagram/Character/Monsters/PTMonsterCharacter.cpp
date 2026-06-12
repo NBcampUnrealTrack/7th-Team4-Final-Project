@@ -16,11 +16,14 @@
 #include "Character/Player/PTPlayerController.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
+#include "Character/Skill/PTMonsterSkillComponent.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
     CharacterType = ECharacterType::NormalMonster;
     PrimaryActorTick.bCanEverTick = false;
+
+    SkillComponent = CreateDefaultSubobject<UPTMonsterSkillComponent>(TEXT("SkillComponent"));
 }
 
 float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
@@ -162,14 +165,30 @@ float APTMonsterCharacter::StartAttack()
         return 1.f;
     }
 
-    const float Duration = AttackMontage->GetPlayLength();
-
-    if (HasAuthority())
+    const bool bActivated = SkillComponent->PerformBasicAttack();
+    if (!bActivated)
     {
-        Multicast_PlayAttackMontage(AttackMontage);
+        return 0.f;
     }
 
-    return Duration > 0.f ? Duration : 1.f;
+    if (IsValid(SkillComponent->SkillDataTable))
+    {
+        const FPTSkillRow* Row = SkillComponent->SkillDataTable->FindRow<FPTSkillRow>(SkillComponent->BasicAttackRowName, TEXT("StartAttack"));
+        if (Row)
+        {
+            UAnimMontage* Montage = Row->SkillMontage.Get();
+            if (!IsValid(Montage))
+            {
+                Montage = Row->SkillMontage.LoadSynchronous();
+            }
+            if (IsValid(Montage))
+            {
+                return Montage->GetPlayLength();
+            }
+        }
+    }
+
+    return 1.f;
 }
 
 void APTMonsterCharacter::StopAttack()
@@ -242,6 +261,11 @@ void APTMonsterCharacter::BeginPlay()
     SpawnLocation = GetActorLocation();
 
     InitializeMonster();
+
+    if (SkillComponent)
+    {
+        SkillComponent->AssignSkillToSlot(SkillComponent->BasicAttackRowName, 0);
+    }
 }
 
 void APTMonsterCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -275,7 +299,7 @@ void APTMonsterCharacter::OnDeath()
     SetMonsterState(EMonsterState::Dead);
 
     const float MontageLength = PlayDeathMontage();
-    const float ActualDelay   = MontageLength > 0.f ? MontageLength : DestroyDelay;
+    const float ActualDelay   = MontageLength > 0.f ? MontageLength + DestroyDelayAfterMontage : DestroyDelay;
 
     if (AAIController* AIC = Cast<AAIController>(GetController()))
     {

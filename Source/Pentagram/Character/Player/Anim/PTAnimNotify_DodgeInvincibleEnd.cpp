@@ -11,4 +11,6 @@ void UPTAnimNotify_DodgeInvincibleEnd::Notify(USkeletalMeshComponent* MeshComp, 
     if (!PC || !PC->IsLocallyControlled()) return;
 
     PC->OnDodgeInvincibleEnd();
+
+    PC->bIsDodging = false;
 }

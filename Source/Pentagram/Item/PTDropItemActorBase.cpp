@@ -8,7 +8,7 @@
 APTDropItemActorBase::APTDropItemActorBase()
 { 
 	PrimaryActorTick.bCanEverTick = false;
-
+    bReplicates = true;
 
     CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
     RootComponent = CollisionSphere;

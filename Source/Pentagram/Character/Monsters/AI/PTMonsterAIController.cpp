@@ -90,10 +90,12 @@ void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulu
     {
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
         BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
+        BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
     }
     else
     {
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
         BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
+        BB->SetValueAsVector(PTMonsterBlackboardKeys::LastKnownLocation, Actor->GetActorLocation());
     }
 }

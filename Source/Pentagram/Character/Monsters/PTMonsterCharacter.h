@@ -11,6 +11,7 @@ class UAnimMontage;
 struct FDataTableRowHandle;
 class APTBasePlayerState;
 class APTGoldPickup;
+class UPTMonsterSkillComponent;
 
 UCLASS()
 class PENTAGRAM_API APTMonsterCharacter : public APTBaseCharacter
@@ -56,6 +57,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "PT|Monster|UI")
     FPTOnBossHealthChanged OnHPChanged;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|Combat")
+    TObjectPtr<UPTMonsterSkillComponent> SkillComponent;
 
 protected:
     UFUNCTION()
@@ -136,6 +140,9 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
     float DestroyDelay = 3.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
+    float DestroyDelayAfterMontage = 1.5f;
 
     FTimerHandle DestroyTimerHandle;
 

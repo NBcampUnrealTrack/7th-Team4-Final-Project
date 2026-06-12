@@ -5,6 +5,21 @@
 #include "PTSkillRow.h"
 #include "PTSkillComponent.generated.h"
 
+USTRUCT(BlueprintType)
+struct FPTSkillActivationRequest
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FName SkillRowName = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TObjectPtr<UDataTable> SkillDataTable = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TSoftObjectPtr<UAnimMontage> OverrideMontage;
+};
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTSkillComponent : public UActorComponent
 {
@@ -16,8 +31,10 @@ public:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 스킬 발동 시도
-    UFUNCTION(BlueprintCallable, Category = "Skill")
-    virtual void TryActivateSkill(FName SkillID);
+    UFUNCTION(BlueprintCallable, Category = "PT|Skill")
+    virtual void TryActivateSkill(const FPTSkillActivationRequest& Request);
+
+    virtual bool TryActivateSkillChecked(const FPTSkillActivationRequest& Request);
 
     // 스킬 슬롯에 배치
     UFUNCTION(BlueprintCallable, Category = "Skill")
@@ -34,19 +51,28 @@ public:
     // DT에서 스킬 데이터 조회
     FPTSkillRow* GetSkillData(FName SkillID) const;
 
+    UFUNCTION(BlueprintPure, Category = "PT|Skill")
+    FName GetCurrentSkillID() const { return CurrentSkillID; }
+
     // 스킬 몽타주 및 이펙트/사운드를 전체 클라이언트에 전파
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlaySkillMontage(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound);
+
+    // 보스 스킬용 — Offset을 직접 전달받아 SkillDataTable 조회 불필요
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlaySkillMontageWithOffset(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset);
 
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void BeginPlay() override;
-
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex);
+
+    const FPTSkillRow* FindSkillRowFromRequest(const FPTSkillActivationRequest& Request) const;
 
 public:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
@@ -59,12 +85,12 @@ public:
     UPROPERTY(EditAnywhere, Category = "Skill")
     TArray<FName> SkillSlots;
 
-    // 현재 발동 중인 스킬 ID
-    UPROPERTY()
-    FName CurrentSkillID = NAME_None;
-
 protected:
     // ── 멤버 변수 (protected) ────────────────────────────────────────────────
+
+     // 현재 발동 중인 스킬 ID
+    UPROPERTY()
+    FName CurrentSkillID = NAME_None;
 
     // 쿨다운 타이머 (슬롯 당 하나)
     TArray<FTimerHandle> CooldownTimers;

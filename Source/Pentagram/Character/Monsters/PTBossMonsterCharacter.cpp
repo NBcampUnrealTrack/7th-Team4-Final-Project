@@ -1,9 +1,12 @@
 #include "Character/Monsters/PTBossMonsterCharacter.h"
 #include "Animation/AnimInstance.h"
+#include "Character/Skill/PTBossPatternComponent.h"
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
     CharacterType = ECharacterType::BossMonster;
+
+    BossPatternComponent = CreateDefaultSubobject<UPTBossPatternComponent>(TEXT("BossPatternComponent"));
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
@@ -70,21 +73,12 @@ float APTBossMonsterCharacter::StartAttack()
 {
     HitActors.Empty();
 
-    const int32 Phase = GetCurrentPhase();
-    UAnimMontage* Montage = GetAttackMontageForPhase(Phase);
-    if (!IsValid(Montage))
+    if (BossPatternComponent)
     {
-        return 1.f;
+        BossPatternComponent->ExecuteSkillForPhase(GetCurrentPhase());
     }
 
-    const float Duration = Montage->GetPlayLength();
-
-    if (HasAuthority())
-    {
-        Multicast_PlayAttackMontage(Montage);
-    }
-
-    return Duration > 0.f ? Duration : 1.f;
+    return 0.f;
 }
 
 void APTBossMonsterCharacter::StopAttack()

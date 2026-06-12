@@ -11,4 +11,6 @@ namespace PTMonsterBlackboardKeys
     inline const FName BossPhase           = TEXT("BossPhase");    
     inline const FName PatrolLocation      = TEXT("PatrolLocation");
     inline const FName SpawnLocation       = TEXT("SpawnLocation");
+    inline const FName ShouldReturnToSpawn = TEXT("ShouldReturnToSpawn");
+    inline const FName LastKnownLocation = TEXT("LastKnownLocation");
 }
