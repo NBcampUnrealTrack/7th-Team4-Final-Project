@@ -28,8 +28,6 @@ class PENTAGRAM_API UPTSkillComponent : public UActorComponent
 public:
     UPTSkillComponent();
 
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
-
     // 스킬 발동 시도
     UFUNCTION(BlueprintCallable, Category = "PT|Skill")
     virtual void TryActivateSkill(const FPTSkillActivationRequest& Request);
@@ -63,11 +61,9 @@ public:
     void Multicast_PlaySkillMontageWithOffset(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset);
 
 protected:
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex);
@@ -75,7 +71,6 @@ protected:
     const FPTSkillRow* FindSkillRowFromRequest(const FPTSkillActivationRequest& Request) const;
 
 public:
-    // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
     // DT 참조
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
@@ -85,8 +80,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Skill")
     TArray<FName> SkillSlots;
 
+    // 쿨다운 중인 슬롯 플래그
+    TArray<bool> bIsCooldown;
 protected:
-    // ── 멤버 변수 (protected) ────────────────────────────────────────────────
 
      // 현재 발동 중인 스킬 ID
     UPROPERTY()
@@ -95,6 +91,4 @@ protected:
     // 쿨다운 타이머 (슬롯 당 하나)
     TArray<FTimerHandle> CooldownTimers;
 
-    // 쿨다운 중인 슬롯 플래그
-    TArray<bool> bIsCooldown;
 };
