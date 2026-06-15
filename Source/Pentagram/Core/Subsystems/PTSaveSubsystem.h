@@ -36,6 +36,9 @@ class PENTAGRAM_API UPTSaveSubsystem : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
+    UFUNCTION(BlueprintCallable, Category = "PT|Save")
+    void SetPlayerSteamID(const FString& PlayerSteamID);
+
     void SaveGame(const APTBasePlayerState* PlayerState);
     void LoadGame(APTBasePlayerState* PlayerState);
     bool HasSaveData() const;
@@ -51,5 +54,6 @@ private:
     bool LoadSlotData();
 
     FPTPlayerSaveData SaveData;
+    FString SaveSlotName = TEXT("PTPlayerSave");
     bool bHasSaveData = false;
 };
