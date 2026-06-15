@@ -10,6 +10,7 @@ class UCommonActivatableWidget;
 class UInputAction;
 class UInputMappingContext;
 class UPTPrimaryLayout;
+class UPTNPCDialogueWidget;
 class APTDropItemActorBase;
 
 UCLASS()
@@ -33,6 +34,7 @@ public:
     void OnDodge(const FInputActionValue& Value);
     void OnInventoryPressed();
     void OnShopPressed();
+    void OnQuestPressed();
 
 
     UFUNCTION(Server, Reliable)
@@ -88,6 +90,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     TObjectPtr<UInputAction> IA_Shop;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    TObjectPtr<UInputAction> IA_Quest;
+
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill1;
 
@@ -115,6 +120,9 @@ public:
     // 상점 클래스
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> ShopClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UPTNPCDialogueWidget> QuestClass;
 
     // 데스 UI
     UPROPERTY(EditDefaultsOnly, Category = "UI")
