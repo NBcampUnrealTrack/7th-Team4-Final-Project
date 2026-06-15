@@ -3,6 +3,7 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
 #include "Character/Player/PTPlayerCharacter.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& Request)
@@ -75,16 +76,24 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
     CurrentSkillID = Request.SkillRowName;
 
     // 쿨다운 시작
-    bIsCooldown[SlotIndex] = true;
-    GetWorld()->GetTimerManager().SetTimer(
-        CooldownTimers[SlotIndex],
-        [this, SlotIndex]() { OnCooldownEnd(SlotIndex); },
-        SkillData->Cooldown,
-        false
-    );
+    UWorld* World = GetWorld();
+    if (!World) return;
 
-    // 발동 성공 시점에 소유 클라로 "쿨다운 시작" 통지
-    Client_NotifyCooldownStarted(SlotIndex, SkillData->Cooldown);
+    if (SkillData->Cooldown > 0.f)
+    {
+        bIsCooldown[SlotIndex] = true;
+
+        int32 CapturedSlotIndex = SlotIndex;
+        World->GetTimerManager().SetTimer(
+            CooldownTimers[SlotIndex],
+            [this, CapturedSlotIndex]() { OnCooldownEnd(CapturedSlotIndex); },
+            SkillData->Cooldown,
+            false
+        );
+
+        // 발동 성공 시점에 소유 클라로 "쿨다운 시작" 통지
+        Client_NotifyCooldownStarted(SlotIndex, SkillData->Cooldown);
+    }
 
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
     {
@@ -97,10 +106,21 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
             Owner->StopAnimMontage();
         }
 
+        // 관통 스킬이면 충돌 무시
+        if (SkillData->bPenetrate)
+        {
+            Multicast_SetPenetration(true);
+
+            if (UAnimInstance* AnimInst = Owner->GetMesh()->GetAnimInstance())
+            {
+                AnimInst->OnMontageEnded.AddUniqueDynamic(this, &UPTPlayerSkillComponent::OnSkillMontageEnded);
+            }
+        }
+
         // 이펙트/사운드 에셋 로드 (서버에서 한 번만 로드 후 Multicast로 전달)
         UNiagaraSystem* Effect = SkillData->SkillEffect.LoadSynchronous();
         USoundBase*     Sound  = SkillData->SkillSound.LoadSynchronous();
-        Multicast_PlaySkillMontage(Montage, Effect, Sound);
+        Multicast_PlaySkillMontageWithOffset(Montage, Effect, Sound, SkillData->SkillOffset);
     }
     else
     {
@@ -220,6 +240,43 @@ void UPTPlayerSkillComponent::OnDodgeMontageEnded(UAnimMontage* Montage, bool bI
     }
 
     Multicast_OnDodgeEnded();
+}
+
+void UPTPlayerSkillComponent::OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    const FPTSkillRow* SkillData = GetSkillData(CurrentSkillID);
+    if (!SkillData) return;
+
+    UAnimMontage* SkillMontage = SkillData->SkillMontage.LoadSynchronous();
+    if (SkillMontage != Montage) return;
+
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    if (UAnimInstance* AnimInst = PC->GetMesh()->GetAnimInstance())
+    {
+        AnimInst->OnMontageEnded.RemoveDynamic(this, &UPTPlayerSkillComponent::OnSkillMontageEnded);
+    }
+
+    Multicast_SetPenetration(false);
+}
+
+void UPTPlayerSkillComponent::Multicast_SetPenetration_Implementation(bool bEnable)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    UCapsuleComponent* Capsule = PC->GetCapsuleComponent();
+    if (!Capsule) return;
+
+    if (bEnable)
+    {
+        Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+    }
+    else
+    {
+        Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+    }
 }
 
 void UPTPlayerSkillComponent::OnCooldownEnd(int32 SlotIndex)

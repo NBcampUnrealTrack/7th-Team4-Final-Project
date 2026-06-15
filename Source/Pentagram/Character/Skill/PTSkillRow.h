@@ -44,6 +44,10 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     FVector SkillOffset = FVector(0.f, 0.f, 0.f); //앞, 양옆, 위아래
 
+    //스킬 관통 여부
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    bool bPenetrate = false;
+
     // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;

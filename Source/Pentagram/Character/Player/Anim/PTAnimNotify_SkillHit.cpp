@@ -1,8 +1,10 @@
 #include "PTAnimNotify_SkillHit.h"
 
+#include "NiagaraFunctionLibrary.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Skill/PTSkillRow.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
@@ -45,6 +47,27 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
         if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
         {
             Target->ApplyDamage(FinalDamage, OwnerPlayer);
+        }
+    }
+
+    for (AActor* HitActor : HitActors)
+    {
+        if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
+        {
+            if (HitVFX)
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                    OwnerPlayer->GetWorld(),
+                    HitVFX,
+                    Target->GetActorLocation() + FVector(0.f, 0.f, 50.f),
+                    FRotator::ZeroRotator
+                );
+
+            if (HitSFX)
+                UGameplayStatics::PlaySoundAtLocation(
+                    OwnerPlayer->GetWorld(),
+                    HitSFX,
+                    Target->GetActorLocation()
+                );
         }
     }
 }
