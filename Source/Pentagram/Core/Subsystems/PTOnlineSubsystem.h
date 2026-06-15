@@ -10,7 +10,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
     FPTLoginCompletedDelegate,
     bool, bWasSuccessful,
     FString, PlayerNickname,
-    FString, PlayerUniqueID,
+    FString, PlayerSteamID,
     FString, ErrorMessage);
 
 UCLASS()
@@ -34,7 +34,7 @@ public:
     FString GetPlayerNickname() const;
 
     UFUNCTION(BlueprintPure, Category = "PT|Online")
-    FString GetPlayerUniqueID() const;
+    FString GetPlayerSteamID() const;
 
 private:
     void OnSteamLoginComplete(

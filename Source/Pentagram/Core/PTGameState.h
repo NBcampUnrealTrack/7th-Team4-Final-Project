@@ -33,4 +33,8 @@ protected:
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentPhase)
     EGamePhase CurrentPhase = EGamePhase::Waiting;
+
+public:
+    UPROPERTY(BlueprintAssignable, Category = "PT|GameState")
+    FOnGamePhaseChanged OnGamePhaseChangedEvent;
 };
