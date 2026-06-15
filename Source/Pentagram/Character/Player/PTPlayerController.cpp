@@ -1,14 +1,13 @@
 #include "Character/Player/PTPlayerController.h"
-
 #include "CommonActivatableWidget.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
-#include "PTInventoryComponent.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Core/PTGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -94,6 +93,9 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Skill2)    EnhancedInput->BindAction(IA_Skill2,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
         if (IA_Skill3)    EnhancedInput->BindAction(IA_Skill3,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill3);
         if (IA_Skill4)    EnhancedInput->BindAction(IA_Skill4,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill4);
+
+        // [디버그] 즉사
+        if (IA_DebugKill) EnhancedInput->BindAction(IA_DebugKill, ETriggerEvent::Started,   this, &APTPlayerController::OnDebugKillPressed);
 
         if (IA_Interact)
         {
@@ -469,4 +471,23 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
     }
 
     GM->RespawnPlayer(this);
+}
+
+// [디버그] 즉사 입력
+void APTPlayerController::OnDebugKillPressed()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    Server_DebugKill();
+}
+
+// [디버그] 즉사
+void APTPlayerController::Server_DebugKill_Implementation()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    // 방어력 무시하고 확실히 죽임
+    PC->ApplyDamage(PC->MaxHP + PC->BaseDef + 1.f, nullptr);
 }
