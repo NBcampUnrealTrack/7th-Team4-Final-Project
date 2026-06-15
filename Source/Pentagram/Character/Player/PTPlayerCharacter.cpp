@@ -41,6 +41,17 @@ APTPlayerCharacter::APTPlayerCharacter()
     SkillComp          = CreateDefaultSubobject<UPTPlayerSkillComponent>(TEXT("Skill"));
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
+    
+    WeaponMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMeshComp"));
+    if (GetMesh())
+    {
+        // 무기 소켓에 붙일 메시 컴포넌트 설정
+        WeaponMeshComp->SetupAttachment(GetMesh(), TEXT("weapon_r"));
+    }
+    // 공격 판정은AnimNotify에서 처리하므로 무기 자체의 물리 충돌은 꺼둠
+    WeaponMeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+    WeaponMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 
     GetCharacterMovement()->bOrientRotationToMovement    = true;
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
@@ -287,4 +298,27 @@ float APTPlayerCharacter::GetTotalAttack() const
     }
 
     return FinalAttack;
+}
+
+// 무기 외형 실시간 변경
+void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset)
+{
+    if (!WeaponMeshComp) return;
+
+    if (NewMeshAsset.IsNull())
+    {
+        // 빈 에셋이 오면 무기를 장착 해제한 것이므로 메시를 비웁니다.
+        WeaponMeshComp->SetStaticMesh(nullptr);
+        UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 제거 완료"));
+    }
+    else
+    {
+        // SoftObjectPtr이므로 안전하게 동기식 로드(LoadSynchronous)하여 메시를 채웁니다.
+        UStaticMesh* LoadedMesh = NewMeshAsset.LoadSynchronous();
+        if (LoadedMesh)
+        {
+            WeaponMeshComp->SetStaticMesh(LoadedMesh);
+            UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 변경 완료: %s"), *LoadedMesh->GetName());
+        }
+    }
 }
