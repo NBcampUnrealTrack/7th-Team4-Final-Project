@@ -4,6 +4,8 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "PTBossMonsterCharacter.generated.h"
 
+class UPTBossPatternComponent;
+
 UCLASS()
 class PENTAGRAM_API APTBossMonsterCharacter : public APTMonsterCharacter
 {
@@ -26,6 +28,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "PT|Boss|UI")
     FPTOnBossPhaseChanged OnPhaseChanged;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Boss|Pattern")
+    TObjectPtr<UPTBossPatternComponent> BossPatternComponent;
 
 protected:
     virtual float StartAttack() override;

@@ -1,11 +1,12 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "UI/Manage/PTUIManagerSubsystem.h"
+﻿#include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/HUD/PTHUDWidget.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
 #include "UI/Widget/Shop/PTShopWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/LocalPlayer.h"
+#include "UI/Setting/PTUISettings.h"
 
 UPTUIManagerSubsystem::UPTUIManagerSubsystem()
 {
@@ -18,7 +19,6 @@ void UPTUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTUIManagerSubsystem::Deinitialize()
 {
-    // 참조 해제
     PrimaryLayout.Reset();
     Super::Deinitialize();
 }
@@ -26,42 +26,69 @@ void UPTUIManagerSubsystem::Deinitialize()
 void UPTUIManagerSubsystem::RegisterPrimaryLayout(UPTPrimaryLayout* InLayout)
 {
     if (!InLayout) return;
-
-    UE_LOG(LogTemp, Warning, TEXT(">> Register: Subsystem=%p, InLayout=%p"), this, InLayout);
-
-    // 레이아웃 등록
     PrimaryLayout = InLayout;
 }
 
 UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonActivatableWidget> WidgetClass,
     EPTUILayer Layer)
 {
-    if (!WidgetClass)
-    {
-        return nullptr;
-    }
-    if (!PrimaryLayout.IsValid())
-    {
-        return nullptr;
-    }
-
-    UE_LOG(LogTemp, Warning, TEXT(">> PushWidget: Layer=%d, Subsystem=%p, PrimaryLayout=%p"),
-        (int32)Layer, this, PrimaryLayout.Get());
+    if (!WidgetClass) return nullptr;
+    if (!PrimaryLayout.IsValid()) return nullptr;
 
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
-    if (!Stack)
-    {
-        return nullptr;
-    }
+    if (!Stack) return nullptr;
+
     return Stack->AddWidget(WidgetClass);
 }
 
 void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemove)
 {
     if (!WidgetToRemove) return;
-
-    // 위젯 종료
     WidgetToRemove->DeactivateWidget();
+}
+
+void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
+{
+    // 표 조회
+    const UPTUISettings* Settings = GetDefault<UPTUISettings>();
+    if (!Settings) return;
+
+    const FPTUILevelEntry* Entry = Settings->LevelUITable.Find(LevelName);
+    if (!Entry) return;
+
+    UWorld* World = GetLocalPlayer() ? GetLocalPlayer()->GetWorld() : nullptr;
+    if (!World) return;
+
+    // 이전 UI 제거
+    if (CurrentUIWidget)
+    {
+        RemoveWidget(CurrentUIWidget);
+        CurrentUIWidget = nullptr;
+    }
+
+    // 이전 스트림 언로드
+    if (!CurrentStreamLevelName.IsNone() && CurrentStreamLevelName != LevelName)
+    {
+        FLatentActionInfo UnloadInfo;
+        UnloadInfo.UUID = 2;
+        UGameplayStatics::UnloadStreamLevel(World, CurrentStreamLevelName, UnloadInfo, false);
+        CurrentStreamLevelName = NAME_None;
+    }
+
+    // 새 스트림 로드
+    if (Entry->bIsStreamingLevel)
+    {
+        FLatentActionInfo LoadInfo;
+        LoadInfo.UUID = 1;
+        UGameplayStatics::LoadStreamLevel(World, LevelName, true, true, LoadInfo);
+        CurrentStreamLevelName = LevelName;
+    }
+
+    // 매핑된 UI 푸시
+    if (UClass* WidgetClass = Entry->WidgetClass.LoadSynchronous())
+    {
+        CurrentUIWidget = PushWidget(WidgetClass, Entry->Layer);
+    }
 }
 
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
@@ -69,8 +96,6 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
     if (!InventoryClass) return;
 
     bool bIsInventoryOpen = false;
-
-    // 열림 판정
     if (InventoryInstance)
     {
         if (InventoryInstance->IsActivated() || InventoryInstance->IsInViewport())
@@ -89,12 +114,12 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
         InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
     }
 }
+
 void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass)
 {
-    if (!ShopClass)return;
+    if (!ShopClass) return;
 
     bool bIsShopOpen = false;
-
     if (ShopInstance)
     {
         if (ShopInstance->IsActivated() || ShopInstance->IsInViewport())

@@ -10,7 +10,9 @@
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Core/PTGameMode.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
 
 APTPlayerController::APTPlayerController()
@@ -38,7 +40,10 @@ void APTPlayerController::BeginPlay()
                 if (UPTUIManagerSubsystem* UIMgr = LP->GetSubsystem<UPTUIManagerSubsystem>())
                 {
                     UIMgr->RegisterPrimaryLayout(PrimaryLayout);
-                    PushInitialHUD();
+
+                    // 현재 레벨에 맞는 UI
+                    const FString MapName = UGameplayStatics::GetCurrentLevelName(this, true);
+                    UIMgr->OpenUILevel(FName(*MapName));
                 }
             }
         }
@@ -126,6 +131,7 @@ void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
     Super::EndPlay(EndPlayReason);
 }
 
+
 void APTPlayerController::PlayAttackMontage()
 {
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
@@ -140,11 +146,30 @@ void APTPlayerController::PlayAttackMontage()
     PlayerCharacter->ComboIndex++;
 }
 
+void APTPlayerController::RotateTowardsMouse()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    FHitResult HitResult;
+    if (!GetHitResultUnderCursor(ECC_Visibility, false, HitResult)) return;
+    if (!HitResult.bBlockingHit) return;
+
+    FVector Direction = HitResult.Location - PC->GetActorLocation();
+    Direction.Z = 0.f;
+    if (Direction.IsNearlyZero()) return;
+
+    FRotator Rotation = Direction.Rotation();
+    PC->SetActorRotation(Rotation);
+    Server_SetActorRotation(Rotation);
+}
+
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
     if (PC->bIsAttacking) return;
+    if (PC->bIsDodging) return;
 
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
@@ -158,6 +183,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
+    if (PlayerCharacter->bIsDodging) return;
 
     bMoveToDestination = false;
     StopMovement();
@@ -223,26 +249,47 @@ void APTPlayerController::OnInteractPressed()
 
 void APTPlayerController::OnSkill1(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[0]) return;
+
+    RotateTowardsMouse();
+
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
 }
 
 void APTPlayerController::OnSkill2(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[1]) return;
+
+    RotateTowardsMouse();
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
 }
 
 void APTPlayerController::OnSkill3(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[2]) return;
+
+    RotateTowardsMouse();
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
 }
 
 void APTPlayerController::OnSkill4(const FInputActionValue& Value)
 {
-    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
-        PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (PC->SkillComp->bIsCooldown[3]) return;
+
+    RotateTowardsMouse();
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
 }
 
 void APTPlayerController::OnDodge(const FInputActionValue& Value)
@@ -250,9 +297,12 @@ void APTPlayerController::OnDodge(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(4) > 0.f) return;
+
     bMoveToDestination = false;
     StopMovement();
 
+    RotateTowardsMouse();
     PC->SkillComp->TryDodge();
 }
 
@@ -326,20 +376,6 @@ void APTPlayerController::OnShopPressed()
     UI->ToggleShop(ShopClass);
 }
 
-void APTPlayerController::PushInitialHUD()
-{
-    if (!IsLocalPlayerController()) return;
-    if (!InitialHUDClass) return;
-
-    if (ULocalPlayer* LP = GetLocalPlayer())
-    {
-        if (UPTUIManagerSubsystem* UIMgr = LP->GetSubsystem<UPTUIManagerSubsystem>())
-        {
-            UIMgr->PushWidget(InitialHUDClass, EPTUILayer::HUD);
-        }
-    }
-}
-
 void APTPlayerController::AddUIInputMapping()
 {
     if (!IsLocalPlayerController()) return;
@@ -379,4 +415,42 @@ void APTPlayerController::RemoveUIInputMapping()
 void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
 {
     OnMonsterTargeted.Broadcast(Monster);
+}
+
+// 유다이 UI
+void APTPlayerController::Client_ShowDeathMenu_Implementation()
+{
+    if (!IsLocalPlayerController()) return;
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP || !DeathMenuClass) return;
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI) return;
+
+    UI->PushWidget(DeathMenuClass,EPTUILayer::Modal);
+}
+
+// 부활 요청
+void APTPlayerController::Server_RequestRespawn_Implementation()
+{
+    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
+    if (!GM) return;
+
+    // 사망 검증
+    APawn* DeadPawn = GetPawn();
+
+    if (APTBaseCharacter* Dead = Cast<APTBaseCharacter>(DeadPawn))
+    {
+        if (Dead->CurrentHP > 0.f) return; // 생존 시 차단
+    }
+
+    // 시체 정리
+    if (DeadPawn)
+    {
+        UnPossess();
+        DeadPawn->Destroy();
+    }
+
+    GM->RespawnPlayer(this);
 }

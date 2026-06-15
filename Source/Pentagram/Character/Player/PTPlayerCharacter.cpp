@@ -219,7 +219,11 @@ void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
 
     if (SkillComp)
     {
-        SkillComp->TryActivateSkill(SkillID);
+        FPTSkillActivationRequest Request;
+        Request.SkillRowName    = SkillID;
+        Request.SkillDataTable  = SkillComp->SkillDataTable;
+
+        SkillComp->TryActivateSkill(Request);
     }
 }
 
@@ -268,4 +272,19 @@ void APTPlayerCharacter::RegenHP()
     {
         PS->CurrentHP = CurrentHP;
     }
+}
+
+float APTPlayerCharacter::GetTotalAttack() const
+{
+    // 부모 클래스(PTBaseCharacter)가 데이터 테이블로부터 플레이어의 순수 기본 공격력을 가져옴.
+    float FinalAttack = BaseAtk;
+
+    // 장비창 컴포넌트가 정상적으로 장착되어 있다면, 현재 장착 중인 아이템들의 보너스 STR 수치를 합산
+    if (IsValid(EquipmentComponent))
+    {
+        // 장비 스탯 총합 Getter 함수를 활용
+        FinalAttack += static_cast<float>(EquipmentComponent->GetTotalBonusStr());
+    }
+
+    return FinalAttack;
 }

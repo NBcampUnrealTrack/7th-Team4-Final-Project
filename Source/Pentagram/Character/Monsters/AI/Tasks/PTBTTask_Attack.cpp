@@ -5,6 +5,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "AIController.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UPTBTTask_Attack::UPTBTTask_Attack()
 {
@@ -39,6 +40,25 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
         return EBTNodeResult::Failed;
     }
 
+    UCharacterMovementComponent* MoveComp = Monster->GetCharacterMovement();
+    if (IsValid(MoveComp))
+    {
+        MoveComp->bOrientRotationToMovement = false;
+        MoveComp->StopMovementImmediately();
+    }
+
+    AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
+    if (IsValid(Target))
+    {
+        const FVector Direction = Target->GetActorLocation() - Monster->GetActorLocation();
+        if (!Direction.IsNearlyZero())
+        {
+            const FVector ToTarget = Direction.GetSafeNormal();
+            const FRotator LookAt = FRotationMatrix::MakeFromX(ToTarget).Rotator();
+            Monster->SetActorRotation(FRotator(0.f, LookAt.Yaw, 0.f));
+        }
+    }
+
     BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, false);
     Monster->SetMonsterState(EMonsterState::Attack);
 
@@ -61,6 +81,13 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
 
                 UBehaviorTreeComponent* OwnerCompPtr = WeakOwnerComp.Get();
                 UBlackboardComponent* BlackboardPtr = WeakBlackboard.Get();
+
+                if (!OwnerCompPtr || !BlackboardPtr)
+                {
+                    return;
+                }
+
+                WeakThis->RestoreMovementRotation(*OwnerCompPtr);
 
                 BlackboardPtr->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
                 WeakThis->FinishLatentTask(*OwnerCompPtr, EBTNodeResult::Succeeded);
@@ -92,10 +119,35 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
         BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
     }
 
+    RestoreMovementRotation(OwnerComp);
+
     return EBTNodeResult::Aborted;
 }
 
 uint16 UPTBTTask_Attack::GetInstanceMemorySize() const
 {
     return sizeof(FPTAttackTaskMemory);
+}
+
+void UPTBTTask_Attack::RestoreMovementRotation(UBehaviorTreeComponent& OwnerComp)
+{
+    AAIController* AIC = OwnerComp.GetAIOwner();
+    if (!IsValid(AIC))
+    {
+        return;
+    }
+
+    APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn());
+    if (!IsValid(Monster))
+    {
+        return;
+    }
+
+    UCharacterMovementComponent* MoveComp = Monster->GetCharacterMovement();
+    if (!IsValid(MoveComp))
+    {
+        return;
+    }
+
+    MoveComp->bOrientRotationToMovement = true;
 }

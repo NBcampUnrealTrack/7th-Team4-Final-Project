@@ -1,4 +1,4 @@
-﻿#include "PTAnimNotify_SkillHit.h"
+#include "PTAnimNotify_SkillHit.h"
 
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Skill/PTSkillRow.h"
@@ -16,7 +16,7 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
     UPTPlayerSkillComponent* SkillComp = OwnerPlayer->SkillComp;
     if (!SkillComp) return;
 
-    FPTSkillRow* SkillData = SkillComp->GetSkillData(SkillComp->CurrentSkillID);
+    FPTSkillRow* SkillData = SkillComp->GetSkillData(SkillComp->GetCurrentSkillID());
     if (!SkillData) return;
 
     float FinalDamage = OwnerPlayer->BaseAtk * SkillData->DamageMultiplier;
