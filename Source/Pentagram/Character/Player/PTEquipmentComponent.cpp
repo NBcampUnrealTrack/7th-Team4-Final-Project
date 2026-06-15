@@ -1,5 +1,6 @@
 #include "PTEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "PTPlayerCharacter.h"
 
 
 UPTEquipmentComponent::UPTEquipmentComponent()
@@ -84,9 +85,20 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
     // 구조체 자체를 대입하여 RPC/네트워크 복제 유도
     *TargetSlot = UpdatedSlot;
 
-
     // 실시간 보너스 스탯 누적 및 캐릭터 갱신 (리플리케이트로 인해 클라이언트로 전송될 것)
     UpdateTotalBonusStats();
+
+    // 장착한 아이템이 무기일 때, 캐릭터의 외형 메시를 업데이트
+    if (NewItem.Item_Type == EItemType::Weapon)
+    {
+        // 이 컴포넌트의 주인(Owner)을 플레이어 캐릭터로 캐스팅
+        APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+        if (OwnerCharacter)
+        {
+            // 데이터베이스에서 세팅한 메시를 캐릭터에게 전달
+            OwnerCharacter->UpdateWeaponVisual(NewItem.ItemMeshAsset);
+        }
+    }
 
     UE_LOG(LogTemp, Log, TEXT("[장비컴포넌트] 장착 완료: %s (누적 스탯 -> STR: %d, DEF: %d, HP: %d)"),
         *NewItem.Item_Name.ToString(), TotalBonusStr, TotalBonusDef, TotalBonusHp);
@@ -127,6 +139,17 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
     *TargetSlot = ClearedSlot;
 
     UpdateTotalBonusStats(); // 스탯 차감 반영
+
+    // 해제한 슬롯이 무기 슬롯일 때, 캐릭터의 외형 메시를 비움
+    if (SlotType == EEquipSlotType::Weapon)
+    {
+        APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+        if (OwnerCharacter)
+        {
+            // nullptr이나 IsNull() 상태라면 메시를 비움
+            OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
+        }
+    }
 
     UE_LOG(LogTemp, Log, TEXT("[장비컴포넌트] 해제 완료: %s (누적 스탯 -> STR: %d, DEF: %d, HP: %d)"),
         *OutUnequippedItem.Item_Name.ToString(), TotalBonusStr, TotalBonusDef, TotalBonusHp);
@@ -217,6 +240,25 @@ void UPTEquipmentComponent::UpdateTotalBonusStats()
                     }
                 }
             }
+        }
+    }
+}
+
+void UPTEquipmentComponent::OnRep_EquippedWeapon()
+{
+    // 리플리케이션을 통해 무기 데이터가 서버로부터 클라이언트에게 도착하면 실행됩니다.
+    APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+    if (OwnerCharacter)
+    {
+        if (EquippedWeapon.bIsEquipped)
+        {
+            // 장착 중이라면 복제되어 온 MountedItem의 메시를 손에 쥐여줍니다.
+            OwnerCharacter->UpdateWeaponVisual(EquippedWeapon.MountedItem.ItemMeshAsset);
+        }
+        else
+        {
+            // 해제 상태라면 손을 비웁니다.
+            OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
         }
     }
 }

@@ -54,6 +54,10 @@ public:
     // 부활 요청
     UFUNCTION(Server, Reliable)
     void Server_RequestRespawn();
+
+    // [디버그] 즉사
+    UFUNCTION(Server, Reliable)
+    void Server_DebugKill();
 protected:
     void PlayAttackMontage();
 
@@ -64,6 +68,9 @@ private:
     void OnInteractPressed();
     void AddUIInputMapping();
     void RemoveUIInputMapping();
+
+    // [디버그] 즉사 입력
+    void OnDebugKillPressed();
 
 public:
     UPROPERTY(EditAnywhere, Category = "Input")
@@ -104,6 +111,10 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill4;
+
+    // [디버그] 즉사 키
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_DebugKill;
 
     UPROPERTY(EditAnywhere, Category = "Input")
     FKey InventoryFallbackKey = EKeys::I;

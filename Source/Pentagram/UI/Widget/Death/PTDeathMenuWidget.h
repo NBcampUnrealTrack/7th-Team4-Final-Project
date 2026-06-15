@@ -1,12 +1,10 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
 #include "PTDeathMenuWidget.generated.h"
 
-class UButton;     // 변경: UButton
+class UButton;
 class UTextBlock;
 
 UCLASS()
@@ -19,25 +17,19 @@ protected:
     virtual void NativeOnDeactivated() override;
 
     UPROPERTY(meta = (BindWidget))
-    UButton* Btn_Restart;   // 변경: UButton
+    UButton* Btn_Respawn;
 
     UPROPERTY(meta = (BindWidget))
-    UButton* Btn_MainMenu;  // 변경: UButton
-
-    UPROPERTY(meta = (BindWidget))
-    UTextBlock* Text_Countdown; // 카운트 표시
+    UTextBlock* Text_Countdown;
 
     UPROPERTY(EditDefaultsOnly, Category = "Respawn")
-    float RespawnDelay = 5.0f; // 대기 시간
+    float RespawnDelay = 5.0f;
 
 private:
-    void UpdateCountdown(); // 카운트 갱신
+    void UpdateCountdown();
 
     UFUNCTION()
-    void OnRestartClicked();
-
-    UFUNCTION()
-    void OnMainMenuClicked();
+    void OnRespawnClicked();
 
     FTimerHandle CountdownTimerHandle;
     int32 RemainingSeconds = 0;
