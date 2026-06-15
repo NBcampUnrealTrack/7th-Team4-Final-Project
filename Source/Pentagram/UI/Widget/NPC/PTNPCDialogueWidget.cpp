@@ -1,17 +1,57 @@
 #include "PTNPCDialogueWidget.h"
 
 #include "Character/NPC/PTQuestNPCCharacter.h"
+#include "CommonButtonBase.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "UI/Widget/NPC/PTQuestListEntryWidget.h"
+
+void UPTNPCDialogueWidget::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    if (AcceptButton != nullptr)
+    {
+        AcceptButton->OnClicked().AddUObject(this, &UPTNPCDialogueWidget::RequestAcceptQuest);
+    }
+}
+
+void UPTNPCDialogueWidget::NativeDestruct()
+{
+    if (AcceptButton != nullptr)
+    {
+        AcceptButton->OnClicked().RemoveAll(this);
+    }
+
+    Super::NativeDestruct();
+}
 
 void UPTNPCDialogueWidget::SetupDialogue(APTQuestNPCCharacter* InNPC)
 {
     TargetNPC = InNPC;
     SelectedQuestID = NAME_None;
 
+    if (AcceptButton != nullptr)
+    {
+        AcceptButton->SetVisibility(ESlateVisibility::Visible);
+    }
+
     BuildQuestList();
+    ClearQuestText();
+}
+
+void UPTNPCDialogueWidget::SetupQuestJournal()
+{
+    TargetNPC = nullptr;
+    SelectedQuestID = NAME_None;
+
+    if (AcceptButton != nullptr)
+    {
+        AcceptButton->SetVisibility(ESlateVisibility::Collapsed);
+    }
+
+    BuildAcceptedQuestList();
     ClearQuestText();
 }
 
@@ -53,6 +93,43 @@ void UPTNPCDialogueWidget::BuildQuestList()
         }
 
         QuestEntry->SetupQuestEntry(QuestID, FText::FromName(QuestID));
+        QuestEntry->OnQuestEntryClicked.AddUObject(this, &UPTNPCDialogueWidget::OnQuestEntryClicked);
+        QuestList->AddChildToVerticalBox(QuestEntry);
+    }
+}
+
+void UPTNPCDialogueWidget::BuildAcceptedQuestList()
+{
+    if (QuestList == nullptr || QuestEntryWidgetClass == nullptr)
+    {
+        return;
+    }
+
+    QuestList->ClearChildren();
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses())
+    {
+        const FPTQuestDataRow* QuestData = QuestSubsystem->GetQuestData(QuestProgress.QuestID);
+        if (QuestData == nullptr)
+        {
+            continue;
+        }
+
+        UPTQuestListEntryWidget* QuestEntry = CreateWidget<UPTQuestListEntryWidget>(
+            GetOwningPlayer(),
+            QuestEntryWidgetClass);
+        if (QuestEntry == nullptr)
+        {
+            continue;
+        }
+
+        QuestEntry->SetupQuestEntry(QuestProgress.QuestID, FText::FromName(QuestProgress.QuestID));
         QuestEntry->OnQuestEntryClicked.AddUObject(this, &UPTNPCDialogueWidget::OnQuestEntryClicked);
         QuestList->AddChildToVerticalBox(QuestEntry);
     }

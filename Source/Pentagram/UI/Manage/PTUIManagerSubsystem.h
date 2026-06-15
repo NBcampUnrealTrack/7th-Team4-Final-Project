@@ -15,6 +15,7 @@ enum class EPTUILayer : uint8
 class UPTPrimaryLayout;
 class UPTHUDWidget;
 class UCommonActivatableWidget;
+class UPTNPCDialogueWidget;
 
 UCLASS()
 class PENTAGRAM_API UPTUIManagerSubsystem : public ULocalPlayerSubsystem
@@ -46,6 +47,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestClass);
+
+    // 레이아웃 조회
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
 
 protected:
@@ -55,6 +60,8 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> ShopInstance;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UPTNPCDialogueWidget> QuestInstance;
     // 현재 UI
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> CurrentUIWidget;

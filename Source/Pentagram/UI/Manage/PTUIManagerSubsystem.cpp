@@ -1,6 +1,7 @@
 ﻿#include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/HUD/PTHUDWidget.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
+#include "UI/Widget/NPC/PTNPCDialogueWidget.h"
 #include "UI/Widget/Shop/PTShopWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
 #include "Kismet/GameplayStatics.h"
@@ -135,5 +136,28 @@ void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> Sho
     else
     {
         ShopInstance = PushWidget(ShopClass, EPTUILayer::GameMenu);
+    }
+}
+
+void UPTUIManagerSubsystem::ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestClass)
+{
+    if (QuestClass == nullptr)
+    {
+        return;
+    }
+
+    if (QuestInstance != nullptr &&
+        (QuestInstance->IsActivated() || QuestInstance->IsInViewport()))
+    {
+        RemoveWidget(QuestInstance);
+        QuestInstance = nullptr;
+        return;
+    }
+
+    QuestInstance = Cast<UPTNPCDialogueWidget>(
+        PushWidget(QuestClass, EPTUILayer::GameMenu));
+    if (QuestInstance != nullptr)
+    {
+        QuestInstance->SetupQuestJournal();
     }
 }
