@@ -1,27 +1,17 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "PTDeathMenuWidget.h"
-#include "Components/Button.h"    // 변경: UButton
+﻿#include "PTDeathMenuWidget.h"
+#include "Components/Button.h"
 #include "Components/TextBlock.h"
-#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "Character/Player/PTPlayerController.h"
 
 void UPTDeathMenuWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
 
-    if (Btn_Restart)
+    if (Btn_Respawn)
     {
-        // 변경: UButton 바인딩
-        Btn_Restart->OnClicked.AddDynamic(this, &UPTDeathMenuWidget::OnRestartClicked);
-        Btn_Restart->SetIsEnabled(false); // 처음엔 잠금
-    }
-
-    if (Btn_MainMenu)
-    {
-        // 변경: UButton 바인딩
-        Btn_MainMenu->OnClicked.AddDynamic(this, &UPTDeathMenuWidget::OnMainMenuClicked);
+        Btn_Respawn->OnClicked.AddDynamic(this, &UPTDeathMenuWidget::OnRespawnClicked);
+        Btn_Respawn->SetIsEnabled(false); // 처음엔 잠금
     }
 
     // 대기 시작
@@ -54,7 +44,7 @@ void UPTDeathMenuWidget::UpdateCountdown()
         if (Text_Countdown)
         {
             Text_Countdown->SetText(FText::FromString(
-                FString::Printf(TEXT("%d초 후 부활"), RemainingSeconds)));
+                FString::Printf(TEXT("부활까지 남은 시간 %d"), RemainingSeconds)));
         }
         --RemainingSeconds;
         return;
@@ -65,30 +55,23 @@ void UPTDeathMenuWidget::UpdateCountdown()
 
     if (Text_Countdown)
     {
-        Text_Countdown->SetText(FText::FromString(TEXT("부활 가능")));
+        Text_Countdown->SetText(FText::FromString(TEXT("부활")));
     }
 
-    if (Btn_Restart)
+    if (Btn_Respawn)
     {
-        Btn_Restart->SetIsEnabled(true);
-        Btn_Restart->SetFocus();
+        Btn_Respawn->SetIsEnabled(true);
+        Btn_Respawn->SetFocus();
     }
 }
 
-void UPTDeathMenuWidget::OnRestartClicked()
+void UPTDeathMenuWidget::OnRespawnClicked()
 {
-    // 위젯 닫기
+    // 부활 요청
+    if (APTPlayerController* PC = Cast<APTPlayerController>(GetOwningPlayer()))
+    {
+        PC->Server_RequestRespawn();
+    }
+
     DeactivateWidget();
-
-    // 현재 레벨 재시작
-    FString CurrentLevelName = UGameplayStatics::GetCurrentLevelName(GetWorld());
-    UGameplayStatics::OpenLevel(GetWorld(), FName(*CurrentLevelName));
-}
-
-void UPTDeathMenuWidget::OnMainMenuClicked()
-{
-    DeactivateWidget();
-
-    // 메인 메뉴 이동
-    UGameplayStatics::OpenLevel(GetWorld(), TEXT("MainMenu"));
 }
