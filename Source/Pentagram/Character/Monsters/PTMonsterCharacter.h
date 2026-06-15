@@ -23,6 +23,8 @@ public:
 
     virtual float ApplyDamage(float DamageAmount, AActor* Attacker) override;
 
+    virtual float ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo) override;
+
     UFUNCTION(BlueprintCallable, Category = "PT|Monster")
     void InitializeMonster();
 

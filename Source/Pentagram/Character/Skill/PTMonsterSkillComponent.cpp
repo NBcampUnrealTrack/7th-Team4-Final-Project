@@ -1,4 +1,5 @@
 #include "Character/Skill/PTMonsterSkillComponent.h"
+#include "Character/PTBaseCharacter.h"
 
 bool UPTMonsterSkillComponent::PerformBasicAttack()
 {
@@ -20,6 +21,14 @@ bool UPTMonsterSkillComponent::CanAttack() const
     if (SlotIndex == INDEX_NONE)
     {
         return false;
+    }
+
+    if (const APTBaseCharacter* Owner = Cast<APTBaseCharacter>(GetOwner()))
+    {
+        if (Owner->bIsStaggered)
+        {
+            return false;
+        }
     }
 
     return GetCooldownRemaining(SlotIndex) <= 0.f;
