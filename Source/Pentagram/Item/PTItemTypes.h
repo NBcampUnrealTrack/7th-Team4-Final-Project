@@ -103,6 +103,10 @@ struct FItemData : public FTableRowBase
     // 음수가 나오면 자동으로 "STR-5", 양수가 나오면 "STR+7" 형태로 저장되어 인벤토리/장비창에 동기화됩니다.
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Runtime Result")
     TArray<FString> Item_Bonus_Options;
+
+    // 무기/장비의 외형을 담당할 스태틱 메시 에셋 경로
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    TSoftObjectPtr<UStaticMesh> ItemMeshAsset;
 };
 
 

@@ -49,6 +49,8 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttackMontage(int32 MontageIndex);
 
+    // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
+    void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset);
 
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
     FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
@@ -100,4 +102,13 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOnPlayerDied OnPlayerDied;
+
+protected:
+    // 무기 장착 스태틱 메시 컴포넌트
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
+    TObjectPtr<UStaticMeshComponent> WeaponMeshComp;
+    // 갑옷 장착 스태틱 메시 컴포넌트(추후)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
+    TObjectPtr<UStaticMeshComponent> ChestMeshComp;
+
 };

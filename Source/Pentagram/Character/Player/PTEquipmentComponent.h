@@ -88,10 +88,15 @@ private:
     void UpdateTotalBonusStats();
 
 protected:
+
+    // 무기 슬롯이 장착/해제 될 때마다 클라이언트에서 외형 업데이트 호출
+    UFUNCTION()
+    void OnRep_EquippedWeapon();
+
     // ── 멤버 변수 (protected) ────────────────────────────────────────────────
 
     // 장착된 무기 슬롯
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_EquippedWeapon, Category = "Equipment")
     FEquipmentSlot EquippedWeapon;
 
     // 장착된 갑옷 슬롯
