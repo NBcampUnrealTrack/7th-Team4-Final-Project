@@ -69,6 +69,16 @@ UAnimMontage* APTBossMonsterCharacter::GetAttackMontageForPhase(int32 Phase) con
     return AttackMontage;
 }
 
+void APTBossMonsterCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (IsValid(BossPatternComponent))
+    {
+        BossPatternComponent->PreloadAllSkills();
+    }
+}
+
 float APTBossMonsterCharacter::StartAttack()
 {
     HitActors.Empty();
@@ -78,7 +88,13 @@ float APTBossMonsterCharacter::StartAttack()
         BossPatternComponent->ExecuteSkillForPhase(GetCurrentPhase());
     }
 
-    return 0.f;
+    UAnimMontage* Montage = GetAttackMontageForPhase(GetCurrentPhase());
+    if (IsValid(Montage))
+    {
+        return Montage->GetPlayLength();
+    }
+
+    return 1.f;
 }
 
 void APTBossMonsterCharacter::StopAttack()

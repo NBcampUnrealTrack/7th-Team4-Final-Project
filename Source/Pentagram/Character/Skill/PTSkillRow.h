@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
 #include "NiagaraSystem.h"
+#include "Character/PTCombatTypes.h"
 #include "PTSkillRow.generated.h"
 
 UENUM(BlueprintType)
@@ -63,6 +64,21 @@ struct FPTSkillRow : public FTableRowBase
     // 스킬 발동 시 실행할 이펙트
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UNiagaraSystem> SkillEffect;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
+    float KnockbackForce = 300.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
+    float KnockbackZForce = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
+    float HitStopDuration = 0.05f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
+    float StaggerDuration = 0.3f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
+    EHitReactionType HitReactionType = EHitReactionType::Light;
 };
 
 USTRUCT(BlueprintType)

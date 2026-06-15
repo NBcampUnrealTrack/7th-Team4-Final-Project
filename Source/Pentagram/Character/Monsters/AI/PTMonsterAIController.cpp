@@ -70,6 +70,7 @@ void APTMonsterAIController::OnPossess(APawn* InPawn)
     if (BehaviorTree)
     {
         RunBehaviorTree(BehaviorTree);
+        UpdateMonsterBlackboard(Monster);
     }
 }
 
