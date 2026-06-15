@@ -14,6 +14,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
+#include "UI/Manage/PTUIManagerSubsystem.h"
+#include "UI/Widget/NPC/PTNPCDialogueWidget.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -86,6 +88,7 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Attack)    EnhancedInput->BindAction(IA_Attack,    ETriggerEvent::Started,   this, &APTPlayerController::OnLeftClick);
         if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started,   this, &APTPlayerController::OnInventoryPressed);
         if (IA_Shop)      EnhancedInput->BindAction(IA_Shop,      ETriggerEvent::Started,   this, &APTPlayerController::OnShopPressed);
+        if (IA_Quest)     EnhancedInput->BindAction(IA_Quest,     ETriggerEvent::Started,   this, &APTPlayerController::OnQuestPressed);
         if (IA_Dodge)     EnhancedInput->BindAction(IA_Dodge,     ETriggerEvent::Started,   this, &APTPlayerController::OnDodge);
         if (IA_Skill1)    EnhancedInput->BindAction(IA_Skill1,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill1);
         if (IA_Skill2)    EnhancedInput->BindAction(IA_Skill2,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
@@ -374,6 +377,19 @@ void APTPlayerController::OnShopPressed()
     if (!UI || !ShopClass) return;
 
     UI->ToggleShop(ShopClass);
+}
+
+void APTPlayerController::OnQuestPressed()
+{
+    if (!IsLocalPlayerController()) return;
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP) return;
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI || !QuestClass) return;
+
+    UI->ToggleQuest(QuestClass);
 }
 
 void APTPlayerController::AddUIInputMapping()
