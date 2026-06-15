@@ -10,7 +10,8 @@ void UPTDeathMenuWidget::NativeOnActivated()
 
     if (Btn_Respawn)
     {
-        Btn_Respawn->OnClicked.AddDynamic(this, &UPTDeathMenuWidget::OnRespawnClicked);
+        // 재활성화 중복 바인딩 방지
+        Btn_Respawn->OnClicked.AddUniqueDynamic(this, &UPTDeathMenuWidget::OnRespawnClicked);
         Btn_Respawn->SetIsEnabled(false); // 처음엔 잠금
     }
 
@@ -28,6 +29,12 @@ void UPTDeathMenuWidget::NativeOnActivated()
 
 void UPTDeathMenuWidget::NativeOnDeactivated()
 {
+    // 바인딩 해제
+    if (Btn_Respawn)
+    {
+        Btn_Respawn->OnClicked.RemoveDynamic(this, &UPTDeathMenuWidget::OnRespawnClicked);
+    }
+
     // 타이머 정리
     if (UWorld* World = GetWorld())
     {
