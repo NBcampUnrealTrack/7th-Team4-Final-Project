@@ -58,6 +58,9 @@ public:
     // [디버그] 즉사
     UFUNCTION(Server, Reliable)
     void Server_DebugKill();
+
+    UFUNCTION(Server, Reliable)
+    void Server_SetReady(bool bReady);
 protected:
     void PlayAttackMontage();
 

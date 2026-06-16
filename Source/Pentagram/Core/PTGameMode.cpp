@@ -49,6 +49,14 @@ void APTGameMode::PostLogin(APlayerController* NewPlayer)
 
 }
 
+// 로비 추가
+void APTGameMode::Logout(AController* Exiting)
+{
+    Super::Logout(Exiting);
+
+    NotifyReadyChanged();   // 인원 재검사
+}
+
 void APTGameMode::SetGamePhase(EGamePhase NewPhase)
 {
     APTGameState* PTGameState = GetGameState<APTGameState>();
@@ -202,6 +210,55 @@ AActor* APTGameMode::SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, co
     }
 
     return SpawnDropItem(DropItemClass, DropLocation);
+}
+
+// 로비 추가
+void APTGameMode::NotifyReadyChanged()
+{
+    if (bIsTraveling)
+    {
+        return;
+    }
+
+    if (AreAllPlayersReady())
+    {
+        TravelToGame();
+    }
+}
+
+// 로비 추가
+bool APTGameMode::AreAllPlayersReady() const
+{
+    APTGameState* PTGameState = GetGameState<APTGameState>();
+    if (PTGameState == nullptr)
+    {
+        return false;
+    }
+
+    const int32 PlayerCount = PTGameState->GetPlayerCount();
+    if (PlayerCount <= 0)
+    {
+        return false;
+    }
+
+    return PTGameState->GetReadyCount() >= PlayerCount;
+}
+
+// 로비 추가
+void APTGameMode::TravelToGame()
+{
+    APTGameState* PTGameState = GetGameState<APTGameState>();
+    if (PTGameState == nullptr || PTGameState->GetCurrentPhase() != EGamePhase::Waiting)
+    {
+        return;     // 로비에서만
+    }
+    if (bIsTraveling || GameMapPath.IsEmpty())
+    {
+        return;
+    }
+
+    bIsTraveling = true;
+    GetWorld()->ServerTravel(GameMapPath);
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
