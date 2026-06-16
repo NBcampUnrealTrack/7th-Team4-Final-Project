@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Core/Subsystems/PTSaveSubsystem.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
 #include "UI/Data/PTDelegates.h"
@@ -38,15 +37,6 @@ public:
     void OnInventoryPressed();
     void OnShopPressed();
     void OnQuestPressed();
-
-    void SavePlayerDataToOwningClient(const FPTPlayerSaveData& PlayerSaveData);
-    void SubmitLocalSaveDataToServer();
-
-    UFUNCTION(Server, Reliable)
-    void ServerSubmitSaveData(const FPTPlayerSaveData& PlayerSaveData);
-
-    UFUNCTION(Client, Reliable)
-    void ClientReceiveSaveData(const FPTPlayerSaveData& PlayerSaveData);
 
     UFUNCTION(Client, Reliable)
     void Client_OpenQuestDialogue(APTQuestNPCCharacter* QuestNPC);
@@ -91,7 +81,6 @@ private:
     void OnInteractPressed();
     void AddUIInputMapping();
     void RemoveUIInputMapping();
-    FPTPlayerSaveData ClampSaveData(const FPTPlayerSaveData& PlayerSaveData) const;
 
     // [디버그] 즉사 입력
     void OnDebugKillPressed();

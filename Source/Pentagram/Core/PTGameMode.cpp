@@ -3,7 +3,6 @@
 #include "PTGameMode.h"
 
 #include "Character/Player/PTBasePlayerState.h"
-#include "Character/Player/PTPlayerController.h"
 #include "PTGameState.h"
 #include "Subsystems/PTPlayerLevelSubsystem.h"
 #include "Subsystems/PTQuestSubsystem.h"
@@ -45,9 +44,21 @@ void APTGameMode::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    InitializePlayerState(NewPlayer->GetPlayerState<APTBasePlayerState>());
+    APTBasePlayerState* PlayerState = NewPlayer->GetPlayerState<APTBasePlayerState>();
+    InitializePlayerState(PlayerState);
 
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem != nullptr)
+    {
+        SaveSubsystem->LoadPlayer(PlayerState);
+    }
+}
 
+void APTGameMode::Logout(AController* Exiting)
+{
+    SavePlayerState(Exiting);
+
+    Super::Logout(Exiting);
 }
 
 // 로비 추가
@@ -311,15 +322,7 @@ void APTGameMode::SavePlayerState(AController* PlayerController) const
         return;
     }
 
-    const FPTPlayerSaveData PlayerSaveData = SaveSubsystem->CaptureFromPlayerState(PlayerState);
-    APTPlayerController* PTPlayerController = Cast<APTPlayerController>(PlayerController);
-    if (PTPlayerController != nullptr)
-    {
-        PTPlayerController->SavePlayerDataToOwningClient(PlayerSaveData);
-        return;
-    }
-
-    SaveSubsystem->WriteSlotData(PlayerSaveData);
+    SaveSubsystem->SavePlayer(PlayerState);
 }
 
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)

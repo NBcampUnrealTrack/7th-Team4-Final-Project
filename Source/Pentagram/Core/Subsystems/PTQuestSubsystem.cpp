@@ -266,9 +266,8 @@ bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBa
         UE_LOG(
             LogTemp,
             Warning,
-            TEXT("[QuestReward] %s quest has item rewards, but item reward data is not wired yet."),
+            TEXT("[QuestReward] %s quest item rewards are skipped because item reward data is not wired yet."),
             *QuestData.QuestID.ToString());
-        return false;
     }
 
     UGameInstance* GameInstance = GetGameInstance();

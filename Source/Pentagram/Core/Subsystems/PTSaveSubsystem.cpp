@@ -4,14 +4,16 @@
 #include "PTSaveSubsystem.h"
 
 #include "Character/Player/PTBasePlayerState.h"
-#include "Character/Player/PTPlayerController.h"
 #include "Engine/World.h"
+#include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Core/PTGameState.h"
 #include "PTPlayerLevelSubsystem.h"
 #include "PTQuestSubsystem.h"
 #include "PTSaveGame.h"
+#include "Misc/Paths.h"
+#include "GameFramework/OnlineReplStructs.h"
 #include "TimerManager.h"
 #include "UObject/UObjectGlobals.h"
 
@@ -36,7 +38,11 @@ void UPTSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTSaveSubsystem::Deinitialize()
 {
-    SaveLocalPlayer(false);
+    if (!SaveAllAuthorityPlayers(false))
+    {
+        SaveLocalPlayer(false);
+    }
+
     StopAutoSave();
 
     if (PreLoadMapHandle.IsValid())
@@ -61,7 +67,7 @@ void UPTSaveSubsystem::SetPlayerSteamID(const FString& PlayerSteamID)
         return;
     }
 
-    const FString NewSaveSlotName = FString::Printf(TEXT("PTPlayerSave_%s"), *PlayerSteamID);
+    const FString NewSaveSlotName = MakeSaveSlotName(PlayerSteamID);
     if (!SaveSlotName.IsEmpty() && SaveSlotName != NewSaveSlotName)
     {
         SaveLocalPlayer(false);
@@ -85,12 +91,20 @@ void UPTSaveSubsystem::SaveGame(const APTBasePlayerState* PlayerState)
         return;
     }
 
-    WriteSlotData(CaptureFromPlayerState(PlayerState));
+    if (PlayerState->HasAuthority())
+    {
+        WriteSlotData(CaptureFromPlayerState(PlayerState));
+    }
 }
 
 void UPTSaveSubsystem::LoadGame(APTBasePlayerState* PlayerState)
 {
     if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    if (!PlayerState->HasAuthority())
     {
         return;
     }
@@ -102,6 +116,77 @@ void UPTSaveSubsystem::LoadGame(APTBasePlayerState* PlayerState)
     }
 
     ApplyToPlayerState(PlayerState, PlayerSaveData);
+}
+
+bool UPTSaveSubsystem::SavePlayer(const APTBasePlayerState* PlayerState)
+{
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    const FString PlayerSaveID = GetPlayerSaveID(PlayerState);
+    if (PlayerSaveID.IsEmpty())
+    {
+        return false;
+    }
+
+    return WriteSlotDataToSlot(MakeSaveSlotName(PlayerSaveID), CaptureFromPlayerState(PlayerState));
+}
+
+bool UPTSaveSubsystem::LoadPlayer(APTBasePlayerState* PlayerState)
+{
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    const FString PlayerSaveID = GetPlayerSaveID(PlayerState);
+    if (PlayerSaveID.IsEmpty())
+    {
+        return false;
+    }
+
+    FPTPlayerSaveData PlayerSaveData;
+    if (!ReadSlotDataFromSlot(MakeSaveSlotName(PlayerSaveID), PlayerSaveData))
+    {
+        return false;
+    }
+
+    ApplyToPlayerState(PlayerState, PlayerSaveData);
+    return true;
+}
+
+bool UPTSaveSubsystem::SaveAllAuthorityPlayers(bool bSkipBossFight)
+{
+    if (bSkipBossFight && ShouldSkipAutoSave())
+    {
+        return false;
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr || World->GetNetMode() == NM_Client)
+    {
+        return false;
+    }
+
+    AGameStateBase* GameState = World->GetGameState();
+    if (GameState == nullptr)
+    {
+        return false;
+    }
+
+    bool bSavedAnyPlayer = false;
+    for (APlayerState* PlayerState : GameState->PlayerArray)
+    {
+        const APTBasePlayerState* PTPlayerState = Cast<APTBasePlayerState>(PlayerState);
+        if (PTPlayerState != nullptr)
+        {
+            bSavedAnyPlayer |= SavePlayer(PTPlayerState);
+        }
+    }
+
+    return bSavedAnyPlayer;
 }
 
 bool UPTSaveSubsystem::SaveLocalPlayer(bool bSkipBossFight)
@@ -122,6 +207,11 @@ bool UPTSaveSubsystem::SaveLocalPlayer(bool bSkipBossFight)
         return false;
     }
 
+    if (!PlayerState->HasAuthority())
+    {
+        return false;
+    }
+
     return WriteSlotData(CaptureFromPlayerState(PlayerState));
 }
 
@@ -138,6 +228,12 @@ bool UPTSaveSubsystem::LoadLocalPlayer()
         return false;
     }
 
+    if (!PlayerState->HasAuthority())
+    {
+        bHasLoadedLocalPlayer = true;
+        return true;
+    }
+
     if (!HasSaveData())
     {
         bHasLoadedLocalPlayer = true;
@@ -151,7 +247,6 @@ bool UPTSaveSubsystem::LoadLocalPlayer()
     }
 
     ApplyToPlayerState(PlayerState, PlayerSaveData);
-    SubmitLoadedDataToServer(PlayerSaveData);
     bHasLoadedLocalPlayer = true;
     return true;
 }
@@ -184,7 +279,7 @@ FPTPlayerSaveData UPTSaveSubsystem::CaptureFromPlayerState(const APTBasePlayerSt
 
 void UPTSaveSubsystem::ApplyToPlayerState(APTBasePlayerState* PlayerState, const FPTPlayerSaveData& PlayerSaveData) const
 {
-    if (PlayerState == nullptr)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
     {
         return;
     }
@@ -227,21 +322,7 @@ bool UPTSaveSubsystem::WriteSlotData(const FPTPlayerSaveData& PlayerSaveData)
         return false;
     }
 
-    UPTSaveGame* SaveGameObject = Cast<UPTSaveGame>(
-        UGameplayStatics::CreateSaveGameObject(UPTSaveGame::StaticClass()));
-    if (SaveGameObject == nullptr)
-    {
-        return false;
-    }
-
-    SaveGameObject->SaveData = PlayerSaveData;
-    bHasSaveData = UGameplayStatics::SaveGameToSlot(SaveGameObject, SaveSlotName, PTSaveUserIndex);
-    if (bHasSaveData)
-    {
-        SaveData = PlayerSaveData;
-    }
-
-    return bHasSaveData;
+    return WriteSlotDataToSlot(SaveSlotName, PlayerSaveData);
 }
 
 bool UPTSaveSubsystem::ReadSlotData(FPTPlayerSaveData& OutPlayerSaveData)
@@ -251,22 +332,18 @@ bool UPTSaveSubsystem::ReadSlotData(FPTPlayerSaveData& OutPlayerSaveData)
         return false;
     }
 
-    if (!UGameplayStatics::DoesSaveGameExist(SaveSlotName, PTSaveUserIndex))
+    return ReadSlotDataFromSlot(SaveSlotName, OutPlayerSaveData);
+}
+
+bool UPTSaveSubsystem::HasPlayerSaveData(const APTBasePlayerState* PlayerState) const
+{
+    const FString PlayerSaveID = GetPlayerSaveID(PlayerState);
+    if (PlayerSaveID.IsEmpty())
     {
         return false;
     }
 
-    UPTSaveGame* LoadedSaveGame = Cast<UPTSaveGame>(
-        UGameplayStatics::LoadGameFromSlot(SaveSlotName, PTSaveUserIndex));
-    if (LoadedSaveGame == nullptr)
-    {
-        return false;
-    }
-
-    OutPlayerSaveData = LoadedSaveGame->SaveData;
-    SaveData = OutPlayerSaveData;
-    bHasSaveData = true;
-    return true;
+    return UGameplayStatics::DoesSaveGameExist(MakeSaveSlotName(PlayerSaveID), PTSaveUserIndex);
 }
 
 bool UPTSaveSubsystem::HasSaveData() const
@@ -291,10 +368,64 @@ void UPTSaveSubsystem::DeleteSaveData()
     UGameplayStatics::DeleteGameInSlot(SaveSlotName, PTSaveUserIndex);
 }
 
+bool UPTSaveSubsystem::WriteSlotDataToSlot(const FString& SlotName, const FPTPlayerSaveData& PlayerSaveData)
+{
+    if (SlotName.IsEmpty())
+    {
+        return false;
+    }
+
+    UPTSaveGame* SaveGameObject = Cast<UPTSaveGame>(
+        UGameplayStatics::CreateSaveGameObject(UPTSaveGame::StaticClass()));
+    if (SaveGameObject == nullptr)
+    {
+        return false;
+    }
+
+    SaveGameObject->SaveData = PlayerSaveData;
+    const bool bWroteSaveData = UGameplayStatics::SaveGameToSlot(SaveGameObject, SlotName, PTSaveUserIndex);
+    if (bWroteSaveData && SlotName == SaveSlotName)
+    {
+        SaveData = PlayerSaveData;
+        bHasSaveData = true;
+    }
+
+    return bWroteSaveData;
+}
+
+bool UPTSaveSubsystem::ReadSlotDataFromSlot(const FString& SlotName, FPTPlayerSaveData& OutPlayerSaveData)
+{
+    if (SlotName.IsEmpty())
+    {
+        return false;
+    }
+
+    if (!UGameplayStatics::DoesSaveGameExist(SlotName, PTSaveUserIndex))
+    {
+        return false;
+    }
+
+    UPTSaveGame* LoadedSaveGame = Cast<UPTSaveGame>(
+        UGameplayStatics::LoadGameFromSlot(SlotName, PTSaveUserIndex));
+    if (LoadedSaveGame == nullptr)
+    {
+        return false;
+    }
+
+    OutPlayerSaveData = LoadedSaveGame->SaveData;
+    if (SlotName == SaveSlotName)
+    {
+        SaveData = OutPlayerSaveData;
+        bHasSaveData = true;
+    }
+
+    return true;
+}
+
 void UPTSaveSubsystem::StartAutoSave()
 {
     UWorld* World = GetWorld();
-    if (World == nullptr || SaveSlotName.IsEmpty())
+    if (World == nullptr)
     {
         return;
     }
@@ -361,12 +492,19 @@ void UPTSaveSubsystem::TryLoadLocalPlayer()
 
 void UPTSaveSubsystem::OnAutoSaveTimer()
 {
-    SaveLocalPlayer(true);
+    if (!SaveAllAuthorityPlayers(true))
+    {
+        SaveLocalPlayer(true);
+    }
 }
 
 void UPTSaveSubsystem::OnPreLoadMap(const FString& MapName)
 {
-    SaveLocalPlayer(false);
+    if (!SaveAllAuthorityPlayers(false))
+    {
+        SaveLocalPlayer(false);
+    }
+
     bHasLoadedLocalPlayer = false;
     StopAutoSave();
 }
@@ -378,15 +516,41 @@ void UPTSaveSubsystem::OnPostLoadMapWithWorld(UWorld* LoadedWorld)
     TryLoadLocalPlayer();
 }
 
-void UPTSaveSubsystem::SubmitLoadedDataToServer(const FPTPlayerSaveData& PlayerSaveData) const
+FString UPTSaveSubsystem::MakeSaveSlotName(const FString& PlayerSaveID) const
 {
-    APTPlayerController* PlayerController = Cast<APTPlayerController>(GetLocalPlayerController());
-    if (PlayerController == nullptr || PlayerController->HasAuthority())
+    if (PlayerSaveID.IsEmpty())
     {
-        return;
+        return FString();
     }
 
-    PlayerController->ServerSubmitSaveData(PlayerSaveData);
+    return FString::Printf(TEXT("PTPlayerSave_%s"), *FPaths::MakeValidFileName(PlayerSaveID));
+}
+
+FString UPTSaveSubsystem::GetPlayerSaveID(const APTBasePlayerState* PlayerState) const
+{
+    if (PlayerState == nullptr)
+    {
+        return FString();
+    }
+
+    const FUniqueNetIdRepl& UniqueID = PlayerState->GetUniqueId();
+    if (UniqueID.IsValid())
+    {
+        return UniqueID.ToString();
+    }
+
+    const int32 PlayerID = PlayerState->GetPlayerId();
+    if (PlayerID >= 0)
+    {
+        return FString::Printf(TEXT("PlayerId_%d"), PlayerID);
+    }
+
+    if (!PlayerState->GetPlayerName().IsEmpty())
+    {
+        return PlayerState->GetPlayerName();
+    }
+
+    return FString();
 }
 
 APlayerController* UPTSaveSubsystem::GetLocalPlayerController() const
