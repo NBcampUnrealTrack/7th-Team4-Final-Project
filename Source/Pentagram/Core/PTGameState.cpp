@@ -7,7 +7,6 @@ void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(APTGameState, CurrentPhase);
-    DOREPLIFETIME(APTGameState, ElapsedTime);
 }
 
 void APTGameState::SetCurrentPhase(EGamePhase NewPhase)

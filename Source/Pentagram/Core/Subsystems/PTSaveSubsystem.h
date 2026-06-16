@@ -2,26 +2,29 @@
 
 #include "CoreMinimal.h"
 #include "Core/PTQuestDataRow.h"
+#include "Engine/TimerHandle.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "PTSaveSubsystem.generated.h"
 
 class APTBasePlayerState;
+class APlayerController;
+class UWorld;
 
 USTRUCT(BlueprintType)
-struct FPTPlayerSaveData
+struct PENTAGRAM_API FPTPlayerSaveData
 {
     GENERATED_BODY()
 
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Save")
     int32 Gold = 0;
 
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Save")
     int32 Level = 1;
 
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Save")
     int32 Exp = 0;
 
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Save")
     TArray<FPTQuestProgress> AcceptedQuests;
 
     //TArray<FInventoryItem> Inventory;
@@ -36,24 +39,42 @@ class PENTAGRAM_API UPTSaveSubsystem : public UGameInstanceSubsystem
     GENERATED_BODY()
 
 public:
+    virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+    virtual void Deinitialize() override;
+
     UFUNCTION(BlueprintCallable, Category = "PT|Save")
     void SetPlayerSteamID(const FString& PlayerSteamID);
 
     void SaveGame(const APTBasePlayerState* PlayerState);
     void LoadGame(APTBasePlayerState* PlayerState);
+    bool SaveLocalPlayer(bool bSkipBossFight);
+    bool LoadLocalPlayer();
+    FPTPlayerSaveData CaptureFromPlayerState(const APTBasePlayerState* PlayerState) const;
+    void ApplyToPlayerState(APTBasePlayerState* PlayerState, const FPTPlayerSaveData& PlayerSaveData) const;
+    bool WriteSlotData(const FPTPlayerSaveData& PlayerSaveData);
+    bool ReadSlotData(FPTPlayerSaveData& OutPlayerSaveData);
     bool HasSaveData() const;
     void DeleteSaveData();
     const FPTPlayerSaveData& GetSaveData() const { return SaveData; }
 
 private:
-    void PlayerStateSaveData(const APTBasePlayerState* PlayerState);
-    void QuestSaveData();
-    void PlayerStateLoadData(APTBasePlayerState* PlayerState) const;
-    void QuestLoadData() const;
-    bool SaveSlotData();
-    bool LoadSlotData();
+    void StartAutoSave();
+    void StopAutoSave();
+    void TryLoadLocalPlayer();
+    void OnAutoSaveTimer();
+    void OnPreLoadMap(const FString& MapName);
+    void OnPostLoadMapWithWorld(UWorld* LoadedWorld);
+    void SubmitLoadedDataToServer(const FPTPlayerSaveData& PlayerSaveData) const;
+    APlayerController* GetLocalPlayerController() const;
+    APTBasePlayerState* GetLocalPlayerState() const;
+    bool ShouldSkipAutoSave() const;
 
     FPTPlayerSaveData SaveData;
-    FString SaveSlotName = TEXT("PTPlayerSave");
+    FString SaveSlotName;
+    FTimerHandle AutoSaveTimerHandle;
+    FTimerHandle LoadRetryTimerHandle;
+    FDelegateHandle PreLoadMapHandle;
+    FDelegateHandle PostLoadMapHandle;
+    bool bHasLoadedLocalPlayer = false;
     bool bHasSaveData = false;
 };

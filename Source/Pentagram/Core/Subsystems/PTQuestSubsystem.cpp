@@ -1,6 +1,10 @@
 #include "PTQuestSubsystem.h"
 
+#include "Character/Player/PTBasePlayerState.h"
 #include "Engine/DataTable.h"
+#include "Engine/GameInstance.h"
+#include "PTEconomySubsystem.h"
+#include "PTPlayerLevelSubsystem.h"
 
 void UPTQuestSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -152,10 +156,16 @@ bool UPTQuestSubsystem::CompleteQuest(FName QuestID)
     return true;
 }
 
-bool UPTQuestSubsystem::RewardQuest(FName QuestID)
+bool UPTQuestSubsystem::RewardQuest(FName QuestID, APTBasePlayerState* RewardPlayerState)
 {
     FPTQuestProgress* QuestProgress = AcceptedQuestProgressMap.Find(QuestID);
     if (QuestProgress == nullptr || QuestProgress->State != EPTQuestProgressState::Completed)
+    {
+        return false;
+    }
+
+    const FPTQuestDataRow* QuestData = GetQuestData(QuestID);
+    if (QuestData == nullptr || !GiveQuestRewards(*QuestData, RewardPlayerState))
     {
         return false;
     }
@@ -239,6 +249,62 @@ bool UPTQuestSubsystem::AreConditionsCompleted(const FPTQuestProgress& QuestProg
         {
             return false;
         }
+    }
+
+    return true;
+}
+
+bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const
+{
+    if (RewardPlayerState == nullptr || !RewardPlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    if (!QuestData.RewardItemIDs.IsEmpty())
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[QuestReward] %s quest has item rewards, but item reward data is not wired yet."),
+            *QuestData.QuestID.ToString());
+        return false;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return false;
+    }
+
+    UPTEconomySubsystem* EconomySubsystem = nullptr;
+    if (QuestData.RewardGold > 0)
+    {
+        EconomySubsystem = GameInstance->GetSubsystem<UPTEconomySubsystem>();
+        if (EconomySubsystem == nullptr)
+        {
+            return false;
+        }
+    }
+
+    UPTPlayerLevelSubsystem* PlayerLevelSubsystem = nullptr;
+    if (QuestData.RewardExp > 0)
+    {
+        PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
+        if (PlayerLevelSubsystem == nullptr)
+        {
+            return false;
+        }
+    }
+
+    if (QuestData.RewardGold > 0)
+    {
+        EconomySubsystem->AddGold(RewardPlayerState, QuestData.RewardGold);
+    }
+
+    if (QuestData.RewardExp > 0)
+    {
+        PlayerLevelSubsystem->AddExp(RewardPlayerState, QuestData.RewardExp);
     }
 
     return true;

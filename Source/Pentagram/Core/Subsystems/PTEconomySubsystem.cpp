@@ -7,7 +7,7 @@
 
 void UPTEconomySubsystem::AddGold(APTBasePlayerState* PlayerState, int32 Amount)
 {
-    if (PlayerState == nullptr || Amount <= 0)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority() || Amount <= 0)
     {
         return;
     }
@@ -17,6 +17,11 @@ void UPTEconomySubsystem::AddGold(APTBasePlayerState* PlayerState, int32 Amount)
 
 bool UPTEconomySubsystem::SpendGold(APTBasePlayerState* PlayerState, int32 Amount)
 {
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return false;
+    }
+
     if (!CanAfford(PlayerState, Amount))
     {
         return false;
@@ -28,7 +33,7 @@ bool UPTEconomySubsystem::SpendGold(APTBasePlayerState* PlayerState, int32 Amoun
 
 void UPTEconomySubsystem::SetGold(APTBasePlayerState* PlayerState, int32 Amount)
 {
-    if (PlayerState == nullptr)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
     {
         return;
     }
@@ -41,6 +46,7 @@ void UPTEconomySubsystem::SetGold(APTBasePlayerState* PlayerState, int32 Amount)
 
     PlayerState->CurrentGold = NewGold;
     OnGoldChanged.Broadcast(PlayerState, PlayerState->CurrentGold);
+    PlayerState->OnGoldChanged.Broadcast(PlayerState->CurrentGold);
 }
 
 int32 UPTEconomySubsystem::GetGold(const APTBasePlayerState* PlayerState) const

@@ -6,6 +6,7 @@
 #include "PTQuestSubsystem.generated.h"
 
 class UDataTable;
+class APTBasePlayerState;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FPTNativeOnQuestAccepted, FName);
 DECLARE_MULTICAST_DELEGATE_OneParam(FPTNativeOnQuestCompleted, FName);
@@ -30,7 +31,7 @@ public:
     const FPTQuestProgress* GetQuestProgress(FName QuestID) const;
     bool UpdateQuestProgress(EPTQuestConditionType ConditionType, FName TargetID, int32 Amount = 1);
     bool CompleteQuest(FName QuestID);
-    bool RewardQuest(FName QuestID);
+    bool RewardQuest(FName QuestID, APTBasePlayerState* RewardPlayerState);
     bool IsQuestCompleted(FName QuestID) const;
     bool IsQuestRewarded(FName QuestID) const;
     TArray<FPTQuestProgress> GetAcceptedQuestProgresses() const;
@@ -40,6 +41,7 @@ public:
 private:
     FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;
     bool AreConditionsCompleted(const FPTQuestProgress& QuestProgress) const;
+    bool GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;

@@ -1,5 +1,6 @@
 #include "Character/Player/PTPlayerController.h"
 #include "CommonActivatableWidget.h"
+#include "Character/Player/PTBasePlayerState.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -10,7 +11,10 @@
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Core/PTGameMode.h"
+#include "Core/Subsystems/PTQuestSubsystem.h"
+#include "Core/Subsystems/PTSaveSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
@@ -128,6 +132,134 @@ void APTPlayerController::AcknowledgePossession(APawn* P)
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
+    }
+
+    if (IsLocalPlayerController() && !HasAuthority())
+    {
+        SubmitLocalSaveDataToServer();
+    }
+}
+
+void APTPlayerController::SavePlayerDataToOwningClient(const FPTPlayerSaveData& PlayerSaveData)
+{
+    const FPTPlayerSaveData ClampedSaveData = ClampSaveData(PlayerSaveData);
+
+    if (IsLocalPlayerController())
+    {
+        UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+        if (SaveSubsystem != nullptr)
+        {
+            SaveSubsystem->WriteSlotData(ClampedSaveData);
+        }
+        return;
+    }
+
+    ClientReceiveSaveData(ClampedSaveData);
+}
+
+void APTPlayerController::SubmitLocalSaveDataToServer()
+{
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem == nullptr)
+    {
+        return;
+    }
+
+    FPTPlayerSaveData PlayerSaveData;
+    if (SaveSubsystem->ReadSlotData(PlayerSaveData))
+    {
+        ServerSubmitSaveData(PlayerSaveData);
+    }
+}
+
+void APTPlayerController::ServerSubmitSaveData_Implementation(const FPTPlayerSaveData& PlayerSaveData)
+{
+    APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+    if (PTPlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem != nullptr)
+    {
+        SaveSubsystem->ApplyToPlayerState(PTPlayerState, ClampSaveData(PlayerSaveData));
+    }
+}
+
+void APTPlayerController::ClientReceiveSaveData_Implementation(const FPTPlayerSaveData& PlayerSaveData)
+{
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem != nullptr)
+    {
+        SaveSubsystem->WriteSlotData(ClampSaveData(PlayerSaveData));
+    }
+}
+
+void APTPlayerController::Client_OpenQuestDialogue_Implementation(APTQuestNPCCharacter* QuestNPC)
+{
+    if (!IsLocalPlayerController() || QuestNPC == nullptr)
+    {
+        return;
+    }
+
+    TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass = QuestNPC->GetQuestDialogueWidgetClass();
+    if (QuestDialogueWidgetClass == nullptr)
+    {
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    if (LocalPlayer == nullptr)
+    {
+        return;
+    }
+
+    UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>();
+    if (UIManager == nullptr)
+    {
+        return;
+    }
+
+    UPTNPCDialogueWidget* DialogueWidget = Cast<UPTNPCDialogueWidget>(
+        UIManager->PushWidget(QuestDialogueWidgetClass, EPTUILayer::GameMenu));
+    if (DialogueWidget != nullptr)
+    {
+        DialogueWidget->SetupDialogue(QuestNPC);
+    }
+}
+
+void APTPlayerController::ServerAcceptQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->AcceptQuest(QuestID);
+    }
+}
+
+void APTPlayerController::ServerRewardQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
+    {
+        return;
+    }
+
+    APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+    if (PTPlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->RewardQuest(QuestID, PTPlayerState);
     }
 }
 
@@ -431,6 +563,16 @@ void APTPlayerController::RemoveUIInputMapping()
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
 }
+
+FPTPlayerSaveData APTPlayerController::ClampSaveData(const FPTPlayerSaveData& PlayerSaveData) const
+{
+    FPTPlayerSaveData ClampedSaveData = PlayerSaveData;
+    ClampedSaveData.Gold = FMath::Max(ClampedSaveData.Gold, 0);
+    ClampedSaveData.Level = FMath::Max(ClampedSaveData.Level, 1);
+    ClampedSaveData.Exp = FMath::Max(ClampedSaveData.Exp, 0);
+    return ClampedSaveData;
+}
+
 void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
 {
     OnMonsterTargeted.Broadcast(Monster);

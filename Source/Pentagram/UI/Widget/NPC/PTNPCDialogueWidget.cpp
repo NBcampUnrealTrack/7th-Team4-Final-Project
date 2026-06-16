@@ -1,6 +1,7 @@
 #include "PTNPCDialogueWidget.h"
 
 #include "Character/NPC/PTQuestNPCCharacter.h"
+#include "Character/Player/PTPlayerController.h"
 #include "CommonButtonBase.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -221,7 +222,11 @@ void UPTNPCDialogueWidget::RequestAcceptQuest()
         return;
     }
 
-    TargetNPC->ServerAcceptQuest(SelectedQuestID);
+    APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer());
+    if (PlayerController != nullptr)
+    {
+        PlayerController->ServerAcceptQuest(TargetNPC, SelectedQuestID);
+    }
 }
 
 void UPTNPCDialogueWidget::RequestRewardQuest()
@@ -231,7 +236,11 @@ void UPTNPCDialogueWidget::RequestRewardQuest()
         return;
     }
 
-    TargetNPC->ServerRewardQuest(SelectedQuestID);
+    APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer());
+    if (PlayerController != nullptr)
+    {
+        PlayerController->ServerRewardQuest(TargetNPC, SelectedQuestID);
+    }
 }
 
 void UPTNPCDialogueWidget::CloseDialogue()

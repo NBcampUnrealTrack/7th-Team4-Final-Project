@@ -3,6 +3,7 @@
 #include "PTGameMode.h"
 
 #include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTPlayerController.h"
 #include "PTGameState.h"
 #include "Subsystems/PTPlayerLevelSubsystem.h"
 #include "Subsystems/PTQuestSubsystem.h"
@@ -100,21 +101,25 @@ void APTGameMode::RespawnPlayer(AController* PlayerController)
         return;
     }
 
+    SavePlayerState(PlayerController);
+
     if (RespawnDelaySeconds <= 0.f)
     {
         RestartPlayer(PlayerController);
         return;
     }
 
+    TWeakObjectPtr<AController> WeakPlayerController(PlayerController);
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, PlayerController]()
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, WeakPlayerController]()
         {
-            if (PlayerController == nullptr)
+            AController* ValidPlayerController = WeakPlayerController.Get();
+            if (ValidPlayerController == nullptr)
             {
                 return;
             }
 
-            RestartPlayer(PlayerController);
+            RestartPlayer(ValidPlayerController);
         }, RespawnDelaySeconds, false);
 }
 
@@ -131,6 +136,8 @@ void APTGameMode::RespawnPlayer(AController* PlayerController, const FVector& Re
         return;
     }
 
+    SavePlayerState(PlayerController);
+
     FVector RespawnLocation = RespawnLoc;
     RespawnLocation.Z += 150.f;
 
@@ -141,15 +148,17 @@ void APTGameMode::RespawnPlayer(AController* PlayerController, const FVector& Re
         return;
     }
 
+    TWeakObjectPtr<AController> WeakPlayerController(PlayerController);
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, PlayerController, RespawnTransform]()
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, WeakPlayerController, RespawnTransform]()
         {
-            if (PlayerController == nullptr)
+            AController* ValidPlayerController = WeakPlayerController.Get();
+            if (ValidPlayerController == nullptr)
             {
                 return;
             }
 
-            RestartPlayerAtTransform(PlayerController, RespawnTransform);
+            RestartPlayerAtTransform(ValidPlayerController, RespawnTransform);
         }, RespawnDelaySeconds, false);
 }
 
@@ -281,6 +290,36 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
     }
 
     PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
+}
+
+void APTGameMode::SavePlayerState(AController* PlayerController) const
+{
+    if (PlayerController == nullptr)
+    {
+        return;
+    }
+
+    APTBasePlayerState* PlayerState = PlayerController->GetPlayerState<APTBasePlayerState>();
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem == nullptr)
+    {
+        return;
+    }
+
+    const FPTPlayerSaveData PlayerSaveData = SaveSubsystem->CaptureFromPlayerState(PlayerState);
+    APTPlayerController* PTPlayerController = Cast<APTPlayerController>(PlayerController);
+    if (PTPlayerController != nullptr)
+    {
+        PTPlayerController->SavePlayerDataToOwningClient(PlayerSaveData);
+        return;
+    }
+
+    SaveSubsystem->WriteSlotData(PlayerSaveData);
 }
 
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)
