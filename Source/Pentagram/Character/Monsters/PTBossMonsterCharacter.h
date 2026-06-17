@@ -14,6 +14,8 @@ class PENTAGRAM_API APTBossMonsterCharacter : public APTMonsterCharacter
 public:
     APTBossMonsterCharacter();
 
+    virtual void PerformAttack() override;
+
     UFUNCTION(BlueprintPure, Category = "PT|Boss|Phase")
     int32 GetCurrentPhase() const;
 
@@ -25,6 +27,8 @@ public:
      * 호출부에서 반드시 null 체크 후 사용할 것.
      */
     UAnimMontage* GetAttackMontageForPhase(int32 Phase) const;
+
+    UPTBossPatternComponent* GetBossPatternComponent() const { return BossPatternComponent; }
 
     UPROPERTY(BlueprintAssignable, Category = "PT|Boss|UI")
     FPTOnBossPhaseChanged OnPhaseChanged;
