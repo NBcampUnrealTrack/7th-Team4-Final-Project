@@ -33,9 +33,6 @@ public:
     int32 GetReadyCount() const;
     int32 GetPlayerCount() const { return PlayerArray.Num(); }
 
-private:
-    UPROPERTY(Replicated)
-    int32 ElapsedTime= 0;
     UFUNCTION(BlueprintCallable, Category = "PT|GameState")
     void SetQuestDataTable(UDataTable* InQuestDataTable);
 

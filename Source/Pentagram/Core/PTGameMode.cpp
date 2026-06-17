@@ -65,14 +65,8 @@ void APTGameMode::Logout(AController* Exiting)
     SavePlayerState(Exiting);
 
     Super::Logout(Exiting);
-}
 
-// 로비 추가
-void APTGameMode::Logout(AController* Exiting)
-{
-    Super::Logout(Exiting);
-
-    NotifyReadyChanged();   // 인원 재검사
+    NotifyReadyChanged();
 }
 
 void APTGameMode::SetGamePhase(EGamePhase NewPhase)
