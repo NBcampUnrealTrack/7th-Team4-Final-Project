@@ -49,6 +49,16 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     bool bPenetrate = false;
 
+    //스킬 시전 시 앞으로 전진하는 거리
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    float DashDistance = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    float AtkBuffMultiplier = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    float BuffDuration = 0.f;
+
     // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;

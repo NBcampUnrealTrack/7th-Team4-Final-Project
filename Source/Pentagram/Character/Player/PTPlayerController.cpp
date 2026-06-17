@@ -234,6 +234,7 @@ void APTPlayerController::RotateTowardsMouse()
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
+    if (PC->bIsStaggered) return;
 
     FHitResult HitResult;
     if (!GetHitResultUnderCursor(ECC_Visibility, false, HitResult)) return;
@@ -283,9 +284,12 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         Direction.Z = 0.f;
         if (!Direction.IsNearlyZero())
         {
-            FRotator NewRotation = Direction.Rotation();
-            PlayerCharacter->SetActorRotation(NewRotation);
-            Server_SetActorRotation(NewRotation);
+            if (!PlayerCharacter->bIsStaggered)
+            {
+                FRotator NewRotation = Direction.Rotation();
+                PlayerCharacter->SetActorRotation(NewRotation);
+                Server_SetActorRotation(NewRotation);
+            }
         }
 
         // 마우스 지정 대상이 오브젝트가 드롭 아이템 액터인지 판별
@@ -336,7 +340,12 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[0]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(0));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
 
@@ -348,7 +357,12 @@ void APTPlayerController::OnSkill2(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[1]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(1));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
@@ -359,7 +373,12 @@ void APTPlayerController::OnSkill3(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[2]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(2));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
@@ -370,7 +389,12 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[3]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(3));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));

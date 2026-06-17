@@ -120,7 +120,15 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
         // 이펙트/사운드 에셋 로드 (서버에서 한 번만 로드 후 Multicast로 전달)
         UNiagaraSystem* Effect = SkillData->SkillEffect.LoadSynchronous();
         USoundBase*     Sound  = SkillData->SkillSound.LoadSynchronous();
-        Multicast_PlaySkillMontageWithOffset(Montage, Effect, Sound, SkillData->SkillOffset);
+        Multicast_PlaySkillMontageWithOffset(Montage, Effect, Sound, SkillData->SkillOffset, Request.SkillRowName);
+
+        if (SkillData->BuffDuration > 0.f && SkillData->AtkBuffMultiplier > 0.f)
+        {
+            if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(Owner))
+            {
+                PC->ApplyBuff(SkillData->AtkBuffMultiplier, SkillData->BuffDuration);
+            }
+        }
     }
     else
     {
@@ -276,6 +284,26 @@ void UPTPlayerSkillComponent::Multicast_SetPenetration_Implementation(bool bEnab
     else
     {
         Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+    }
+}
+
+void UPTPlayerSkillComponent::Multicast_LaunchForSkill_Implementation(FVector Velocity)
+{
+    ACharacter* Character = Cast<ACharacter>(GetOwner());
+    if (!Character) return;
+
+    Character->LaunchCharacter(Velocity, true, false);
+}
+
+
+void UPTPlayerSkillComponent::Multicast_StopMovementForSkill_Implementation()
+{
+    ACharacter* Character = Cast<ACharacter>(GetOwner());
+    if (!Character) return;
+
+    if (UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
+    {
+        MoveComp->StopMovementImmediately();
     }
 }
 

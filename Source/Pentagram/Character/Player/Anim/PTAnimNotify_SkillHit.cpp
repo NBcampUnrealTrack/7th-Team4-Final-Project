@@ -13,15 +13,13 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
     Super::Notify(MeshComp, Animation, EventReference);
 
     APTPlayerCharacter* OwnerPlayer = Cast<APTPlayerCharacter>(MeshComp->GetOwner());
-    if (!OwnerPlayer || !OwnerPlayer->HasAuthority()) return;
+    if (!OwnerPlayer) return;
 
     UPTPlayerSkillComponent* SkillComp = OwnerPlayer->SkillComp;
     if (!SkillComp) return;
 
     FPTSkillRow* SkillData = SkillComp->GetSkillData(SkillComp->GetCurrentSkillID());
     if (!SkillData) return;
-
-    float FinalDamage = OwnerPlayer->BaseAtk * SkillData->DamageMultiplier;
 
     FVector ForwardOffset = OwnerPlayer->GetActorForwardVector() * SkillData->SkillOffset.X;
     FVector RightOffset = OwnerPlayer->GetActorRightVector() * SkillData->SkillOffset.Y;
@@ -46,14 +44,8 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
     {
         if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
         {
-            Target->ApplyDamage(FinalDamage, OwnerPlayer);
-        }
-    }
+            if (Cast<APTPlayerCharacter>(Target)) continue;
 
-    for (AActor* HitActor : HitActors)
-    {
-        if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
-        {
             if (HitVFX)
                 UNiagaraFunctionLibrary::SpawnSystemAtLocation(
                     OwnerPlayer->GetWorld(),
@@ -68,6 +60,18 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
                     HitSFX,
                     Target->GetActorLocation()
                 );
+        }
+    }
+
+    if (!OwnerPlayer->HasAuthority()) return;
+
+    float FinalDamage = OwnerPlayer->BaseAtk * SkillData->DamageMultiplier;
+
+    for (AActor* HitActor : HitActors)
+    {
+        if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
+        {
+            Target->ApplyDamage(FinalDamage, OwnerPlayer);
         }
     }
 }

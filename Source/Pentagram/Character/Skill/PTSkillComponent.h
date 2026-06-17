@@ -58,7 +58,7 @@ public:
 
     // 보스 스킬용 — Offset을 직접 전달받아 SkillDataTable 조회 불필요
     UFUNCTION(NetMulticast, Reliable)
-    void Multicast_PlaySkillMontageWithOffset(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset);
+    void Multicast_PlaySkillMontageWithOffset(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset, FName SkillID);
 
 protected:
 
