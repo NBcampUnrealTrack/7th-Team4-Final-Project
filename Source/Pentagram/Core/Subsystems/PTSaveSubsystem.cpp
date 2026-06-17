@@ -6,7 +6,6 @@
 #include "Character/Player/PTBasePlayerState.h"
 #include "Engine/World.h"
 #include "GameFramework/GameStateBase.h"
-#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Core/PTGameState.h"
 #include "PTPlayerLevelSubsystem.h"
@@ -21,7 +20,6 @@ namespace
 {
 constexpr int32 PTSaveUserIndex = 0;
 constexpr float PTAutoSaveIntervalSeconds = 60.f;
-constexpr float PTLoadRetryIntervalSeconds = 1.f;
 }
 
 void UPTSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -38,10 +36,7 @@ void UPTSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTSaveSubsystem::Deinitialize()
 {
-    if (!SaveAllAuthorityPlayers(false))
-    {
-        SaveLocalPlayer(false);
-    }
+    SaveAllAuthorityPlayers(false);
 
     StopAutoSave();
 
@@ -58,64 +53,6 @@ void UPTSaveSubsystem::Deinitialize()
     }
 
     Super::Deinitialize();
-}
-
-void UPTSaveSubsystem::SetPlayerSteamID(const FString& PlayerSteamID)
-{
-    if (PlayerSteamID.IsEmpty())
-    {
-        return;
-    }
-
-    const FString NewSaveSlotName = MakeSaveSlotName(PlayerSteamID);
-    if (!SaveSlotName.IsEmpty() && SaveSlotName != NewSaveSlotName)
-    {
-        SaveLocalPlayer(false);
-    }
-
-    StopAutoSave();
-
-    SaveSlotName = NewSaveSlotName;
-    SaveData = FPTPlayerSaveData();
-    bHasSaveData = false;
-    bHasLoadedLocalPlayer = false;
-
-    StartAutoSave();
-    TryLoadLocalPlayer();
-}
-
-void UPTSaveSubsystem::SaveGame(const APTBasePlayerState* PlayerState)
-{
-    if (PlayerState == nullptr)
-    {
-        return;
-    }
-
-    if (PlayerState->HasAuthority())
-    {
-        WriteSlotData(CaptureFromPlayerState(PlayerState));
-    }
-}
-
-void UPTSaveSubsystem::LoadGame(APTBasePlayerState* PlayerState)
-{
-    if (PlayerState == nullptr)
-    {
-        return;
-    }
-
-    if (!PlayerState->HasAuthority())
-    {
-        return;
-    }
-
-    FPTPlayerSaveData PlayerSaveData;
-    if (!ReadSlotData(PlayerSaveData))
-    {
-        return;
-    }
-
-    ApplyToPlayerState(PlayerState, PlayerSaveData);
 }
 
 bool UPTSaveSubsystem::SavePlayer(const APTBasePlayerState* PlayerState)
@@ -189,68 +126,6 @@ bool UPTSaveSubsystem::SaveAllAuthorityPlayers(bool bSkipBossFight)
     return bSavedAnyPlayer;
 }
 
-bool UPTSaveSubsystem::SaveLocalPlayer(bool bSkipBossFight)
-{
-    if (SaveSlotName.IsEmpty())
-    {
-        return false;
-    }
-
-    if (bSkipBossFight && ShouldSkipAutoSave())
-    {
-        return false;
-    }
-
-    const APTBasePlayerState* PlayerState = GetLocalPlayerState();
-    if (PlayerState == nullptr)
-    {
-        return false;
-    }
-
-    if (!PlayerState->HasAuthority())
-    {
-        return false;
-    }
-
-    return WriteSlotData(CaptureFromPlayerState(PlayerState));
-}
-
-bool UPTSaveSubsystem::LoadLocalPlayer()
-{
-    if (SaveSlotName.IsEmpty())
-    {
-        return false;
-    }
-
-    APTBasePlayerState* PlayerState = GetLocalPlayerState();
-    if (PlayerState == nullptr)
-    {
-        return false;
-    }
-
-    if (!PlayerState->HasAuthority())
-    {
-        bHasLoadedLocalPlayer = true;
-        return true;
-    }
-
-    if (!HasSaveData())
-    {
-        bHasLoadedLocalPlayer = true;
-        return true;
-    }
-
-    FPTPlayerSaveData PlayerSaveData;
-    if (!ReadSlotData(PlayerSaveData))
-    {
-        return false;
-    }
-
-    ApplyToPlayerState(PlayerState, PlayerSaveData);
-    bHasLoadedLocalPlayer = true;
-    return true;
-}
-
 FPTPlayerSaveData UPTSaveSubsystem::CaptureFromPlayerState(const APTBasePlayerState* PlayerState) const
 {
     FPTPlayerSaveData PlayerSaveData;
@@ -315,26 +190,6 @@ void UPTSaveSubsystem::ApplyToPlayerState(APTBasePlayerState* PlayerState, const
     }
 }
 
-bool UPTSaveSubsystem::WriteSlotData(const FPTPlayerSaveData& PlayerSaveData)
-{
-    if (SaveSlotName.IsEmpty())
-    {
-        return false;
-    }
-
-    return WriteSlotDataToSlot(SaveSlotName, PlayerSaveData);
-}
-
-bool UPTSaveSubsystem::ReadSlotData(FPTPlayerSaveData& OutPlayerSaveData)
-{
-    if (SaveSlotName.IsEmpty())
-    {
-        return false;
-    }
-
-    return ReadSlotDataFromSlot(SaveSlotName, OutPlayerSaveData);
-}
-
 bool UPTSaveSubsystem::HasPlayerSaveData(const APTBasePlayerState* PlayerState) const
 {
     const FString PlayerSaveID = GetPlayerSaveID(PlayerState);
@@ -344,28 +199,6 @@ bool UPTSaveSubsystem::HasPlayerSaveData(const APTBasePlayerState* PlayerState) 
     }
 
     return UGameplayStatics::DoesSaveGameExist(MakeSaveSlotName(PlayerSaveID), PTSaveUserIndex);
-}
-
-bool UPTSaveSubsystem::HasSaveData() const
-{
-    if (SaveSlotName.IsEmpty())
-    {
-        return false;
-    }
-
-    return bHasSaveData || UGameplayStatics::DoesSaveGameExist(SaveSlotName, PTSaveUserIndex);
-}
-
-void UPTSaveSubsystem::DeleteSaveData()
-{
-    if (SaveSlotName.IsEmpty())
-    {
-        return;
-    }
-
-    SaveData = FPTPlayerSaveData();
-    bHasSaveData = false;
-    UGameplayStatics::DeleteGameInSlot(SaveSlotName, PTSaveUserIndex);
 }
 
 bool UPTSaveSubsystem::WriteSlotDataToSlot(const FString& SlotName, const FPTPlayerSaveData& PlayerSaveData)
@@ -383,14 +216,7 @@ bool UPTSaveSubsystem::WriteSlotDataToSlot(const FString& SlotName, const FPTPla
     }
 
     SaveGameObject->SaveData = PlayerSaveData;
-    const bool bWroteSaveData = UGameplayStatics::SaveGameToSlot(SaveGameObject, SlotName, PTSaveUserIndex);
-    if (bWroteSaveData && SlotName == SaveSlotName)
-    {
-        SaveData = PlayerSaveData;
-        bHasSaveData = true;
-    }
-
-    return bWroteSaveData;
+    return UGameplayStatics::SaveGameToSlot(SaveGameObject, SlotName, PTSaveUserIndex);
 }
 
 bool UPTSaveSubsystem::ReadSlotDataFromSlot(const FString& SlotName, FPTPlayerSaveData& OutPlayerSaveData)
@@ -413,12 +239,6 @@ bool UPTSaveSubsystem::ReadSlotDataFromSlot(const FString& SlotName, FPTPlayerSa
     }
 
     OutPlayerSaveData = LoadedSaveGame->SaveData;
-    if (SlotName == SaveSlotName)
-    {
-        SaveData = OutPlayerSaveData;
-        bHasSaveData = true;
-    }
-
     return true;
 }
 
@@ -451,69 +271,23 @@ void UPTSaveSubsystem::StopAutoSave()
     }
 
     World->GetTimerManager().ClearTimer(AutoSaveTimerHandle);
-    World->GetTimerManager().ClearTimer(LoadRetryTimerHandle);
-}
-
-void UPTSaveSubsystem::TryLoadLocalPlayer()
-{
-    if (bHasLoadedLocalPlayer)
-    {
-        return;
-    }
-
-    if (LoadLocalPlayer())
-    {
-        UWorld* World = GetWorld();
-        if (World == nullptr)
-        {
-            return;
-        }
-
-        World->GetTimerManager().ClearTimer(LoadRetryTimerHandle);
-        return;
-    }
-
-    UWorld* World = GetWorld();
-    if (World == nullptr || SaveSlotName.IsEmpty())
-    {
-        return;
-    }
-
-    if (!World->GetTimerManager().IsTimerActive(LoadRetryTimerHandle))
-    {
-        World->GetTimerManager().SetTimer(
-            LoadRetryTimerHandle,
-            this,
-            &UPTSaveSubsystem::TryLoadLocalPlayer,
-            PTLoadRetryIntervalSeconds,
-            true);
-    }
 }
 
 void UPTSaveSubsystem::OnAutoSaveTimer()
 {
-    if (!SaveAllAuthorityPlayers(true))
-    {
-        SaveLocalPlayer(true);
-    }
+    SaveAllAuthorityPlayers(true);
 }
 
 void UPTSaveSubsystem::OnPreLoadMap(const FString& MapName)
 {
-    if (!SaveAllAuthorityPlayers(false))
-    {
-        SaveLocalPlayer(false);
-    }
+    SaveAllAuthorityPlayers(false);
 
-    bHasLoadedLocalPlayer = false;
     StopAutoSave();
 }
 
 void UPTSaveSubsystem::OnPostLoadMapWithWorld(UWorld* LoadedWorld)
 {
-    bHasLoadedLocalPlayer = false;
     StartAutoSave();
-    TryLoadLocalPlayer();
 }
 
 FString UPTSaveSubsystem::MakeSaveSlotName(const FString& PlayerSaveID) const
@@ -551,34 +325,6 @@ FString UPTSaveSubsystem::GetPlayerSaveID(const APTBasePlayerState* PlayerState)
     }
 
     return FString();
-}
-
-APlayerController* UPTSaveSubsystem::GetLocalPlayerController() const
-{
-    UWorld* World = GetWorld();
-    if (World == nullptr)
-    {
-        return nullptr;
-    }
-
-    APlayerController* PlayerController = World->GetFirstPlayerController();
-    if (PlayerController == nullptr || !PlayerController->IsLocalPlayerController())
-    {
-        return nullptr;
-    }
-
-    return PlayerController;
-}
-
-APTBasePlayerState* UPTSaveSubsystem::GetLocalPlayerState() const
-{
-    APlayerController* PlayerController = GetLocalPlayerController();
-    if (PlayerController == nullptr)
-    {
-        return nullptr;
-    }
-
-    return PlayerController->GetPlayerState<APTBasePlayerState>();
 }
 
 bool UPTSaveSubsystem::ShouldSkipAutoSave() const
