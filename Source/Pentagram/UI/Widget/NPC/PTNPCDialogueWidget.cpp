@@ -1,6 +1,8 @@
 #include "PTNPCDialogueWidget.h"
 
 #include "Character/NPC/PTQuestNPCCharacter.h"
+#include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTPlayerController.h"
 #include "CommonButtonBase.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -10,6 +12,8 @@
 void UPTNPCDialogueWidget::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    BindQuestDelegates();
 
     if (AcceptButton != nullptr)
     {
@@ -23,6 +27,8 @@ void UPTNPCDialogueWidget::NativeDestruct()
     {
         AcceptButton->OnClicked().RemoveAll(this);
     }
+
+    UnbindQuestDelegates();
 
     Super::NativeDestruct();
 }
@@ -92,7 +98,7 @@ void UPTNPCDialogueWidget::BuildQuestList()
             continue;
         }
 
-        QuestEntry->SetupQuestEntry(QuestID, FText::FromName(QuestID));
+        QuestEntry->SetupQuestEntry(QuestID, QuestData->QuestName);
         QuestEntry->OnQuestEntryClicked.AddUObject(this, &UPTNPCDialogueWidget::OnQuestEntryClicked);
         QuestList->AddChildToVerticalBox(QuestEntry);
     }
@@ -113,7 +119,9 @@ void UPTNPCDialogueWidget::BuildAcceptedQuestList()
         return;
     }
 
-    for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses())
+    APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+
+    for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses(PlayerState))
     {
         const FPTQuestDataRow* QuestData = QuestSubsystem->GetQuestData(QuestProgress.QuestID);
         if (QuestData == nullptr)
@@ -129,7 +137,7 @@ void UPTNPCDialogueWidget::BuildAcceptedQuestList()
             continue;
         }
 
-        QuestEntry->SetupQuestEntry(QuestProgress.QuestID, FText::FromName(QuestProgress.QuestID));
+        QuestEntry->SetupQuestEntry(QuestProgress.QuestID, QuestData->QuestName);
         QuestEntry->OnQuestEntryClicked.AddUObject(this, &UPTNPCDialogueWidget::OnQuestEntryClicked);
         QuestList->AddChildToVerticalBox(QuestEntry);
     }
@@ -214,6 +222,65 @@ void UPTNPCDialogueWidget::RefreshQuestText()
     }
 }
 
+void UPTNPCDialogueWidget::BindQuestDelegates()
+{
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->OnQuestAccepted.RemoveAll(this);
+    QuestSubsystem->OnQuestCompleted.RemoveAll(this);
+    QuestSubsystem->OnQuestProgressChanged.RemoveAll(this);
+
+    QuestSubsystem->OnQuestAccepted.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestAccepted);
+    QuestSubsystem->OnQuestCompleted.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestCompleted);
+    QuestSubsystem->OnQuestProgressChanged.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestProgressChanged);
+}
+
+void UPTNPCDialogueWidget::UnbindQuestDelegates()
+{
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    QuestSubsystem->OnQuestAccepted.RemoveAll(this);
+    QuestSubsystem->OnQuestCompleted.RemoveAll(this);
+    QuestSubsystem->OnQuestProgressChanged.RemoveAll(this);
+}
+
+void UPTNPCDialogueWidget::RefreshVisibleQuestList()
+{
+    if (TargetNPC != nullptr)
+    {
+        BuildQuestList();
+    }
+    else
+    {
+        BuildAcceptedQuestList();
+    }
+
+    RefreshQuestText();
+}
+
+void UPTNPCDialogueWidget::HandleQuestAccepted(FName QuestID)
+{
+    RefreshVisibleQuestList();
+}
+
+void UPTNPCDialogueWidget::HandleQuestCompleted(FName QuestID)
+{
+    RefreshVisibleQuestList();
+}
+
+void UPTNPCDialogueWidget::HandleQuestProgressChanged(FName QuestID, const FPTQuestProgress& QuestProgress)
+{
+    RefreshVisibleQuestList();
+}
+
 void UPTNPCDialogueWidget::RequestAcceptQuest()
 {
     if (TargetNPC == nullptr || SelectedQuestID.IsNone())
@@ -221,7 +288,11 @@ void UPTNPCDialogueWidget::RequestAcceptQuest()
         return;
     }
 
-    TargetNPC->ServerAcceptQuest(SelectedQuestID);
+    APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer());
+    if (PlayerController != nullptr)
+    {
+        PlayerController->ServerAcceptQuest(TargetNPC, SelectedQuestID);
+    }
 }
 
 void UPTNPCDialogueWidget::RequestRewardQuest()
@@ -231,7 +302,11 @@ void UPTNPCDialogueWidget::RequestRewardQuest()
         return;
     }
 
-    TargetNPC->ServerRewardQuest(SelectedQuestID);
+    APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer());
+    if (PlayerController != nullptr)
+    {
+        PlayerController->ServerRewardQuest(TargetNPC, SelectedQuestID);
+    }
 }
 
 void UPTNPCDialogueWidget::CloseDialogue()

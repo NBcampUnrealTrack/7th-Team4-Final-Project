@@ -1,4 +1,6 @@
 #include "Character/Player/PTBasePlayerState.h"
+
+#include "Core/Subsystems/PTQuestSubsystem.h"
 #include "UI/Data/PTDelegates.h"
 #include "Net/UnrealNetwork.h"
 #include "Core/PTGameMode.h"     // 로비 추가 (경로는 프로젝트에 맞게)
@@ -52,6 +54,15 @@ void APTBasePlayerState::OnRep_IsReady()
         PTGameState->NotifyLobbyUpdated();
     }
 }
+void APTBasePlayerState::OnRep_AcceptedQuests()
+{
+    
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->BroadcastQuestProgresses(AcceptedQuests);
+    }
+}
 
 void APTBasePlayerState::BroadcastAllStats()
 {
@@ -103,4 +114,5 @@ void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
     DOREPLIFETIME(APTBasePlayerState, PlayerLevel);
     DOREPLIFETIME(APTBasePlayerState, RequiredExp);
     DOREPLIFETIME(APTBasePlayerState, bIsReady);    // 로비 추가
+    DOREPLIFETIME(APTBasePlayerState, AcceptedQuests);
 }

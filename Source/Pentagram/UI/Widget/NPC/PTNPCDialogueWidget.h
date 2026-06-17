@@ -9,6 +9,7 @@ class UCommonButtonBase;
 class UTextBlock;
 class UVerticalBox;
 class UPTQuestListEntryWidget;
+struct FPTQuestProgress;
 
 UCLASS()
 class PENTAGRAM_API UPTNPCDialogueWidget : public UCommonActivatableWidget
@@ -44,6 +45,12 @@ protected:
     void ClearQuestText();
     void OnQuestEntryClicked(FName QuestID);
     void RefreshQuestText();
+    void BindQuestDelegates();
+    void UnbindQuestDelegates();
+    void RefreshVisibleQuestList();
+    void HandleQuestAccepted(FName QuestID);
+    void HandleQuestCompleted(FName QuestID);
+    void HandleQuestProgressChanged(FName QuestID, const FPTQuestProgress& QuestProgress);
 
     UPROPERTY(BlueprintReadOnly, Category = "PT|NPC")
     TObjectPtr<APTQuestNPCCharacter> TargetNPC;

@@ -41,6 +41,7 @@ protected:
 
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
+    void SavePlayerState(AController* PlayerController) const;
 
     void TravelToGame();    // 서버 트래블 로비 추가
 

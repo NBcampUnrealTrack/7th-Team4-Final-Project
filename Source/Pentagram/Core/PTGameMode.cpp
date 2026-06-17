@@ -28,6 +28,12 @@ void APTGameMode::BeginPlay()
         QuestSubsystem->SetQuestDataTable(QuestDataTable);
     }
 
+    APTGameState* PTGameState = GetGameState<APTGameState>();
+    if (PTGameState != nullptr)
+    {
+        PTGameState->SetQuestDataTable(QuestDataTable);
+    }
+
     UPTPlayerLevelSubsystem* PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
     if (PlayerLevelSubsystem != nullptr)
     {
@@ -44,17 +50,23 @@ void APTGameMode::PostLogin(APlayerController* NewPlayer)
         return;
     }
 
-    InitializePlayerState(NewPlayer->GetPlayerState<APTBasePlayerState>());
+    APTBasePlayerState* PlayerState = NewPlayer->GetPlayerState<APTBasePlayerState>();
+    InitializePlayerState(PlayerState);
 
-
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem != nullptr)
+    {
+        SaveSubsystem->LoadPlayer(PlayerState);
+    }
 }
 
-// 로비 추가
 void APTGameMode::Logout(AController* Exiting)
 {
+    SavePlayerState(Exiting);
+
     Super::Logout(Exiting);
 
-    NotifyReadyChanged();   // 인원 재검사
+    NotifyReadyChanged();
 }
 
 void APTGameMode::SetGamePhase(EGamePhase NewPhase)
@@ -100,21 +112,25 @@ void APTGameMode::RespawnPlayer(AController* PlayerController)
         return;
     }
 
+    SavePlayerState(PlayerController);
+
     if (RespawnDelaySeconds <= 0.f)
     {
         RestartPlayer(PlayerController);
         return;
     }
 
+    TWeakObjectPtr<AController> WeakPlayerController(PlayerController);
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, PlayerController]()
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, WeakPlayerController]()
         {
-            if (PlayerController == nullptr)
+            AController* ValidPlayerController = WeakPlayerController.Get();
+            if (ValidPlayerController == nullptr)
             {
                 return;
             }
 
-            RestartPlayer(PlayerController);
+            RestartPlayer(ValidPlayerController);
         }, RespawnDelaySeconds, false);
 }
 
@@ -131,6 +147,8 @@ void APTGameMode::RespawnPlayer(AController* PlayerController, const FVector& Re
         return;
     }
 
+    SavePlayerState(PlayerController);
+
     FVector RespawnLocation = RespawnLoc;
     RespawnLocation.Z += 150.f;
 
@@ -141,15 +159,17 @@ void APTGameMode::RespawnPlayer(AController* PlayerController, const FVector& Re
         return;
     }
 
+    TWeakObjectPtr<AController> WeakPlayerController(PlayerController);
     FTimerHandle RespawnTimerHandle;
-    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, PlayerController, RespawnTransform]()
+    GetWorldTimerManager().SetTimer(RespawnTimerHandle, [this, WeakPlayerController, RespawnTransform]()
         {
-            if (PlayerController == nullptr)
+            AController* ValidPlayerController = WeakPlayerController.Get();
+            if (ValidPlayerController == nullptr)
             {
                 return;
             }
 
-            RestartPlayerAtTransform(PlayerController, RespawnTransform);
+            RestartPlayerAtTransform(ValidPlayerController, RespawnTransform);
         }, RespawnDelaySeconds, false);
 }
 
@@ -281,6 +301,28 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
     }
 
     PlayerState->RequiredExp = FMath::Max(PlayerState->RequiredExp, 100);
+}
+
+void APTGameMode::SavePlayerState(AController* PlayerController) const
+{
+    if (PlayerController == nullptr)
+    {
+        return;
+    }
+
+    APTBasePlayerState* PlayerState = PlayerController->GetPlayerState<APTBasePlayerState>();
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    if (SaveSubsystem == nullptr)
+    {
+        return;
+    }
+
+    SaveSubsystem->SavePlayer(PlayerState);
 }
 
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)
