@@ -135,16 +135,23 @@ void APTPlayerController::AcknowledgePossession(APawn* P)
 
 }
 
-void APTPlayerController::Client_OpenQuestDialogue_Implementation(APTQuestNPCCharacter* QuestNPC)
+void APTPlayerController::Client_OpenQuestDialogue_Implementation(
+    APTQuestNPCCharacter* QuestNPC,
+    TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass)
 {
     if (!IsLocalPlayerController() || QuestNPC == nullptr)
     {
         return;
     }
 
-    TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass = QuestNPC->GetQuestDialogueWidgetClass();
     if (QuestDialogueWidgetClass == nullptr)
     {
+        QuestDialogueWidgetClass = QuestNPC->GetQuestDialogueWidgetClass();
+    }
+
+    if (QuestDialogueWidgetClass == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Quest dialogue widget class is null."));
         return;
     }
 

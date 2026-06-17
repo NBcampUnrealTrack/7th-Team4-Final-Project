@@ -39,7 +39,9 @@ public:
     void OnQuestPressed();
 
     UFUNCTION(Client, Reliable)
-    void Client_OpenQuestDialogue(APTQuestNPCCharacter* QuestNPC);
+    void Client_OpenQuestDialogue(
+        APTQuestNPCCharacter* QuestNPC,
+        TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass);
 
     UFUNCTION(Server, Reliable)
     void ServerAcceptQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);

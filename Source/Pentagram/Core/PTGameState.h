@@ -6,6 +6,8 @@
 #include "UI/Data/PTDelegates.h"    // 로비 추가
 #include "PTGameState.generated.h"
 
+class UDataTable;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGamePhaseChanged, EGamePhase, NewPhase);
 
 UCLASS()
@@ -34,15 +36,24 @@ public:
 private:
     UPROPERTY(Replicated)
     int32 ElapsedTime= 0;
+    UFUNCTION(BlueprintCallable, Category = "PT|GameState")
+    void SetQuestDataTable(UDataTable* InQuestDataTable);
 
 protected:
     UFUNCTION()
     void OnRep_CurrentPhase();
 
+    UFUNCTION()
+    void OnRep_QuestDataTable();
+
     void OnGamePhaseChanged();
+    void ApplyQuestDataTable() const;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentPhase)
     EGamePhase CurrentPhase = EGamePhase::Waiting;
+
+    UPROPERTY(ReplicatedUsing = OnRep_QuestDataTable, VisibleAnywhere, Category = "PT|Quest")
+    TObjectPtr<UDataTable> QuestDataTable;
 
 public:
     // 로비 갱신 신호 로비 추가

@@ -28,6 +28,12 @@ void APTGameMode::BeginPlay()
         QuestSubsystem->SetQuestDataTable(QuestDataTable);
     }
 
+    APTGameState* PTGameState = GetGameState<APTGameState>();
+    if (PTGameState != nullptr)
+    {
+        PTGameState->SetQuestDataTable(QuestDataTable);
+    }
+
     UPTPlayerLevelSubsystem* PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
     if (PlayerLevelSubsystem != nullptr)
     {

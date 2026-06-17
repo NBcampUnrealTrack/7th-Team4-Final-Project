@@ -2,6 +2,15 @@
 
 #include "Character/Player/PTPlayerController.h"
 #include "GameFramework/Pawn.h"
+#include "Net/UnrealNetwork.h"
+
+void APTQuestNPCCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APTQuestNPCCharacter, QuestIDs);
+    DOREPLIFETIME(APTQuestNPCCharacter, QuestDialogueWidgetClass);
+}
 
 void APTQuestNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 {
@@ -25,7 +34,7 @@ void APTQuestNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
         return;
     }
 
-    InteractPlayerController->Client_OpenQuestDialogue(this);
+    InteractPlayerController->Client_OpenQuestDialogue(this, QuestDialogueWidgetClass);
 }
 
 const TArray<FName>& APTQuestNPCCharacter::GetQuestIDs() const

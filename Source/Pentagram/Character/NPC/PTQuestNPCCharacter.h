@@ -13,15 +13,16 @@ class PENTAGRAM_API APTQuestNPCCharacter : public APTNPCCharacter
     GENERATED_BODY()
 
 public:
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void Interact_Implementation(AActor* InteractorCharacter) override;
 
     const TArray<FName>& GetQuestIDs() const;
     TSubclassOf<UPTNPCDialogueWidget> GetQuestDialogueWidgetClass() const { return QuestDialogueWidgetClass; }
 
 protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Quest")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "PT|NPC|Quest")
     TArray<FName> QuestIDs;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Quest")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "PT|NPC|Quest")
     TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass;
 };
