@@ -27,6 +27,11 @@ public:
     UFUNCTION(BlueprintPure, Category = "PT|Respawn")
     bool HasRespawnLocation() const { return bHasRespawnLocation; }
 
+    // 준비 상태 변경 (서버 전용) 로비 추가
+    void SetReady(bool bNewReady);
+    // 로비 추가
+    bool IsReady() const { return bIsReady; }
+
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
@@ -58,6 +63,10 @@ protected:
     UFUNCTION()
     void OnRep_PlayerLevel();
 
+    // 로비 추가
+    UFUNCTION()
+    void OnRep_IsReady();
+
 public:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
@@ -84,6 +93,10 @@ public:
 
     UPROPERTY(ReplicatedUsing = OnRep_RequiredExp, VisibleAnywhere, Category = "PT|PlayerState|Progress")
     int32 RequiredExp = 100;
+
+    // 로비 추가
+    UPROPERTY(ReplicatedUsing = OnRep_IsReady, VisibleAnywhere, Category = "PT|Lobby")
+    bool bIsReady = false;
 
 private:
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────

@@ -55,21 +55,21 @@ void UPTMainMenuWidget::PlayMenuVideo()
 
 void UPTMainMenuWidget::HandleGameStartClicked()
 {
-    // 서브레벨 이동 (보류)
-    // ULocalPlayer* LP = GetOwningLocalPlayer();
-    // if (!LP) return;
-    //
-    // UPTUIManagerSubsystem* UIManager = LP->GetSubsystem<UPTUIManagerSubsystem>();
-    // if (!UIManager) return;
-    //
-    // UIManager->OpenUILevel(LobbyLevelName);
+    //서브레벨 이동
+    ULocalPlayer* LP = GetOwningLocalPlayer();
+    if (!LP) return;
+
+    UPTUIManagerSubsystem* UIManager = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UIManager) return;
+
+    UIManager->OpenUILevel(LobbyLevelName);
 
     // 임시 트레블
-    if (UWorld* World = GetWorld())
-    {
-        // TODO: 테스트 후 삭제, 경로만 교체
-        World->ServerTravel(TEXT("/Game/Pentagram/Level/L_Lobby"));
-    }
+    // if (UWorld* World = GetWorld())
+    // {
+    //     // TODO: 테스트 후 삭제, 경로만 교체
+    //     World->ServerTravel(TEXT("/Game/Pentagram/Level/L_Lobby"));
+    // }
 }
 
 void UPTMainMenuWidget::HandleQuitClicked()

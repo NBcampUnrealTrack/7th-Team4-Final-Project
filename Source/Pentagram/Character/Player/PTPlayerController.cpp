@@ -3,6 +3,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "PTBasePlayerState.h"
 #include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
@@ -490,4 +491,11 @@ void APTPlayerController::Server_DebugKill_Implementation()
 
     // 방어력 무시하고 확실히 죽임
     PC->ApplyDamage(PC->MaxHP + PC->BaseDef + 1.f, nullptr);
+}
+void APTPlayerController::Server_SetReady_Implementation(bool bReady)
+{
+    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+    {
+        PS->SetReady(bReady);
+    }
 }
