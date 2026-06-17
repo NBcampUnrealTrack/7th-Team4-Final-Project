@@ -37,6 +37,7 @@ public:
     TArray<FPTQuestProgress> GetAcceptedQuestProgresses(const APTBasePlayerState* PlayerState) const;
     void SetAcceptedQuestProgresses(APTBasePlayerState* PlayerState, const TArray<FPTQuestProgress>& InQuestProgresses);
     void ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerState);
+    void BroadcastQuestProgresses(const TArray<FPTQuestProgress>& QuestProgresses);
 
 private:
     FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;

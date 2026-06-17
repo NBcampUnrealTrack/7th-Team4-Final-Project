@@ -259,6 +259,19 @@ void UPTQuestSubsystem::ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerS
     PlayerState->ForceNetUpdate();
 }
 
+void UPTQuestSubsystem::BroadcastQuestProgresses(const TArray<FPTQuestProgress>& QuestProgresses)
+{
+    for (const FPTQuestProgress& QuestProgress : QuestProgresses)
+    {
+        if (QuestProgress.QuestID.IsNone())
+        {
+            continue;
+        }
+
+        OnQuestProgressChanged.Broadcast(QuestProgress.QuestID, QuestProgress);
+    }
+}
+
 FPTQuestProgress* UPTQuestSubsystem::FindQuestProgress(APTBasePlayerState* PlayerState, FName QuestID) const
 {
     if (PlayerState == nullptr || QuestID.IsNone())
