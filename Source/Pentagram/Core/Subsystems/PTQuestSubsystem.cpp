@@ -1,8 +1,11 @@
 #include "PTQuestSubsystem.h"
 
 #include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTInventoryComponent.h"
+#include "Character/Player/PTPlayerCharacter.h"
 #include "Engine/DataTable.h"
 #include "Engine/GameInstance.h"
+#include "GameFramework/Controller.h"
 #include "PTEconomySubsystem.h"
 #include "PTPlayerLevelSubsystem.h"
 
@@ -259,17 +262,9 @@ void UPTQuestSubsystem::ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerS
     PlayerState->ForceNetUpdate();
 }
 
-void UPTQuestSubsystem::BroadcastQuestProgresses(const TArray<FPTQuestProgress>& QuestProgresses)
+void UPTQuestSubsystem::BroadcastQuestListChanged()
 {
-    for (const FPTQuestProgress& QuestProgress : QuestProgresses)
-    {
-        if (QuestProgress.QuestID.IsNone())
-        {
-            continue;
-        }
-
-        OnQuestProgressChanged.Broadcast(QuestProgress.QuestID, QuestProgress);
-    }
+    OnQuestListChanged.Broadcast();
 }
 
 FPTQuestProgress* UPTQuestSubsystem::FindQuestProgress(APTBasePlayerState* PlayerState, FName QuestID) const
@@ -323,6 +318,87 @@ bool UPTQuestSubsystem::AreConditionsCompleted(const FPTQuestProgress& QuestProg
     return true;
 }
 
+UPTInventoryComponent* UPTQuestSubsystem::GetRewardPlayerInventory(APTBasePlayerState* RewardPlayerState) const
+{
+    AController* Controller = RewardPlayerState != nullptr ? Cast<AController>(RewardPlayerState->GetOwner()) : nullptr;
+    APTPlayerCharacter* PlayerCharacter = Controller != nullptr ? Cast<APTPlayerCharacter>(Controller->GetPawn()) : nullptr;
+    return PlayerCharacter != nullptr ? PlayerCharacter->GetInventoryComponent() : nullptr;
+}
+
+bool UPTQuestSubsystem::HasRequiredCollectItems(
+    const FPTQuestDataRow& QuestData,
+    APTBasePlayerState* RewardPlayerState) const
+{
+    TMap<FName, int32> RequiredItemCounts;
+    for (const FPTQuestCondition& Condition : QuestData.Conditions)
+    {
+        if (Condition.ConditionType != EPTQuestConditionType::CollectItem || Condition.TargetID.IsNone())
+        {
+            continue;
+        }
+
+        RequiredItemCounts.FindOrAdd(Condition.TargetID) += FMath::Max(Condition.RequiredCount, 1);
+    }
+
+    if (RequiredItemCounts.IsEmpty())
+    {
+        return true;
+    }
+
+    UPTInventoryComponent* InventoryComponent = GetRewardPlayerInventory(RewardPlayerState);
+    if (InventoryComponent == nullptr)
+    {
+        return false;
+    }
+
+    for (const TPair<FName, int32>& RequiredItemCount : RequiredItemCounts)
+    {
+        if (InventoryComponent->GetItemCount(RequiredItemCount.Key) < RequiredItemCount.Value)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UPTQuestSubsystem::ConsumeRequiredCollectItems(
+    const FPTQuestDataRow& QuestData,
+    APTBasePlayerState* RewardPlayerState) const
+{
+    TMap<FName, int32> RequiredItemCounts;
+    for (const FPTQuestCondition& Condition : QuestData.Conditions)
+    {
+        if (Condition.ConditionType != EPTQuestConditionType::CollectItem || Condition.TargetID.IsNone())
+        {
+            continue;
+        }
+
+        RequiredItemCounts.FindOrAdd(Condition.TargetID) += FMath::Max(Condition.RequiredCount, 1);
+    }
+
+    if (RequiredItemCounts.IsEmpty())
+    {
+        return true;
+    }
+
+    UPTInventoryComponent* InventoryComponent = GetRewardPlayerInventory(RewardPlayerState);
+    if (InventoryComponent == nullptr)
+    {
+        return false;
+    }
+
+    for (const TPair<FName, int32>& RequiredItemCount : RequiredItemCounts)
+    {
+        if (!InventoryComponent->RemoveItem(RequiredItemCount.Key, RequiredItemCount.Value))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const
 {
     if (RewardPlayerState == nullptr || !RewardPlayerState->HasAuthority())
@@ -337,6 +413,11 @@ bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBa
             Warning,
             TEXT("[QuestReward] %s quest item rewards are skipped because item reward data is not wired yet."),
             *QuestData.QuestID.ToString());
+    }
+
+    if (!HasRequiredCollectItems(QuestData, RewardPlayerState))
+    {
+        return false;
     }
 
     UGameInstance* GameInstance = GetGameInstance();
@@ -363,6 +444,11 @@ bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBa
         {
             return false;
         }
+    }
+
+    if (!ConsumeRequiredCollectItems(QuestData, RewardPlayerState))
+    {
+        return false;
     }
 
     if (QuestData.RewardGold > 0)

@@ -45,12 +45,15 @@ protected:
     void ClearQuestText();
     void OnQuestEntryClicked(FName QuestID);
     void RefreshQuestText();
+    void RefreshQuestActionButtons();
+    void HandleQuestActionButtonClicked();
     void BindQuestDelegates();
     void UnbindQuestDelegates();
     void RefreshVisibleQuestList();
     void HandleQuestAccepted(FName QuestID);
     void HandleQuestCompleted(FName QuestID);
     void HandleQuestProgressChanged(FName QuestID, const FPTQuestProgress& QuestProgress);
+    void HandleQuestListChanged();
 
     UPROPERTY(BlueprintReadOnly, Category = "PT|NPC")
     TObjectPtr<APTQuestNPCCharacter> TargetNPC;

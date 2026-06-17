@@ -2,7 +2,9 @@
 #include "Character/Monsters/PTMonsterRewardData.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
+#include "PTQuestSubsystem.h"
 #include "PTPlayerLevelSubsystem.h"
+#include "Item/PTDropItemActorBase.h"
 #include "Item/PTGoldPickup.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
@@ -30,6 +32,7 @@ void UPTRewardSubsystem::HandleMonsterDeathReward(APTMonsterCharacter* DeadMonst
     }
 
     GiveExpToContributors(DeadMonster);
+    UpdateKillMonsterQuestProgress(DeadMonster);
     SpawnDeathDrops(DeadMonster);
 
     DeadMonster->ClearExpContributors();
@@ -71,6 +74,28 @@ void UPTRewardSubsystem::GiveExpToContributors(APTMonsterCharacter* DeadMonster)
             *PS->GetPlayerName(), RewardData.RewardExp);
     }
 
+}
+
+void UPTRewardSubsystem::UpdateKillMonsterQuestProgress(APTMonsterCharacter* DeadMonster)
+{
+    UGameInstance* GI = GetWorld()->GetGameInstance();
+    UPTQuestSubsystem* QuestSubsystem = GI->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    const FName MonsterID = DeadMonster->GetCharacterDataRowName();
+    for (const TWeakObjectPtr<APTBasePlayerState>& WeakPS : DeadMonster->GetExpContributors())
+    {
+        APTBasePlayerState* PS = WeakPS.Get();
+        if (!IsValid(PS))
+        {
+            continue;
+        }
+
+        QuestSubsystem->UpdateQuestProgress(PS, EPTQuestConditionType::KillMonster, MonsterID);
+    }
 }
 
 void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)

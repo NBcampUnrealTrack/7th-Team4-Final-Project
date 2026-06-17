@@ -7,10 +7,12 @@
 
 class UDataTable;
 class APTBasePlayerState;
+class UPTInventoryComponent;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FPTNativeOnQuestAccepted, FName);
 DECLARE_MULTICAST_DELEGATE_OneParam(FPTNativeOnQuestCompleted, FName);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FPTNativeOnQuestProgressChanged, FName, const FPTQuestProgress&);
+DECLARE_MULTICAST_DELEGATE(FPTNativeOnQuestListChanged);
 
 UCLASS()
 class PENTAGRAM_API UPTQuestSubsystem : public UGameInstanceSubsystem
@@ -37,11 +39,14 @@ public:
     TArray<FPTQuestProgress> GetAcceptedQuestProgresses(const APTBasePlayerState* PlayerState) const;
     void SetAcceptedQuestProgresses(APTBasePlayerState* PlayerState, const TArray<FPTQuestProgress>& InQuestProgresses);
     void ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerState);
-    void BroadcastQuestProgresses(const TArray<FPTQuestProgress>& QuestProgresses);
+    void BroadcastQuestListChanged();
 
 private:
     FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;
     bool AreConditionsCompleted(const FPTQuestProgress& QuestProgress) const;
+    UPTInventoryComponent* GetRewardPlayerInventory(APTBasePlayerState* RewardPlayerState) const;
+    bool HasRequiredCollectItems(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
+    bool ConsumeRequiredCollectItems(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
     bool GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
     FPTQuestProgress* FindQuestProgress(APTBasePlayerState* PlayerState, FName QuestID) const;
 
@@ -54,4 +59,5 @@ public:
     FPTNativeOnQuestAccepted OnQuestAccepted;
     FPTNativeOnQuestCompleted OnQuestCompleted;
     FPTNativeOnQuestProgressChanged OnQuestProgressChanged;
+    FPTNativeOnQuestListChanged OnQuestListChanged;
 };
