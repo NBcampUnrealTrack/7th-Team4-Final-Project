@@ -60,7 +60,7 @@ void APTBasePlayerState::OnRep_AcceptedQuests()
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem != nullptr)
     {
-        QuestSubsystem->BroadcastQuestProgresses(AcceptedQuests);
+        QuestSubsystem->BroadcastQuestListChanged();
     }
 }
 

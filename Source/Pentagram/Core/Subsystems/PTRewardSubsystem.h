@@ -21,6 +21,8 @@ public:
 private:
     void GiveExpToContributors(APTMonsterCharacter* DeadMonster);
 
+    void UpdateKillMonsterQuestProgress(APTMonsterCharacter* DeadMonster);
+
     void SpawnDeathDrops(APTMonsterCharacter* DeadMonster);
 
     bool HasServerAuthority() const;

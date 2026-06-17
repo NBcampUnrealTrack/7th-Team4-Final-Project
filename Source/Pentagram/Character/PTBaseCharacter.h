@@ -35,6 +35,7 @@ public:
     virtual void OnRep_CurrentHP();
 
     float GetAttackSpeed() const { return AttackSpeed; }
+    FName GetCharacterDataRowName() const { return CharacterDataHandle.RowName; }
 
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────

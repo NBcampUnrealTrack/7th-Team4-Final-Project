@@ -7,6 +7,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
+#include "UI/Components/PTCommonButtonBase.h"
 #include "UI/Widget/NPC/PTQuestListEntryWidget.h"
 
 void UPTNPCDialogueWidget::NativeConstruct()
@@ -17,7 +18,7 @@ void UPTNPCDialogueWidget::NativeConstruct()
 
     if (AcceptButton != nullptr)
     {
-        AcceptButton->OnClicked().AddUObject(this, &UPTNPCDialogueWidget::RequestAcceptQuest);
+        AcceptButton->OnClicked().AddUObject(this, &UPTNPCDialogueWidget::HandleQuestActionButtonClicked);
     }
 }
 
@@ -38,13 +39,9 @@ void UPTNPCDialogueWidget::SetupDialogue(APTQuestNPCCharacter* InNPC)
     TargetNPC = InNPC;
     SelectedQuestID = NAME_None;
 
-    if (AcceptButton != nullptr)
-    {
-        AcceptButton->SetVisibility(ESlateVisibility::Visible);
-    }
-
     BuildQuestList();
     ClearQuestText();
+    RefreshQuestActionButtons();
 }
 
 void UPTNPCDialogueWidget::SetupQuestJournal()
@@ -65,6 +62,7 @@ void UPTNPCDialogueWidget::SelectQuest(FName QuestID)
 {
     SelectedQuestID = QuestID;
     RefreshQuestText();
+    RefreshQuestActionButtons();
 }
 
 void UPTNPCDialogueWidget::BuildQuestList()
@@ -222,6 +220,68 @@ void UPTNPCDialogueWidget::RefreshQuestText()
     }
 }
 
+void UPTNPCDialogueWidget::RefreshQuestActionButtons()
+{
+    bool bShowActionButton = false;
+    bool bUseRewardAction = false;
+
+    if (TargetNPC != nullptr && !SelectedQuestID.IsNone())
+    {
+        UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+        if (QuestSubsystem != nullptr)
+        {
+            APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+            const bool bHasAcceptedQuest = QuestSubsystem->HasAcceptedQuest(PlayerState, SelectedQuestID);
+            const bool bIsCompleted = QuestSubsystem->IsQuestCompleted(PlayerState, SelectedQuestID);
+            const bool bIsRewarded = QuestSubsystem->IsQuestRewarded(PlayerState, SelectedQuestID);
+
+            bUseRewardAction = bIsCompleted && !bIsRewarded;
+            bShowActionButton = !bHasAcceptedQuest || bUseRewardAction;
+        }
+    }
+
+    if (AcceptButton != nullptr)
+    {
+        AcceptButton->SetVisibility(bShowActionButton ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+        AcceptButton->SetIsEnabled(bShowActionButton);
+
+        if (UPTCommonButtonBase* QuestActionButton = Cast<UPTCommonButtonBase>(AcceptButton))
+        {
+            QuestActionButton->SetButtonText(
+                bUseRewardAction
+                    ? NSLOCTEXT("PTQuest", "RewardQuestButton", "보상 받기")
+                    : NSLOCTEXT("PTQuest", "AcceptQuestButton", "수락"));
+        }
+    }
+}
+
+void UPTNPCDialogueWidget::HandleQuestActionButtonClicked()
+{
+    if (TargetNPC == nullptr || SelectedQuestID.IsNone())
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem == nullptr)
+    {
+        return;
+    }
+
+    APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+    if (QuestSubsystem->IsQuestCompleted(PlayerState, SelectedQuestID) &&
+        !QuestSubsystem->IsQuestRewarded(PlayerState, SelectedQuestID))
+    {
+        RequestRewardQuest();
+        return;
+    }
+
+    if (!QuestSubsystem->HasAcceptedQuest(PlayerState, SelectedQuestID))
+    {
+        RequestAcceptQuest();
+    }
+}
+
 void UPTNPCDialogueWidget::BindQuestDelegates()
 {
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
@@ -233,10 +293,12 @@ void UPTNPCDialogueWidget::BindQuestDelegates()
     QuestSubsystem->OnQuestAccepted.RemoveAll(this);
     QuestSubsystem->OnQuestCompleted.RemoveAll(this);
     QuestSubsystem->OnQuestProgressChanged.RemoveAll(this);
+    QuestSubsystem->OnQuestListChanged.RemoveAll(this);
 
     QuestSubsystem->OnQuestAccepted.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestAccepted);
     QuestSubsystem->OnQuestCompleted.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestCompleted);
     QuestSubsystem->OnQuestProgressChanged.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestProgressChanged);
+    QuestSubsystem->OnQuestListChanged.AddUObject(this, &UPTNPCDialogueWidget::HandleQuestListChanged);
 }
 
 void UPTNPCDialogueWidget::UnbindQuestDelegates()
@@ -250,6 +312,7 @@ void UPTNPCDialogueWidget::UnbindQuestDelegates()
     QuestSubsystem->OnQuestAccepted.RemoveAll(this);
     QuestSubsystem->OnQuestCompleted.RemoveAll(this);
     QuestSubsystem->OnQuestProgressChanged.RemoveAll(this);
+    QuestSubsystem->OnQuestListChanged.RemoveAll(this);
 }
 
 void UPTNPCDialogueWidget::RefreshVisibleQuestList()
@@ -264,6 +327,7 @@ void UPTNPCDialogueWidget::RefreshVisibleQuestList()
     }
 
     RefreshQuestText();
+    RefreshQuestActionButtons();
 }
 
 void UPTNPCDialogueWidget::HandleQuestAccepted(FName QuestID)
@@ -277,6 +341,15 @@ void UPTNPCDialogueWidget::HandleQuestCompleted(FName QuestID)
 }
 
 void UPTNPCDialogueWidget::HandleQuestProgressChanged(FName QuestID, const FPTQuestProgress& QuestProgress)
+{
+    if (SelectedQuestID == QuestID)
+    {
+        RefreshQuestText();
+        RefreshQuestActionButtons();
+    }
+}
+
+void UPTNPCDialogueWidget::HandleQuestListChanged()
 {
     RefreshVisibleQuestList();
 }

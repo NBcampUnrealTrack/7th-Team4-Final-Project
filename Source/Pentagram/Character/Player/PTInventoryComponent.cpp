@@ -1,6 +1,9 @@
 #include "PTInventoryComponent.h"
 
+#include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
+#include "Core/Subsystems/PTQuestSubsystem.h"
+#include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 
 UPTInventoryComponent::UPTInventoryComponent()
@@ -53,6 +56,7 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
                 *NewItemData.Item_Name.ToString(), Count, InventorySlots[TargetIndex].Quantity);
 
             PrintInventoryLog();
+            NotifyQuestItemCollected(NewItemData, Count);
             return true;
         }
     }
@@ -68,12 +72,96 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
             EmptyIndex, *NewItemData.Item_Name.ToString(), Count);
 
         PrintInventoryLog();
+        NotifyQuestItemCollected(NewItemData, Count);
         return true;
     }
 
     // 가방이 가득 차서 추가 실패
     UE_LOG(LogTemp, Warning, TEXT("[인벤토리] 가방 공간이 부족하여 아이템을 추가할 수 없습니다: %s"), *NewItemData.Item_Name.ToString());
     return false;
+}
+
+int32 UPTInventoryComponent::GetItemCount(FName ItemID) const
+{
+    if (ItemID.IsNone())
+    {
+        return 0;
+    }
+
+    int32 TotalCount = 0;
+    for (const FInventorySlot& Slot : InventorySlots)
+    {
+        if (!Slot.IsEmpty() && Slot.ItemData.Item_ID == ItemID)
+        {
+            TotalCount += Slot.Quantity;
+        }
+    }
+
+    return TotalCount;
+}
+
+bool UPTInventoryComponent::RemoveItem(FName ItemID, int32 Count)
+{
+    if (!GetOwner()->HasAuthority() || ItemID.IsNone() || Count <= 0)
+    {
+        return false;
+    }
+
+    if (GetItemCount(ItemID) < Count)
+    {
+        return false;
+    }
+
+    int32 RemainingCount = Count;
+    for (FInventorySlot& Slot : InventorySlots)
+    {
+        if (RemainingCount <= 0)
+        {
+            break;
+        }
+
+        if (Slot.IsEmpty() || Slot.ItemData.Item_ID != ItemID)
+        {
+            continue;
+        }
+
+        const int32 RemoveCount = FMath::Min(Slot.Quantity, RemainingCount);
+        Slot.Quantity -= RemoveCount;
+        RemainingCount -= RemoveCount;
+
+        if (Slot.Quantity <= 0)
+        {
+            Slot = FInventorySlot();
+        }
+    }
+
+    PrintInventoryLog();
+    return true;
+}
+
+void UPTInventoryComponent::NotifyQuestItemCollected(const FItemData& ItemData, int32 Count) const
+{
+    APawn* OwnerPawn = Cast<APawn>(GetOwner());
+    if (OwnerPawn == nullptr)
+    {
+        return;
+    }
+
+    APTBasePlayerState* PlayerState = OwnerPawn->GetPlayerState<APTBasePlayerState>();
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->UpdateQuestProgress(
+            PlayerState,
+            EPTQuestConditionType::CollectItem,
+            ItemData.Item_ID,
+            Count);
+    }
 }
 
 bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션) 사용
