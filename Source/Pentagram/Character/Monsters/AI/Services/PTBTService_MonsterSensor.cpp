@@ -3,6 +3,9 @@
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
+#include "Perception/AIPerceptionComponent.h"
+#include "Perception/AISense_Sight.h"
+#include "Character/Player/PTPlayerCharacter.h"
 
 UPTBTService_MonsterSensor::UPTBTService_MonsterSensor()
 {
@@ -40,10 +43,30 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
     AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
     if (!IsValid(Target))
     {
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
-        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
-        return;
+        if (UAIPerceptionComponent* PerceptionComp = AIC->GetPerceptionComponent())
+        {
+            TArray<AActor*> PerceivedActors;
+            PerceptionComp->GetCurrentlyPerceivedActors(
+                UAISense_Sight::StaticClass(), PerceivedActors);
+
+            for (AActor* Actor : PerceivedActors)
+            {
+                if (Cast<APTPlayerCharacter>(Actor))
+                {
+                    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
+                    BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
+                    Target = Actor;
+                    break;
+                }
+            }
+        }
+
+        if (!IsValid(Target))
+        {
+            BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
+            BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
+            return;
+        }
     }
 
     const float DistToTargetSq = FVector::DistSquared(MonsterLocation, Target->GetActorLocation());

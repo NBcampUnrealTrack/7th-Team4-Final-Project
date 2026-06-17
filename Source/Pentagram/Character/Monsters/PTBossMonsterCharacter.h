@@ -33,6 +33,7 @@ public:
     TObjectPtr<UPTBossPatternComponent> BossPatternComponent;
 
 protected:
+    virtual void BeginPlay() override;
     virtual float StartAttack() override;
     virtual void StopAttack() override;
     virtual float GetAttackDamage() const override;

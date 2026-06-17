@@ -33,7 +33,7 @@ void APTGameState::OnRep_CurrentPhase()
 
 void APTGameState::OnGamePhaseChanged()
 {
-    //OnGamePhaseChangedEvent.Broadcast(CurrentPhase);
+    OnGamePhaseChangedEvent.Broadcast(CurrentPhase);
 }
 
 // 로비 추가

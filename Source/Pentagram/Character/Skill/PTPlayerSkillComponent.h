@@ -40,6 +40,12 @@ public:
     UFUNCTION()
     void OnDodgeMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
+    UFUNCTION()
+    void OnSkillMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetPenetration(bool bEnable);
+
 protected:
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex) override;

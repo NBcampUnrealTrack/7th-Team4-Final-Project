@@ -11,8 +11,19 @@
 
 namespace
 {
-const FString PTSaveSlotName = TEXT("PTPlayerSave");
 constexpr int32 PTSaveUserIndex = 0;
+}
+
+void UPTSaveSubsystem::SetPlayerSteamID(const FString& PlayerSteamID)
+{
+    if (PlayerSteamID.IsEmpty())
+    {
+        return;
+    }
+
+    SaveSlotName = FString::Printf(TEXT("PTPlayerSave_%s"), *PlayerSteamID);
+    SaveData = FPTPlayerSaveData();
+    bHasSaveData = false;
 }
 
 void UPTSaveSubsystem::SaveGame(const APTBasePlayerState* PlayerState)
@@ -45,14 +56,14 @@ void UPTSaveSubsystem::LoadGame(APTBasePlayerState* PlayerState)
 
 bool UPTSaveSubsystem::HasSaveData() const
 {
-    return bHasSaveData || UGameplayStatics::DoesSaveGameExist(PTSaveSlotName, PTSaveUserIndex);
+    return bHasSaveData || UGameplayStatics::DoesSaveGameExist(SaveSlotName, PTSaveUserIndex);
 }
 
 void UPTSaveSubsystem::DeleteSaveData()
 {
     SaveData = FPTPlayerSaveData();
     bHasSaveData = false;
-    UGameplayStatics::DeleteGameInSlot(PTSaveSlotName, PTSaveUserIndex);
+    UGameplayStatics::DeleteGameInSlot(SaveSlotName, PTSaveUserIndex);
 }
 
 void UPTSaveSubsystem::PlayerStateSaveData(const APTBasePlayerState* PlayerState)
@@ -119,18 +130,18 @@ bool UPTSaveSubsystem::SaveSlotData()
     }
 
     SaveGameObject->SaveData = SaveData;
-    return UGameplayStatics::SaveGameToSlot(SaveGameObject, PTSaveSlotName, PTSaveUserIndex);
+    return UGameplayStatics::SaveGameToSlot(SaveGameObject, SaveSlotName, PTSaveUserIndex);
 }
 
 bool UPTSaveSubsystem::LoadSlotData()
 {
-    if (!UGameplayStatics::DoesSaveGameExist(PTSaveSlotName, PTSaveUserIndex))
+    if (!UGameplayStatics::DoesSaveGameExist(SaveSlotName, PTSaveUserIndex))
     {
         return false;
     }
 
     UPTSaveGame* LoadedSaveGame = Cast<UPTSaveGame>(
-        UGameplayStatics::LoadGameFromSlot(PTSaveSlotName, PTSaveUserIndex));
+        UGameplayStatics::LoadGameFromSlot(SaveSlotName, PTSaveUserIndex));
     if (LoadedSaveGame == nullptr)
     {
         return false;

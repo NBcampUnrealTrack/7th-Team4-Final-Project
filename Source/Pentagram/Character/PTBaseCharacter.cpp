@@ -61,6 +61,18 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     return FinalDamage;
 }
 
+float APTBaseCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo)
+{
+    const float FinalDamage = ApplyDamage(DamageAmount, Attacker);
+    if (FinalDamage <= 0.f)
+    {
+        return 0.f;
+    }
+
+    ApplyHit(HitInfo);
+    return FinalDamage;
+}
+
 void APTBaseCharacter::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
@@ -122,4 +134,88 @@ void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
     DOREPLIFETIME(APTBaseCharacter, BaseAtk);
     DOREPLIFETIME(APTBaseCharacter, AttackSpeed);
     DOREPLIFETIME(APTBaseCharacter, MoveSpeed);
+}
+
+void APTBaseCharacter::ApplyHit(const FPTHitInfo& HitInfo)
+{
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    ApplyHitStop(HitInfo.HitStopDuration);
+
+    if (APTBaseCharacter* AttackerChar = Cast<APTBaseCharacter>(HitInfo.Attacker))
+    {
+        AttackerChar->ApplyHitStop(HitInfo.HitStopDuration * 0.5f);
+    }
+
+    if (HitInfo.KnockbackForce > 0.f)
+    {
+        ApplyKnockback(HitInfo);
+    }
+
+    if (HitInfo.StaggerDuration > 0.f)
+    {
+        bIsStaggered = true;
+        GetCharacterMovement()->MaxWalkSpeed = 0.f;
+        GetCharacterMovement()->bOrientRotationToMovement = false;
+        World->GetTimerManager().ClearTimer(StaggerTimer);
+        World->GetTimerManager().SetTimer(
+            StaggerTimer,
+            [this]()
+            {
+                bIsStaggered = false;
+                GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+                GetCharacterMovement()->bOrientRotationToMovement = true;
+            },
+            HitInfo.StaggerDuration, false);
+    }
+}
+
+void APTBaseCharacter::ApplyHitStop(float Duration)
+{
+    if (Duration <= 0.f)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    World->GetTimerManager().ClearTimer(HitStopTimer);
+    CustomTimeDilation = 0.05f;
+    World->GetTimerManager().SetTimer(
+        HitStopTimer, this, &APTBaseCharacter::RestoreHitStop,
+        Duration, false);
+}
+
+void APTBaseCharacter::RestoreHitStop()
+{
+    CustomTimeDilation = DefaultTimeDilation;
+}
+
+void APTBaseCharacter::ApplyKnockback(const FPTHitInfo& HitInfo)
+{
+    FVector Dir = HitInfo.HitDirection.GetSafeNormal();
+    if (Dir.IsNearlyZero())
+    {
+        Dir = GetActorForwardVector();
+    }
+
+    if (HitInfo.HitReactionType == EHitReactionType::Light)
+    {
+        GetCharacterMovement()->AddImpulse(Dir *
+            HitInfo.KnockbackForce, true);
+        PlayAnimMontage(HitReaction_Light);
+    }
+    else
+    {
+        LaunchCharacter(Dir * HitInfo.KnockbackForce + FVector::UpVector * HitInfo.KnockbackZForce, true, true);
+        PlayAnimMontage(HitReaction_Heavy);
+    }
 }

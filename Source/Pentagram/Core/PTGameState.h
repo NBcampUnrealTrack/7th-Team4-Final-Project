@@ -48,4 +48,7 @@ public:
     // 로비 갱신 신호 로비 추가
     UPROPERTY(BlueprintAssignable, Category = "PT|Lobby")
     FPTOnLobbyUpdated OnLobbyUpdated;
+    
+    UPROPERTY(BlueprintAssignable, Category = "PT|GameState")
+    FOnGamePhaseChanged OnGamePhaseChangedEvent;
 };

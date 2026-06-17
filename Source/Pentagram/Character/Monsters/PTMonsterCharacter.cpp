@@ -17,6 +17,7 @@
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/Skill/PTMonsterSkillComponent.h"
+#include "Character/PTCombatTypes.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -58,6 +59,38 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
             }
         }
 
+        OnHPChanged.Broadcast(CurrentHP, MaxHP);
+    }
+
+    return FinalDamage;
+}
+
+float APTMonsterCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo)
+{
+    if (IsDead())
+    {
+        return 0.f;
+    }
+
+    const float FinalDamage = Super::ApplyDamageWithHit(DamageAmount, Attacker, HitInfo);
+    if (FinalDamage <= 0.f)
+    {
+        return 0.f;
+    }
+
+    if (HasAuthority())
+    {
+        if (IsValid(Attacker))
+        {
+            RegisterDamageContributor(Attacker);
+            if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Attacker))
+            {
+                if (APTPlayerController* PC = Cast<APTPlayerController>(Player->GetController()))
+                {
+                    PC->Client_ShowMonsterHealth(this);
+                }
+            }
+        }
         OnHPChanged.Broadcast(CurrentHP, MaxHP);
     }
 
@@ -151,7 +184,24 @@ void APTMonsterCharacter::PerformAttack()
 
         if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
         {
-            Player->ApplyDamage(GetAttackDamage(), this);
+            FPTHitInfo HitInfo;
+            HitInfo.HitDirection = GetActorForwardVector();
+            HitInfo.Attacker     = this;
+
+            if (IsValid(SkillComponent) && IsValid(SkillComponent->SkillDataTable))
+            {
+                const FPTSkillRow* Row = SkillComponent->GetSkillData(SkillComponent->GetCurrentSkillID());
+                if (Row)
+                {
+                    HitInfo.KnockbackForce  = Row->KnockbackForce;
+                    HitInfo.KnockbackZForce = Row->KnockbackZForce;
+                    HitInfo.HitStopDuration = Row->HitStopDuration;
+                    HitInfo.StaggerDuration = Row->StaggerDuration;
+                    HitInfo.HitReactionType = Row->HitReactionType;
+                }
+            }
+
+            Player->ApplyDamageWithHit(GetAttackDamage(), this, HitInfo);
         }
     }
 }

@@ -107,7 +107,7 @@ FString UPTOnlineSubsystem::GetPlayerNickname() const
     return IdentityInterface->GetPlayerNickname(LocalUserNumber);
 }
 
-FString UPTOnlineSubsystem::GetPlayerUniqueID() const
+FString UPTOnlineSubsystem::GetPlayerSteamID() const
 {
     IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
     if (OnlineSubsystem == nullptr)
@@ -121,13 +121,13 @@ FString UPTOnlineSubsystem::GetPlayerUniqueID() const
         return FString();
     }
 
-    FUniqueNetIdPtr PlayerUniqueID = IdentityInterface->GetUniquePlayerId(LocalUserNumber);
-    if (!PlayerUniqueID.IsValid())
+    FUniqueNetIdPtr PlayerSteamID = IdentityInterface->GetUniquePlayerId(LocalUserNumber);
+    if (!PlayerSteamID.IsValid())
     {
         return FString();
     }
 
-    return PlayerUniqueID->ToString();
+    return PlayerSteamID->ToString();
 }
 
 void UPTOnlineSubsystem::OnSteamLoginComplete(
@@ -158,13 +158,13 @@ void UPTOnlineSubsystem::OnSteamLoginComplete(
     const FString PlayerNickname = bWasSuccessful
         ? IdentityInterface->GetPlayerNickname(LocalUserNum)
         : FString();
-    const FString PlayerUniqueID = bWasSuccessful
+    const FString PlayerSteamID = bWasSuccessful
         ? UserID.ToString()
         : FString();
 
     OnLoginCompleted.Broadcast(
         bWasSuccessful,
         PlayerNickname,
-        PlayerUniqueID,
+        PlayerSteamID,
         ErrorMessage);
 }
