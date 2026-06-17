@@ -26,28 +26,28 @@ public:
     const FPTQuestDataRow* GetQuestData(FName QuestID) const;
     bool HasQuestData(FName QuestID) const;
 
-    bool AcceptQuest(FName QuestID);
-    bool HasAcceptedQuest(FName QuestID) const;
-    const FPTQuestProgress* GetQuestProgress(FName QuestID) const;
-    bool UpdateQuestProgress(EPTQuestConditionType ConditionType, FName TargetID, int32 Amount = 1);
-    bool CompleteQuest(FName QuestID);
+    bool AcceptQuest(APTBasePlayerState* PlayerState, FName QuestID);
+    bool HasAcceptedQuest(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    const FPTQuestProgress* GetQuestProgress(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    bool UpdateQuestProgress(APTBasePlayerState* PlayerState, EPTQuestConditionType ConditionType, FName TargetID, int32 Amount = 1);
+    bool CompleteQuest(APTBasePlayerState* PlayerState, FName QuestID);
     bool RewardQuest(FName QuestID, APTBasePlayerState* RewardPlayerState);
-    bool IsQuestCompleted(FName QuestID) const;
-    bool IsQuestRewarded(FName QuestID) const;
-    TArray<FPTQuestProgress> GetAcceptedQuestProgresses() const;
-    void SetAcceptedQuestProgresses(const TArray<FPTQuestProgress>& InQuestProgresses);
-    void ClearAcceptedQuestProgresses();
+    bool IsQuestCompleted(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    bool IsQuestRewarded(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    TArray<FPTQuestProgress> GetAcceptedQuestProgresses(const APTBasePlayerState* PlayerState) const;
+    void SetAcceptedQuestProgresses(APTBasePlayerState* PlayerState, const TArray<FPTQuestProgress>& InQuestProgresses);
+    void ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerState);
 
 private:
     FPTQuestProgress MakeQuestProgress(const FPTQuestDataRow& QuestData) const;
     bool AreConditionsCompleted(const FPTQuestProgress& QuestProgress) const;
     bool GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
+    FPTQuestProgress* FindQuestProgress(APTBasePlayerState* PlayerState, FName QuestID) const;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;
 
     TMap<FName, FPTQuestDataRow> QuestDataMap;
-    TMap<FName, FPTQuestProgress> AcceptedQuestProgressMap;
 
 public:
     FPTNativeOnQuestAccepted OnQuestAccepted;

@@ -178,7 +178,7 @@ void APTPlayerController::ServerAcceptQuest_Implementation(APTQuestNPCCharacter*
     UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem != nullptr)
     {
-        QuestSubsystem->AcceptQuest(QuestID);
+        QuestSubsystem->AcceptQuest(GetPlayerState<APTBasePlayerState>(), QuestID);
     }
 }
 

@@ -52,6 +52,10 @@ void APTBasePlayerState::OnRep_IsReady()
         PTGameState->NotifyLobbyUpdated();
     }
 }
+void APTBasePlayerState::OnRep_AcceptedQuests()
+{
+    
+}
 
 void APTBasePlayerState::BroadcastAllStats()
 {
@@ -103,4 +107,5 @@ void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
     DOREPLIFETIME(APTBasePlayerState, PlayerLevel);
     DOREPLIFETIME(APTBasePlayerState, RequiredExp);
     DOREPLIFETIME(APTBasePlayerState, bIsReady);    // 로비 추가
+    DOREPLIFETIME(APTBasePlayerState, AcceptedQuests);
 }

@@ -270,7 +270,7 @@ FPTPlayerSaveData UPTSaveSubsystem::CaptureFromPlayerState(const APTBasePlayerSt
         UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
         if (QuestSubsystem != nullptr)
         {
-            PlayerSaveData.AcceptedQuests = QuestSubsystem->GetAcceptedQuestProgresses();
+            PlayerSaveData.AcceptedQuests = QuestSubsystem->GetAcceptedQuestProgresses(PlayerState);
         }
     }
 
@@ -310,7 +310,7 @@ void UPTSaveSubsystem::ApplyToPlayerState(APTBasePlayerState* PlayerState, const
         UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
         if (QuestSubsystem != nullptr)
         {
-            QuestSubsystem->SetAcceptedQuestProgresses(PlayerSaveData.AcceptedQuests);
+            QuestSubsystem->SetAcceptedQuestProgresses(PlayerState, PlayerSaveData.AcceptedQuests);
         }
     }
 }

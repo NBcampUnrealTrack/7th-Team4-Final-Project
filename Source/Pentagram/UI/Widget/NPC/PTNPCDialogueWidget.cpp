@@ -1,6 +1,7 @@
 #include "PTNPCDialogueWidget.h"
 
 #include "Character/NPC/PTQuestNPCCharacter.h"
+#include "Character/Player/PTBasePlayerState.h"
 #include "Character/Player/PTPlayerController.h"
 #include "CommonButtonBase.h"
 #include "Components/TextBlock.h"
@@ -114,7 +115,11 @@ void UPTNPCDialogueWidget::BuildAcceptedQuestList()
         return;
     }
 
-    for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses())
+    APTBasePlayerState* PlayerState = GetOwningPlayer() != nullptr
+        ? GetOwningPlayer()->GetPlayerState<APTBasePlayerState>()
+        : nullptr;
+
+    for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses(PlayerState))
     {
         const FPTQuestDataRow* QuestData = QuestSubsystem->GetQuestData(QuestProgress.QuestID);
         if (QuestData == nullptr)
