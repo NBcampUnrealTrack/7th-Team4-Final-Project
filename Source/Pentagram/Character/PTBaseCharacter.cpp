@@ -5,7 +5,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Player/PTPlayerCharacter.h"
-#include "Character/Player/PTPlayerCharacter.h" 
+#include "Character/Player/PTPlayerCharacter.h"
 #include "Player/PTEquipmentComponent.h"
 
 APTBaseCharacter::APTBaseCharacter()
@@ -24,21 +24,21 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
         if (Player->bIsInvincible) return 0.f;
     }
 
+    if (Cast<APTPlayerCharacter>(this) && Cast<APTPlayerCharacter>(Attacker))
+    {
+        return 0.f;
+    }
+
     // 기본 데미지는 DamageAmount로 시작 (때린 놈의 장비 스탯이 있다면 그걸 더해줘야 함)
     float FinalDamageAmount = DamageAmount;
 
     // 만약 때린 놈(Attacker)이 존재하고, 그 놈이 플레이어 캐릭터라면?
     if (APTPlayerCharacter* AttackerPlayer = Cast<APTPlayerCharacter>(Attacker))
     {
-        // 플레이어의 장비창 컴포넌트가 정상적으로 붙어있는지 확인
-        if (IsValid(AttackerPlayer->GetEquipmentComponent()))
-        {
-            // 장비 컴포넌트의 총 STR(TotalBonusStr)을 가로채서 데미지에 가산
-            FinalDamageAmount += static_cast<float>(AttackerPlayer->GetEquipmentComponent()->GetTotalBonusStr());
-        }
+        FinalDamageAmount = AttackerPlayer->GetTotalAttack() * DamageAmount;
     }
 
-    // [데미지 계산 공식] 기존 DamageAmount 대신 장비 스탯이 합산된 FinalDamageAmount를 사용 
+    // [데미지 계산 공식] 기존 DamageAmount 대신 장비 스탯이 합산된 FinalDamageAmount를 사용
     float FinalDamage = FMath::Max(FinalDamageAmount - BaseDef, 1.f);
 
     // HP 감소
@@ -64,6 +64,7 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 float APTBaseCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo)
 {
     const float FinalDamage = ApplyDamage(DamageAmount, Attacker);
+
     if (FinalDamage <= 0.f)
     {
         return 0.f;

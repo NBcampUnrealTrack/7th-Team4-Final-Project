@@ -35,6 +35,8 @@ public:
     // 체력 재생
     void RegenHP();
 
+    void RegenMP();
+
     // 상호작용 실제 처리 담당
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_TryInteract(AActor* TargetActor);
@@ -49,8 +51,15 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttackMontage(int32 MontageIndex);
 
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlayDeathMontage();
+
     // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
     void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset);
+
+    void ApplyBuff(float BonusMultiplier, float Duration);
+
+    void OnAtkBuffExpired();
 
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
     FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
@@ -93,10 +102,17 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     float DodgeLaunchSpeed = 1200.f;
 
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Buff")
+    float AtkBuffBonus = 0.f;
+
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
 
     FTimerHandle HPRegenTimerHandle;
+
+    FTimerHandle MPRegenTimerHandle;
+
+    FTimerHandle BuffTimerHandle;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 

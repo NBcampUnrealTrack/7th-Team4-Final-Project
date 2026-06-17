@@ -48,6 +48,8 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     {
         if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
         {
+            if (Cast<APTPlayerCharacter>(Target)) continue;
+
             if (HitVFX)
                 UNiagaraFunctionLibrary::SpawnSystemAtLocation(
                     OwnerPlayer->GetWorld(),
@@ -69,7 +71,7 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     if (!OwnerPlayer->HasAuthority()) return;
 
     /* PTBaseCharacter::ApplyDamage 내부에서 따로 공격자(OwnerPlayer)의 장비창 스탯을 알아서 더해주기 때문에
-    복잡한 장비 스탯 계산 없이 기본 공격력만 넘겨줌 */ 
+    복잡한 장비 스탯 계산 없이 기본 공격력만 넘겨줌 */
     for (AActor* HitActor : HitActors)
     {
         if (HitActor && HitActor != OwnerPlayer)
