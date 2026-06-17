@@ -1,11 +1,16 @@
 #include "Character/NPC/PTQuestNPCCharacter.h"
 
-#include "Core/Subsystems/PTQuestSubsystem.h"
-#include "Engine/LocalPlayer.h"
+#include "Character/Player/PTPlayerController.h"
 #include "GameFramework/Pawn.h"
-#include "GameFramework/PlayerController.h"
-#include "UI/Manage/PTUIManagerSubsystem.h"
-#include "UI/Widget/NPC/PTNPCDialogueWidget.h"
+#include "Net/UnrealNetwork.h"
+
+void APTQuestNPCCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APTQuestNPCCharacter, QuestIDs);
+    DOREPLIFETIME(APTQuestNPCCharacter, QuestDialogueWidgetClass);
+}
 
 void APTQuestNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 {
@@ -22,69 +27,14 @@ void APTQuestNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
         return;
     }
 
-    MulticastOpenQuestDialogue(InteractPawn);
-}
-
-void APTQuestNPCCharacter::MulticastOpenQuestDialogue_Implementation(APawn* InteractPawn)
-{
-    if (InteractPawn == nullptr || !InteractPawn->IsLocallyControlled() || QuestDialogueWidgetClass == nullptr)
-    {
-        return;
-    }
-
-    APlayerController* InteractPlayerController =
-        Cast<APlayerController>(InteractPawn->GetController());
+    APTPlayerController* InteractPlayerController =
+        Cast<APTPlayerController>(InteractPawn->GetController());
     if (InteractPlayerController == nullptr)
     {
         return;
     }
 
-    ULocalPlayer* LocalPlayer = InteractPlayerController->GetLocalPlayer();
-    if (LocalPlayer == nullptr)
-    {
-        return;
-    }
-
-    UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>();
-    if (UIManager == nullptr)
-    {
-        return;
-    }
-
-    UPTNPCDialogueWidget* DialogueWidget = Cast<UPTNPCDialogueWidget>(
-        UIManager->PushWidget(QuestDialogueWidgetClass, EPTUILayer::GameMenu));
-    if (DialogueWidget != nullptr)
-    {
-        DialogueWidget->SetupDialogue(this);
-    }
-}
-
-void APTQuestNPCCharacter::ServerAcceptQuest_Implementation(FName QuestID)
-{
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
-    {
-        return;
-    }
-
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem != nullptr)
-    {
-        QuestSubsystem->AcceptQuest(QuestID);
-    }
-}
-
-void APTQuestNPCCharacter::ServerRewardQuest_Implementation(FName QuestID)
-{
-    if (QuestID.IsNone() || !QuestIDs.Contains(QuestID))
-    {
-        return;
-    }
-
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-    if (QuestSubsystem != nullptr)
-    {
-        QuestSubsystem->RewardQuest(QuestID);
-    }
+    InteractPlayerController->Client_OpenQuestDialogue(this, QuestDialogueWidgetClass);
 }
 
 const TArray<FName>& APTQuestNPCCharacter::GetQuestIDs() const

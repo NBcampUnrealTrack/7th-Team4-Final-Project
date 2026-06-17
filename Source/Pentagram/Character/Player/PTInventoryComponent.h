@@ -20,6 +20,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool TryAddItem(const FItemData& NewItemData, int32 Count = 1);
 
+    UFUNCTION(BlueprintPure, Category = "Inventory")
+    int32 GetItemCount(FName ItemID) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool RemoveItem(FName ItemID, int32 Count);
+
     // 블루프린트나 캐릭터에서 호출할 물약 사용 함수
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool UsePotion(int32 SlotIndex);
@@ -61,6 +67,7 @@ private:
 
     // 실제 캐릭터를 찾아서 피를 채워줄 내부 틱 함수 (5초간 매초 실행)
     void ExecutePotionHealing();
+    void NotifyQuestItemCollected(const FItemData& ItemData, int32 Count) const;
 
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 

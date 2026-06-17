@@ -17,6 +17,7 @@ public:
     APTGameMode();
 
     virtual void PostLogin(APlayerController* NewPlayer) override;
+    virtual void Logout(AController* Exiting) override;    // 로비 추가
     virtual void RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform) override;
 
     void SetGamePhase(EGamePhase NewPhase);
@@ -31,11 +32,18 @@ public:
     AActor* SpawnDropItem(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation) const;
     AActor* SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, const FVector& DropLocation, float DropRate) const;
 
+    // 준비 변경 시 호출 로비 추가
+    void NotifyReadyChanged();
+    bool AreAllPlayersReady() const;
+
 protected:
     virtual void BeginPlay() override;
 
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
+    void SavePlayerState(AController* PlayerController) const;
+
+    void TravelToGame();    // 서버 트래블 로비 추가
 
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
@@ -46,4 +54,12 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;
+
+    // 인게임 맵 경로 로비 추가
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Lobby")
+    FString GameMapPath;
+
+private:
+    // 로비 추가
+    bool bIsTraveling = false;
 };

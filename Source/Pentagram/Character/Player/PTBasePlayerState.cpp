@@ -1,6 +1,10 @@
 #include "Character/Player/PTBasePlayerState.h"
+
+#include "Core/Subsystems/PTQuestSubsystem.h"
 #include "UI/Data/PTDelegates.h"
 #include "Net/UnrealNetwork.h"
+#include "Core/PTGameMode.h"     // 로비 추가 (경로는 프로젝트에 맞게)
+#include "Core/PTGameState.h"    // 로비 추가 (경로는 프로젝트에 맞게)
 
 void APTBasePlayerState::OnRep_CurrentHP()
 {
@@ -42,6 +46,24 @@ void APTBasePlayerState::OnRep_PlayerLevel()
     OnLevelChanged.Broadcast(PlayerLevel);
 }
 
+// 로비 추가
+void APTBasePlayerState::OnRep_IsReady()
+{
+    if (APTGameState* PTGameState = GetWorld()->GetGameState<APTGameState>())
+    {
+        PTGameState->NotifyLobbyUpdated();
+    }
+}
+void APTBasePlayerState::OnRep_AcceptedQuests()
+{
+    
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->BroadcastQuestListChanged();
+    }
+}
+
 void APTBasePlayerState::BroadcastAllStats()
 {
     OnHealthChanged.Broadcast(CurrentHP, MaxHP);
@@ -58,6 +80,27 @@ void APTBasePlayerState::SetSavedRespawnLocation(const FVector& NewLocation)
     bHasRespawnLocation = true;
 }
 
+// 로비 추가
+void APTBasePlayerState::SetReady(bool bNewReady)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+    if (bIsReady == bNewReady)
+    {
+        return;
+    }
+
+    bIsReady = bNewReady;
+    OnRep_IsReady();    // 서버 반영
+
+    if (APTGameMode* PTGameMode = GetWorld()->GetAuthGameMode<APTGameMode>())
+    {
+        PTGameMode->NotifyReadyChanged();
+    }
+}
+
 void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -70,4 +113,6 @@ void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
     DOREPLIFETIME(APTBasePlayerState, CurrentExp);
     DOREPLIFETIME(APTBasePlayerState, PlayerLevel);
     DOREPLIFETIME(APTBasePlayerState, RequiredExp);
+    DOREPLIFETIME(APTBasePlayerState, bIsReady);    // 로비 추가
+    DOREPLIFETIME(APTBasePlayerState, AcceptedQuests);
 }

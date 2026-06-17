@@ -12,6 +12,8 @@ class UInputMappingContext;
 class UPTPrimaryLayout;
 class UPTNPCDialogueWidget;
 class APTDropItemActorBase;
+class APTMonsterCharacter;
+class APTQuestNPCCharacter;
 
 UCLASS()
 class PENTAGRAM_API APTPlayerController : public APlayerController
@@ -36,6 +38,16 @@ public:
     void OnShopPressed();
     void OnQuestPressed();
 
+    UFUNCTION(Client, Reliable)
+    void Client_OpenQuestDialogue(
+        APTQuestNPCCharacter* QuestNPC,
+        TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass);
+
+    UFUNCTION(Server, Reliable)
+    void ServerAcceptQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRewardQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);
 
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);
@@ -58,6 +70,9 @@ public:
     // [디버그] 즉사
     UFUNCTION(Server, Reliable)
     void Server_DebugKill();
+
+    UFUNCTION(Server, Reliable)
+    void Server_SetReady(bool bReady);
 protected:
     void PlayAttackMontage();
 

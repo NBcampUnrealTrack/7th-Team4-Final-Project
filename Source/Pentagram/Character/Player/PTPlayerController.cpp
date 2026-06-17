@@ -1,15 +1,19 @@
 #include "Character/Player/PTPlayerController.h"
 #include "CommonActivatableWidget.h"
+#include "Character/Player/PTBasePlayerState.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "PTBasePlayerState.h"
 #include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Core/PTGameMode.h"
+#include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
@@ -127,6 +131,81 @@ void APTPlayerController::AcknowledgePossession(APawn* P)
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
+    }
+
+}
+
+void APTPlayerController::Client_OpenQuestDialogue_Implementation(
+    APTQuestNPCCharacter* QuestNPC,
+    TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass)
+{
+    if (!IsLocalPlayerController() || QuestNPC == nullptr)
+    {
+        return;
+    }
+
+    if (QuestDialogueWidgetClass == nullptr)
+    {
+        QuestDialogueWidgetClass = QuestNPC->GetQuestDialogueWidgetClass();
+    }
+
+    if (QuestDialogueWidgetClass == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Quest dialogue widget class is null."));
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    if (LocalPlayer == nullptr)
+    {
+        return;
+    }
+
+    UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>();
+    if (UIManager == nullptr)
+    {
+        return;
+    }
+
+    UPTNPCDialogueWidget* DialogueWidget = Cast<UPTNPCDialogueWidget>(
+        UIManager->PushWidget(QuestDialogueWidgetClass, EPTUILayer::GameMenu));
+    if (DialogueWidget != nullptr)
+    {
+        DialogueWidget->SetupDialogue(QuestNPC);
+    }
+}
+
+void APTPlayerController::ServerAcceptQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->AcceptQuest(GetPlayerState<APTBasePlayerState>(), QuestID);
+    }
+}
+
+void APTPlayerController::ServerRewardQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
+    {
+        return;
+    }
+
+    APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+    if (PTPlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->RewardQuest(QuestID, PTPlayerState);
     }
 }
 
@@ -454,6 +533,7 @@ void APTPlayerController::RemoveUIInputMapping()
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
 }
+
 void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
 {
     OnMonsterTargeted.Broadcast(Monster);
@@ -514,4 +594,11 @@ void APTPlayerController::Server_DebugKill_Implementation()
 
     // 방어력 무시하고 확실히 죽임
     PC->ApplyDamage(PC->MaxHP + PC->BaseDef + 1.f, nullptr);
+}
+void APTPlayerController::Server_SetReady_Implementation(bool bReady)
+{
+    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+    {
+        PS->SetReady(bReady);
+    }
 }

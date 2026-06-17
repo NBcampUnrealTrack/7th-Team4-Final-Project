@@ -4,8 +4,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/Player/PTBasePlayerState.h"
-#include "Player/PTPlayerCharacter.h"
-#include "Character/Player/PTPlayerCharacter.h"
+#include "Character/Player/PTPlayerCharacter.h" 
 #include "Player/PTEquipmentComponent.h"
 
 APTBaseCharacter::APTBaseCharacter()
@@ -68,6 +67,12 @@ float APTBaseCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker,
     if (FinalDamage <= 0.f)
     {
         return 0.f;
+    }
+
+    if (CurrentHP <= 0.f)
+    {
+        ApplyHitStop(HitInfo.HitStopDuration);
+        return FinalDamage;
     }
 
     ApplyHit(HitInfo);
@@ -159,17 +164,30 @@ void APTBaseCharacter::ApplyHit(const FPTHitInfo& HitInfo)
 
     if (HitInfo.StaggerDuration > 0.f)
     {
+        UCharacterMovementComponent* Movement = GetCharacterMovement();
+        if (!IsValid(Movement))
+        {
+            return;
+        }
+
+        CachedWalkSpeed       = Movement->MaxWalkSpeed;
+        bCachedOrientRotation = Movement->bOrientRotationToMovement;
+
         bIsStaggered = true;
-        GetCharacterMovement()->MaxWalkSpeed = 0.f;
-        GetCharacterMovement()->bOrientRotationToMovement = false;
+        Movement->MaxWalkSpeed = 0.f;
+        Movement->bOrientRotationToMovement = false;
+
         World->GetTimerManager().ClearTimer(StaggerTimer);
         World->GetTimerManager().SetTimer(
             StaggerTimer,
             [this]()
             {
                 bIsStaggered = false;
-                GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
-                GetCharacterMovement()->bOrientRotationToMovement = true;
+                if (UCharacterMovementComponent* M = GetCharacterMovement())
+                {
+                    M->MaxWalkSpeed              = CachedWalkSpeed;
+                    M->bOrientRotationToMovement = bCachedOrientRotation;
+                }
             },
             HitInfo.StaggerDuration, false);
     }
@@ -202,6 +220,12 @@ void APTBaseCharacter::RestoreHitStop()
 
 void APTBaseCharacter::ApplyKnockback(const FPTHitInfo& HitInfo)
 {
+    UCharacterMovementComponent* Movement = GetCharacterMovement();
+    if (!IsValid(Movement))
+    {
+        return;
+    }
+
     FVector Dir = HitInfo.HitDirection.GetSafeNormal();
     if (Dir.IsNearlyZero())
     {
@@ -210,8 +234,7 @@ void APTBaseCharacter::ApplyKnockback(const FPTHitInfo& HitInfo)
 
     if (HitInfo.HitReactionType == EHitReactionType::Light)
     {
-        GetCharacterMovement()->AddImpulse(Dir *
-            HitInfo.KnockbackForce, true);
+        Movement->AddImpulse(Dir * HitInfo.KnockbackForce, true);
         PlayAnimMontage(HitReaction_Light);
     }
     else

@@ -1,6 +1,8 @@
 #include "Character/Monsters/PTBossMonsterCharacter.h"
 #include "Animation/AnimInstance.h"
 #include "Character/Skill/PTBossPatternComponent.h"
+#include "Character/Skill/PTMonsterSkillComponent.h"
+#include "Character/Player/PTPlayerCharacter.h"
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
@@ -76,6 +78,74 @@ void APTBossMonsterCharacter::BeginPlay()
     if (IsValid(BossPatternComponent))
     {
         BossPatternComponent->PreloadAllSkills();
+    }
+}
+
+void APTBossMonsterCharacter::PerformAttack()
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    if (!IsValid(BossPatternComponent) || !IsValid(BossPatternComponent->BossSkillDataTable) || !IsValid(SkillComponent))
+    {
+        Super::PerformAttack();
+        return;
+    }
+
+    const FName CurrentSkill = SkillComponent->GetCurrentSkillID();
+    const FPTBossSkillRow* Row = BossPatternComponent->BossSkillDataTable->FindRow<FPTBossSkillRow>(
+        CurrentSkill, TEXT("BossPerformAttack"));
+
+    if (!Row)
+    {
+        Super::PerformAttack();
+        return;
+    }
+
+    switch (Row->SkillType)
+    {
+    case EBossSkillType::Projectile:
+    case EBossSkillType::Area:
+        return;
+
+    case EBossSkillType::Melee:
+    default:
+    {
+        UWorld* World = GetWorld();
+        if (!IsValid(World)) return;
+
+        const FVector TraceStart = GetActorLocation()
+            + GetActorForwardVector() * AttackForwardOffset
+            + FVector(0.f, 0.f, AttackHeightOffset);
+
+        TArray<FHitResult> HitResults;
+        FCollisionQueryParams Params;
+        Params.AddIgnoredActor(this);
+
+        World->SweepMultiByChannel(HitResults, TraceStart, TraceStart,
+            FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(AttackRadius), Params);
+
+        const float FinalDamage = GetBaseAtk()
+            * Row->DamageMultiplier
+            * GetDamageMultiplierForPhase(GetCurrentPhase());
+
+        for (const FHitResult& Hit : HitResults)
+        {
+            AActor* HitActor = Hit.GetActor();
+            if (!IsValid(HitActor) || HitActors.Contains(HitActor)) continue;
+            HitActors.Add(HitActor);
+
+            if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
+            {
+                FPTHitInfo HitInfo = Row->MakeHitInfo(this);
+                HitInfo.HitDirection = GetActorForwardVector();
+                Player->ApplyDamageWithHit(FinalDamage, this, HitInfo);
+            }
+        }
+    }
+    break;
     }
 }
 

@@ -6,6 +6,7 @@
 #include "Components/BoxComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
+#include "Character/Player/PTBasePlayerState.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UI/Widget/NPC/PTNPCInteractionPromptWidget.h"
@@ -83,7 +84,10 @@ void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
         UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
         if (QuestSubsystem != nullptr)
         {
-            QuestSubsystem->UpdateQuestProgress(EPTQuestConditionType::TalkToNPC, NPCID);
+            QuestSubsystem->UpdateQuestProgress(
+                InteractPlayerController->GetPlayerState<APTBasePlayerState>(),
+                EPTQuestConditionType::TalkToNPC,
+                NPCID);
         }
     }
 

@@ -35,6 +35,8 @@ public:
     virtual void OnRep_CurrentHP();
 
     float GetAttackSpeed() const { return AttackSpeed; }
+    float GetBaseAtk()     const { return BaseAtk; }
+    FName GetCharacterDataRowName() const { return CharacterDataHandle.RowName; }
 
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
@@ -89,7 +91,9 @@ public:
     bool bIsStaggered = false;
 
 private:
-    float DefaultTimeDilation = 1.f;
+    float DefaultTimeDilation  = 1.f;
+    float CachedWalkSpeed      = 0.f;
+    bool bCachedOrientRotation = true;
 
     FTimerHandle HitStopTimer;
     FTimerHandle StaggerTimer;

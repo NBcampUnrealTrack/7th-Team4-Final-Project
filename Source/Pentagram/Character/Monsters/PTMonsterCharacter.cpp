@@ -185,19 +185,14 @@ void APTMonsterCharacter::PerformAttack()
         if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
         {
             FPTHitInfo HitInfo;
-            HitInfo.HitDirection = GetActorForwardVector();
-            HitInfo.Attacker     = this;
 
             if (IsValid(SkillComponent) && IsValid(SkillComponent->SkillDataTable))
             {
                 const FPTSkillRow* Row = SkillComponent->GetSkillData(SkillComponent->GetCurrentSkillID());
                 if (Row)
                 {
-                    HitInfo.KnockbackForce  = Row->KnockbackForce;
-                    HitInfo.KnockbackZForce = Row->KnockbackZForce;
-                    HitInfo.HitStopDuration = Row->HitStopDuration;
-                    HitInfo.StaggerDuration = Row->StaggerDuration;
-                    HitInfo.HitReactionType = Row->HitReactionType;
+                    HitInfo              = Row->MakeHitInfo(this);
+                    HitInfo.HitDirection = GetActorForwardVector();
                 }
             }
 
