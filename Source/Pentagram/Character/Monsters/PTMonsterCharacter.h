@@ -42,7 +42,7 @@ public:
     bool    IsDead()                const { return CurrentState == EMonsterState::Dead; }
     const TSet<TWeakObjectPtr<APTBasePlayerState>>& GetExpContributors() const { return ExpContributors; }
 
-    void PerformAttack();
+    virtual void PerformAttack();
     virtual float StartAttack();
     virtual void StopAttack();
 
@@ -89,6 +89,15 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Animation")
     TObjectPtr<UAnimMontage> DeathMontage;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
+    float AttackForwardOffset = 150.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
+    float AttackHeightOffset = 50.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
+    float AttackRadius = 150.f;
+
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
     float SightAngle = 0.f;
@@ -101,15 +110,6 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
     float AttackRange = 0.f;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
-    float AttackForwardOffset = 150.f;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
-    float AttackHeightOffset = 50.f;
-
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
-    float AttackRadius = 150.f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
     float PatrolRadius = 0.f;
