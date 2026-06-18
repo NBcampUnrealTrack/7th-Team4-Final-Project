@@ -1,16 +1,17 @@
 ﻿#include "PTLobbyWidget.h"
-
 #include "PTLobbySlotWidget.h"
 #include "PTLobbyPreviewActor.h"
-#include "Core/PTGameState.h"                       // 경로는 프로젝트에 맞게
-#include "Character/Player/PTBasePlayerState.h"     // 경로는 프로젝트에 맞게
-#include "Character/Player/PTPlayerController.h"     // 경로는 프로젝트에 맞게
+#include "Core/PTGameState.h"
+#include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTPlayerController.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
 
 void UPTLobbyWidget::NativeConstruct()
 {
@@ -148,10 +149,15 @@ void UPTLobbyWidget::RefreshPreview()
         return;
     }
 
-    if (UTextureRenderTarget2D* RenderTarget = PreviewActor->GetRenderTarget())
+    UTextureRenderTarget2D* RenderTarget = PreviewActor->GetRenderTarget();
+    if (RenderTarget == nullptr || PreviewMaterial == nullptr)
     {
-        CharacterPreviewImage->SetBrushResourceObject(RenderTarget);
+        return;
     }
+
+    UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(PreviewMaterial, this);
+    MID->SetTextureParameterValue(TEXT("PreviewTex"), RenderTarget);  // 머티리얼에 RT 주입
+    CharacterPreviewImage->SetBrushFromMaterial(MID);
 }
 
 void UPTLobbyWidget::OnReadyClicked()
