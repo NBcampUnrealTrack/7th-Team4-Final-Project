@@ -36,6 +36,9 @@ public:
     bool RewardQuest(FName QuestID, APTBasePlayerState* RewardPlayerState);
     bool IsQuestCompleted(const APTBasePlayerState* PlayerState, FName QuestID) const;
     bool IsQuestRewarded(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    bool ArePrerequisiteQuestsRewarded(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    bool IsPlayerLevelRequirementMet(const APTBasePlayerState* PlayerState, FName QuestID) const;
+    bool AreQuestRequirementsMet(const APTBasePlayerState* PlayerState, FName QuestID) const;
     TArray<FPTQuestProgress> GetAcceptedQuestProgresses(const APTBasePlayerState* PlayerState) const;
     void SetAcceptedQuestProgresses(APTBasePlayerState* PlayerState, const TArray<FPTQuestProgress>& InQuestProgresses);
     void ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerState);

@@ -46,6 +46,13 @@ struct PENTAGRAM_API FPTQuestDataRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest")
     FText Description;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest|Progression")
+    TArray<FName> PrerequisiteQuestIDs;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest|Progression",
+        meta = (ClampMin = "1", UIMin = "1"))
+    int32 RequiredPlayerLevel = 1;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Quest")
     TArray<FPTQuestCondition> Conditions;
 
