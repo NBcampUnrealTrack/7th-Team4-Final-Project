@@ -1,5 +1,6 @@
 #include "Character/Player/PTPlayerController.h"
 #include "CommonActivatableWidget.h"
+#include "Character/Player/PTBasePlayerState.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -10,7 +11,9 @@
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Core/PTGameMode.h"
+#include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
@@ -129,6 +132,81 @@ void APTPlayerController::AcknowledgePossession(APawn* P)
     {
         UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
     }
+
+}
+
+void APTPlayerController::Client_OpenQuestDialogue_Implementation(
+    APTQuestNPCCharacter* QuestNPC,
+    TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass)
+{
+    if (!IsLocalPlayerController() || QuestNPC == nullptr)
+    {
+        return;
+    }
+
+    if (QuestDialogueWidgetClass == nullptr)
+    {
+        QuestDialogueWidgetClass = QuestNPC->GetQuestDialogueWidgetClass();
+    }
+
+    if (QuestDialogueWidgetClass == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Quest dialogue widget class is null."));
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    if (LocalPlayer == nullptr)
+    {
+        return;
+    }
+
+    UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>();
+    if (UIManager == nullptr)
+    {
+        return;
+    }
+
+    UPTNPCDialogueWidget* DialogueWidget = Cast<UPTNPCDialogueWidget>(
+        UIManager->PushWidget(QuestDialogueWidgetClass, EPTUILayer::GameMenu));
+    if (DialogueWidget != nullptr)
+    {
+        DialogueWidget->SetupDialogue(QuestNPC);
+    }
+}
+
+void APTPlayerController::ServerAcceptQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->AcceptQuest(GetPlayerState<APTBasePlayerState>(), QuestID);
+    }
+}
+
+void APTPlayerController::ServerRewardQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
+    {
+        return;
+    }
+
+    APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+    if (PTPlayerState == nullptr)
+    {
+        return;
+    }
+
+    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    if (QuestSubsystem != nullptr)
+    {
+        QuestSubsystem->RewardQuest(QuestID, PTPlayerState);
+    }
 }
 
 void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -156,6 +234,7 @@ void APTPlayerController::RotateTowardsMouse()
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
+    if (PC->bIsStaggered) return;
 
     FHitResult HitResult;
     if (!GetHitResultUnderCursor(ECC_Visibility, false, HitResult)) return;
@@ -205,9 +284,12 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
         Direction.Z = 0.f;
         if (!Direction.IsNearlyZero())
         {
-            FRotator NewRotation = Direction.Rotation();
-            PlayerCharacter->SetActorRotation(NewRotation);
-            Server_SetActorRotation(NewRotation);
+            if (!PlayerCharacter->bIsStaggered)
+            {
+                FRotator NewRotation = Direction.Rotation();
+                PlayerCharacter->SetActorRotation(NewRotation);
+                Server_SetActorRotation(NewRotation);
+            }
         }
 
         // 마우스 지정 대상이 오브젝트가 드롭 아이템 액터인지 판별
@@ -258,7 +340,12 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[0]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(0));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
 
@@ -270,7 +357,12 @@ void APTPlayerController::OnSkill2(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[1]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(1));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
@@ -281,7 +373,12 @@ void APTPlayerController::OnSkill3(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[2]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(2));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
@@ -292,7 +389,12 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+
     if (PC->SkillComp->bIsCooldown[3]) return;
+
+    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(3));
+    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
 
     RotateTowardsMouse();
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
@@ -431,6 +533,7 @@ void APTPlayerController::RemoveUIInputMapping()
     InputSubsystem->RemoveMappingContext(IMC_UI);
     bUIInputMappingAdded = false;
 }
+
 void APTPlayerController::Client_ShowMonsterHealth_Implementation(APTMonsterCharacter* Monster)
 {
     OnMonsterTargeted.Broadcast(Monster);

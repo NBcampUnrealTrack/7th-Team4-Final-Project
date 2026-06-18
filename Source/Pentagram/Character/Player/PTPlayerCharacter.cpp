@@ -41,7 +41,7 @@ APTPlayerCharacter::APTPlayerCharacter()
     SkillComp          = CreateDefaultSubobject<UPTPlayerSkillComponent>(TEXT("Skill"));
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
-    
+
     WeaponMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMeshComp"));
     if (GetMesh())
     {
@@ -102,6 +102,14 @@ void APTPlayerCharacter::BeginPlay()
             5.f,
             true
         );
+
+        GetWorldTimerManager().SetTimer(
+            MPRegenTimerHandle,
+            this,
+            &APTPlayerCharacter::RegenMP,
+            3.f,
+            true
+            );
     }
 }
 
@@ -113,20 +121,19 @@ void APTPlayerCharacter::Tick(float DeltaTime)
 void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APTPlayerCharacter, AtkBuffBonus);
 }
 
 void APTPlayerCharacter::OnDeath()
 {
     Super::OnDeath();
 
-    if (!HasAuthority()) return;
+    if (!HasAuthority()) return
 
     GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
 
-    if (DeathMontage)
-    {
-        PlayAnimMontage(DeathMontage);
-    }
+    Multicast_PlayDeathMontage();
 
     OnPlayerDied.Broadcast();
 
@@ -295,6 +302,19 @@ void APTPlayerCharacter::RegenHP()
     }
 }
 
+void APTPlayerCharacter::RegenMP()
+{
+    if (!HasAuthority()) return;
+    float RegenAmount = MaxMP * 0.1f;
+    CurrentMP = FMath::Min(CurrentMP + RegenAmount, MaxMP);
+
+    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
+    if (PS)
+    {
+        PS->CurrentMP = CurrentMP;
+    }
+}
+
 float APTPlayerCharacter::GetTotalAttack() const
 {
     // 부모 클래스(PTBaseCharacter)가 데이터 테이블로부터 플레이어의 순수 기본 공격력을 가져옴.
@@ -307,7 +327,18 @@ float APTPlayerCharacter::GetTotalAttack() const
         FinalAttack += static_cast<float>(EquipmentComponent->GetTotalBonusStr());
     }
 
+    //공격 버프 효과 합산
+    FinalAttack *= (1.f + AtkBuffBonus);
+
     return FinalAttack;
+}
+
+void APTPlayerCharacter::Multicast_PlayDeathMontage_Implementation()
+{
+    if (DeathMontage)
+    {
+        PlayAnimMontage(DeathMontage);
+    }
 }
 
 // 무기 외형 실시간 변경
@@ -331,4 +362,26 @@ void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& N
             UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 변경 완료: %s"), *LoadedMesh->GetName());
         }
     }
+}
+
+void APTPlayerCharacter::ApplyBuff(float BonusMultiplier, float Duration)
+{
+    if (!HasAuthority()) return;
+
+    GetWorldTimerManager().ClearTimer(BuffTimerHandle);
+
+    AtkBuffBonus = BonusMultiplier;
+
+    GetWorld()->GetTimerManager().SetTimer(
+        BuffTimerHandle,
+        this,
+        &APTPlayerCharacter::OnAtkBuffExpired,
+        Duration,
+        false
+        );
+}
+
+void APTPlayerCharacter::OnAtkBuffExpired()
+{
+    AtkBuffBonus = 0.f;
 }

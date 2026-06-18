@@ -46,6 +46,13 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_SetPenetration(bool bEnable);
 
+    //스킬 전방 대쉬
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_LaunchForSkill(FVector Velocity);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_StopMovementForSkill();
+
 protected:
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex) override;

@@ -4,7 +4,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
-static constexpr int32 MaxSkillSlots = 4;
+static constexpr int32 MaxSkillSlots = 5;
 
 UPTSkillComponent::UPTSkillComponent()
 {
@@ -86,7 +86,7 @@ bool UPTSkillComponent::TryActivateSkillChecked(const FPTSkillActivationRequest&
     UNiagaraSystem* Effect = SkillData->SkillEffect.LoadSynchronous();
     USoundBase* Sound = SkillData->SkillSound.LoadSynchronous();
 
-    Multicast_PlaySkillMontageWithOffset(Montage, Effect, Sound, SkillData->SkillOffset);
+    Multicast_PlaySkillMontageWithOffset(Montage, Effect, Sound, SkillData->SkillOffset,Request.SkillRowName);
 
     if (SkillData->Cooldown <= 0.f)
     {
@@ -203,7 +203,7 @@ void UPTSkillComponent::Multicast_PlaySkillMontage_Implementation(UAnimMontage* 
     }
 }
 
-void UPTSkillComponent::Multicast_PlaySkillMontageWithOffset_Implementation(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset)
+void UPTSkillComponent::Multicast_PlaySkillMontageWithOffset_Implementation(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset, FName SkillID)
 {
     if (!IsValid(Montage))
     {
@@ -215,6 +215,8 @@ void UPTSkillComponent::Multicast_PlaySkillMontageWithOffset_Implementation(UAni
     {
         return;
     }
+
+    CurrentSkillID = SkillID;
 
     Owner->PlayAnimMontage(Montage);
 

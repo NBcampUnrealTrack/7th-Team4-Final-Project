@@ -30,10 +30,12 @@ protected:
     void UpdateButtonStyle();
 
     // 외부에서 수동으로 텍스트를 설정하는 함수
+public:
     UFUNCTION(BlueprintCallable, Category = "PT Button")
     void SetButtonText(const FText& InText);
 
     // 조건에 따라 텍스트를 선택하여 갱신
+protected:
     void RefreshButtonText();
 
     // 기본 버튼 텍스트

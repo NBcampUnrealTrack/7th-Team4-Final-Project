@@ -34,7 +34,7 @@ void UPTPlayerLevelSubsystem::RebuildLevelDataMap()
 
 void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpAmount)
 {
-    if (PlayerState == nullptr || ExpAmount <= 0)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority() || ExpAmount <= 0)
     {
         return;
     }
@@ -50,17 +50,19 @@ void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpA
     }
 
     OnExpChanged.Broadcast(PlayerState, PlayerState->CurrentExp);
+    PlayerState->OnExpChanged.Broadcast(PlayerState->CurrentExp, PlayerState->RequiredExp);
 }
 
 void UPTPlayerLevelSubsystem::LevelUp(APTBasePlayerState* PlayerState)
 {
-    if (PlayerState == nullptr)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
     {
         return;
     }
 
     ++PlayerState->PlayerLevel;
     PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
+    PlayerState->OnLevelChanged.Broadcast(PlayerState->PlayerLevel);
     OnLevelUp.Broadcast(PlayerState, PlayerState->PlayerLevel);
 }
 
@@ -96,7 +98,7 @@ int32 UPTPlayerLevelSubsystem::GetRequiredExp(const APTBasePlayerState* PlayerSt
 
 void UPTPlayerLevelSubsystem::ApplyDeathPenalty(APTBasePlayerState* PlayerState)
 {
-    if (PlayerState == nullptr)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
     {
         return;
     }
@@ -109,11 +111,12 @@ void UPTPlayerLevelSubsystem::ApplyDeathPenalty(APTBasePlayerState* PlayerState)
 
     PlayerState->CurrentExp = NewExp;
     OnExpChanged.Broadcast(PlayerState, PlayerState->CurrentExp);
+    PlayerState->OnExpChanged.Broadcast(PlayerState->CurrentExp, PlayerState->RequiredExp);
 }
 
 void UPTPlayerLevelSubsystem::SetProgress(APTBasePlayerState* PlayerState, int32 NewLevel, int32 NewExp)
 {
-    if (PlayerState == nullptr)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
     {
         return;
     }
@@ -122,6 +125,8 @@ void UPTPlayerLevelSubsystem::SetProgress(APTBasePlayerState* PlayerState, int32
     PlayerState->CurrentExp = FMath::Max(NewExp, 0);
     PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
 
+    PlayerState->OnLevelChanged.Broadcast(PlayerState->PlayerLevel);
+    PlayerState->OnExpChanged.Broadcast(PlayerState->CurrentExp, PlayerState->RequiredExp);
     OnExpChanged.Broadcast(PlayerState, PlayerState->CurrentExp);
 }
 

@@ -49,6 +49,16 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     bool bPenetrate = false;
 
+    //스킬 시전 시 앞으로 전진하는 거리
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    float DashDistance = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    float AtkBuffMultiplier = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    float BuffDuration = 0.f;
+
     // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;
@@ -79,6 +89,27 @@ struct FPTSkillRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
     EHitReactionType HitReactionType = EHitReactionType::Light;
+
+    FPTHitInfo MakeHitInfo(AActor* InAttacker) const
+    {
+        FPTHitInfo HitInfo;
+        HitInfo.Attacker = InAttacker;
+        HitInfo.KnockbackForce = KnockbackForce;
+        HitInfo.KnockbackZForce = KnockbackZForce;
+        HitInfo.HitStopDuration = HitStopDuration;
+        HitInfo.StaggerDuration = StaggerDuration;
+        HitInfo.HitReactionType = HitReactionType;
+        return HitInfo;
+    }
+};
+
+UENUM(BlueprintType)
+enum class EBossSkillType : uint8
+{
+    Melee      UMETA(DisplayName = "Melee"),
+    Projectile UMETA(DisplayName = "Projectile"),
+    Area       UMETA(DisplayName = "Area"),
+    Summon     UMETA(DisplayName = "Summon")
 };
 
 USTRUCT(BlueprintType)
@@ -94,4 +125,22 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UAnimMontage> OverrideMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    EBossSkillType SkillType = EBossSkillType::Melee;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile")
+    float ProjectileSpeed = 800.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Condition")
+    float MinUseDistance = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Condition")
+    float MaxUseDistance = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    float AreaAttackDelay = 2.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    float AreaAttackRadius = 300.f;
 };

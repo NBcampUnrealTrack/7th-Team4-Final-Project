@@ -1,6 +1,13 @@
 #include "PTQuestSubsystem.h"
 
+#include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTInventoryComponent.h"
+#include "Character/Player/PTPlayerCharacter.h"
 #include "Engine/DataTable.h"
+#include "Engine/GameInstance.h"
+#include "GameFramework/Controller.h"
+#include "PTEconomySubsystem.h"
+#include "PTPlayerLevelSubsystem.h"
 
 void UPTQuestSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -53,9 +60,10 @@ bool UPTQuestSubsystem::HasQuestData(FName QuestID) const
     return GetQuestData(QuestID) != nullptr;
 }
 
-bool UPTQuestSubsystem::AcceptQuest(FName QuestID)
+bool UPTQuestSubsystem::AcceptQuest(APTBasePlayerState* PlayerState, FName QuestID)
 {
-    if (QuestID.IsNone() || AcceptedQuestProgressMap.Contains(QuestID))
+    if (PlayerState == nullptr || !PlayerState->HasAuthority() || QuestID.IsNone() ||
+        GetQuestProgress(PlayerState, QuestID) != nullptr)
     {
         return false;
     }
@@ -66,38 +74,46 @@ bool UPTQuestSubsystem::AcceptQuest(FName QuestID)
         return false;
     }
 
-    AcceptedQuestProgressMap.Add(QuestID, MakeQuestProgress(*QuestData));
+    PlayerState->AcceptedQuests.Add(MakeQuestProgress(*QuestData));
+    PlayerState->ForceNetUpdate();
     OnQuestAccepted.Broadcast(QuestID);
     return true;
 }
 
-bool UPTQuestSubsystem::HasAcceptedQuest(FName QuestID) const
+bool UPTQuestSubsystem::HasAcceptedQuest(const APTBasePlayerState* PlayerState, FName QuestID) const
 {
-    return !QuestID.IsNone() && AcceptedQuestProgressMap.Contains(QuestID);
+    return GetQuestProgress(PlayerState, QuestID) != nullptr;
 }
 
-const FPTQuestProgress* UPTQuestSubsystem::GetQuestProgress(FName QuestID) const
+const FPTQuestProgress* UPTQuestSubsystem::GetQuestProgress(const APTBasePlayerState* PlayerState, FName QuestID) const
 {
-    if (QuestID.IsNone())
+    if (PlayerState == nullptr || QuestID.IsNone())
     {
         return nullptr;
     }
 
-    return AcceptedQuestProgressMap.Find(QuestID);
+    return PlayerState->AcceptedQuests.FindByPredicate([QuestID](const FPTQuestProgress& QuestProgress)
+        {
+            return QuestProgress.QuestID == QuestID;
+        });
 }
 
-bool UPTQuestSubsystem::UpdateQuestProgress(EPTQuestConditionType ConditionType, FName TargetID, int32 Amount)
+bool UPTQuestSubsystem::UpdateQuestProgress(
+    APTBasePlayerState* PlayerState,
+    EPTQuestConditionType ConditionType,
+    FName TargetID,
+    int32 Amount)
 {
-    if (ConditionType == EPTQuestConditionType::None || Amount <= 0)
+    if (PlayerState == nullptr || !PlayerState->HasAuthority() ||
+        ConditionType == EPTQuestConditionType::None || Amount <= 0)
     {
         return false;
     }
 
     bool bUpdatedAnyQuest = false;
 
-    for (auto& AcceptedQuest : AcceptedQuestProgressMap)
+    for (FPTQuestProgress& QuestProgress : PlayerState->AcceptedQuests)
     {
-        FPTQuestProgress& QuestProgress = AcceptedQuest.Value;
         if (QuestProgress.State != EPTQuestProgressState::InProgress)
         {
             continue;
@@ -135,61 +151,88 @@ bool UPTQuestSubsystem::UpdateQuestProgress(EPTQuestConditionType ConditionType,
         bUpdatedAnyQuest = true;
     }
 
+    if (bUpdatedAnyQuest)
+    {
+        PlayerState->ForceNetUpdate();
+    }
+
     return bUpdatedAnyQuest;
 }
 
-bool UPTQuestSubsystem::CompleteQuest(FName QuestID)
+bool UPTQuestSubsystem::CompleteQuest(APTBasePlayerState* PlayerState, FName QuestID)
 {
-    FPTQuestProgress* QuestProgress = AcceptedQuestProgressMap.Find(QuestID);
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    FPTQuestProgress* QuestProgress = FindQuestProgress(PlayerState, QuestID);
     if (QuestProgress == nullptr || QuestProgress->State != EPTQuestProgressState::InProgress)
     {
         return false;
     }
 
     QuestProgress->State = EPTQuestProgressState::Completed;
+    PlayerState->ForceNetUpdate();
     OnQuestCompleted.Broadcast(QuestID);
     OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
     return true;
 }
 
-bool UPTQuestSubsystem::RewardQuest(FName QuestID)
+bool UPTQuestSubsystem::RewardQuest(FName QuestID, APTBasePlayerState* RewardPlayerState)
 {
-    FPTQuestProgress* QuestProgress = AcceptedQuestProgressMap.Find(QuestID);
+    if (RewardPlayerState == nullptr || !RewardPlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    FPTQuestProgress* QuestProgress = FindQuestProgress(RewardPlayerState, QuestID);
     if (QuestProgress == nullptr || QuestProgress->State != EPTQuestProgressState::Completed)
     {
         return false;
     }
 
+    const FPTQuestDataRow* QuestData = GetQuestData(QuestID);
+    if (QuestData == nullptr || !GiveQuestRewards(*QuestData, RewardPlayerState))
+    {
+        return false;
+    }
+
     QuestProgress->State = EPTQuestProgressState::Rewarded;
+    RewardPlayerState->ForceNetUpdate();
     OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
     return true;
 }
 
-bool UPTQuestSubsystem::IsQuestCompleted(FName QuestID) const
+bool UPTQuestSubsystem::IsQuestCompleted(const APTBasePlayerState* PlayerState, FName QuestID) const
 {
-    const FPTQuestProgress* QuestProgress = GetQuestProgress(QuestID);
+    const FPTQuestProgress* QuestProgress = GetQuestProgress(PlayerState, QuestID);
     return QuestProgress != nullptr &&
         (QuestProgress->State == EPTQuestProgressState::Completed ||
             QuestProgress->State == EPTQuestProgressState::Rewarded);
 }
 
-bool UPTQuestSubsystem::IsQuestRewarded(FName QuestID) const
+bool UPTQuestSubsystem::IsQuestRewarded(const APTBasePlayerState* PlayerState, FName QuestID) const
 {
-    const FPTQuestProgress* QuestProgress = GetQuestProgress(QuestID);
+    const FPTQuestProgress* QuestProgress = GetQuestProgress(PlayerState, QuestID);
     return QuestProgress != nullptr && QuestProgress->State == EPTQuestProgressState::Rewarded;
 }
 
-TArray<FPTQuestProgress> UPTQuestSubsystem::GetAcceptedQuestProgresses() const
+TArray<FPTQuestProgress> UPTQuestSubsystem::GetAcceptedQuestProgresses(const APTBasePlayerState* PlayerState) const
 {
-    TArray<FPTQuestProgress> QuestProgresses;
-    AcceptedQuestProgressMap.GenerateValueArray(QuestProgresses);
-    return QuestProgresses;
+    return PlayerState != nullptr ? PlayerState->AcceptedQuests : TArray<FPTQuestProgress>();
 }
 
-void UPTQuestSubsystem::SetAcceptedQuestProgresses(const TArray<FPTQuestProgress>& InQuestProgresses)
+void UPTQuestSubsystem::SetAcceptedQuestProgresses(
+    APTBasePlayerState* PlayerState,
+    const TArray<FPTQuestProgress>& InQuestProgresses)
 {
-    AcceptedQuestProgressMap.Empty();
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return;
+    }
 
+    PlayerState->AcceptedQuests.Empty();
     for (const FPTQuestProgress& QuestProgress : InQuestProgresses)
     {
         if (QuestProgress.QuestID.IsNone())
@@ -197,13 +240,44 @@ void UPTQuestSubsystem::SetAcceptedQuestProgresses(const TArray<FPTQuestProgress
             continue;
         }
 
-        AcceptedQuestProgressMap.Add(QuestProgress.QuestID, QuestProgress);
+        if (GetQuestData(QuestProgress.QuestID) == nullptr)
+        {
+            continue;
+        }
+
+        PlayerState->AcceptedQuests.Add(QuestProgress);
     }
+
+    PlayerState->ForceNetUpdate();
 }
 
-void UPTQuestSubsystem::ClearAcceptedQuestProgresses()
+void UPTQuestSubsystem::ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerState)
 {
-    AcceptedQuestProgressMap.Empty();
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return;
+    }
+
+    PlayerState->AcceptedQuests.Empty();
+    PlayerState->ForceNetUpdate();
+}
+
+void UPTQuestSubsystem::BroadcastQuestListChanged()
+{
+    OnQuestListChanged.Broadcast();
+}
+
+FPTQuestProgress* UPTQuestSubsystem::FindQuestProgress(APTBasePlayerState* PlayerState, FName QuestID) const
+{
+    if (PlayerState == nullptr || QuestID.IsNone())
+    {
+        return nullptr;
+    }
+
+    return PlayerState->AcceptedQuests.FindByPredicate([QuestID](const FPTQuestProgress& QuestProgress)
+        {
+            return QuestProgress.QuestID == QuestID;
+        });
 }
 
 FPTQuestProgress UPTQuestSubsystem::MakeQuestProgress(const FPTQuestDataRow& QuestData) const
@@ -239,6 +313,152 @@ bool UPTQuestSubsystem::AreConditionsCompleted(const FPTQuestProgress& QuestProg
         {
             return false;
         }
+    }
+
+    return true;
+}
+
+UPTInventoryComponent* UPTQuestSubsystem::GetRewardPlayerInventory(APTBasePlayerState* RewardPlayerState) const
+{
+    AController* Controller = RewardPlayerState != nullptr ? Cast<AController>(RewardPlayerState->GetOwner()) : nullptr;
+    APTPlayerCharacter* PlayerCharacter = Controller != nullptr ? Cast<APTPlayerCharacter>(Controller->GetPawn()) : nullptr;
+    return PlayerCharacter != nullptr ? PlayerCharacter->GetInventoryComponent() : nullptr;
+}
+
+bool UPTQuestSubsystem::HasRequiredCollectItems(
+    const FPTQuestDataRow& QuestData,
+    APTBasePlayerState* RewardPlayerState) const
+{
+    TMap<FName, int32> RequiredItemCounts;
+    for (const FPTQuestCondition& Condition : QuestData.Conditions)
+    {
+        if (Condition.ConditionType != EPTQuestConditionType::CollectItem || Condition.TargetID.IsNone())
+        {
+            continue;
+        }
+
+        RequiredItemCounts.FindOrAdd(Condition.TargetID) += FMath::Max(Condition.RequiredCount, 1);
+    }
+
+    if (RequiredItemCounts.IsEmpty())
+    {
+        return true;
+    }
+
+    UPTInventoryComponent* InventoryComponent = GetRewardPlayerInventory(RewardPlayerState);
+    if (InventoryComponent == nullptr)
+    {
+        return false;
+    }
+
+    for (const TPair<FName, int32>& RequiredItemCount : RequiredItemCounts)
+    {
+        if (InventoryComponent->GetItemCount(RequiredItemCount.Key) < RequiredItemCount.Value)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UPTQuestSubsystem::ConsumeRequiredCollectItems(
+    const FPTQuestDataRow& QuestData,
+    APTBasePlayerState* RewardPlayerState) const
+{
+    TMap<FName, int32> RequiredItemCounts;
+    for (const FPTQuestCondition& Condition : QuestData.Conditions)
+    {
+        if (Condition.ConditionType != EPTQuestConditionType::CollectItem || Condition.TargetID.IsNone())
+        {
+            continue;
+        }
+
+        RequiredItemCounts.FindOrAdd(Condition.TargetID) += FMath::Max(Condition.RequiredCount, 1);
+    }
+
+    if (RequiredItemCounts.IsEmpty())
+    {
+        return true;
+    }
+
+    UPTInventoryComponent* InventoryComponent = GetRewardPlayerInventory(RewardPlayerState);
+    if (InventoryComponent == nullptr)
+    {
+        return false;
+    }
+
+    for (const TPair<FName, int32>& RequiredItemCount : RequiredItemCounts)
+    {
+        if (!InventoryComponent->RemoveItem(RequiredItemCount.Key, RequiredItemCount.Value))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const
+{
+    if (RewardPlayerState == nullptr || !RewardPlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    if (!QuestData.RewardItemIDs.IsEmpty())
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[QuestReward] %s quest item rewards are skipped because item reward data is not wired yet."),
+            *QuestData.QuestID.ToString());
+    }
+
+    if (!HasRequiredCollectItems(QuestData, RewardPlayerState))
+    {
+        return false;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return false;
+    }
+
+    UPTEconomySubsystem* EconomySubsystem = nullptr;
+    if (QuestData.RewardGold > 0)
+    {
+        EconomySubsystem = GameInstance->GetSubsystem<UPTEconomySubsystem>();
+        if (EconomySubsystem == nullptr)
+        {
+            return false;
+        }
+    }
+
+    UPTPlayerLevelSubsystem* PlayerLevelSubsystem = nullptr;
+    if (QuestData.RewardExp > 0)
+    {
+        PlayerLevelSubsystem = GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>();
+        if (PlayerLevelSubsystem == nullptr)
+        {
+            return false;
+        }
+    }
+
+    if (!ConsumeRequiredCollectItems(QuestData, RewardPlayerState))
+    {
+        return false;
+    }
+
+    if (QuestData.RewardGold > 0)
+    {
+        EconomySubsystem->AddGold(RewardPlayerState, QuestData.RewardGold);
+    }
+
+    if (QuestData.RewardExp > 0)
+    {
+        PlayerLevelSubsystem->AddExp(RewardPlayerState, QuestData.RewardExp);
     }
 
     return true;

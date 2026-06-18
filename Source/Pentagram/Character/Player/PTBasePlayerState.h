@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/PTQuestDataRow.h"
 #include "GameFramework/PlayerState.h"
 #include "UI/Data/PTDelegates.h"
 #include "PTBasePlayerState.generated.h"
@@ -66,6 +67,8 @@ protected:
     // 로비 추가
     UFUNCTION()
     void OnRep_IsReady();
+    UFUNCTION()
+    void OnRep_AcceptedQuests();
 
 public:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
@@ -97,6 +100,8 @@ public:
     // 로비 추가
     UPROPERTY(ReplicatedUsing = OnRep_IsReady, VisibleAnywhere, Category = "PT|Lobby")
     bool bIsReady = false;
+    UPROPERTY(ReplicatedUsing = OnRep_AcceptedQuests, VisibleAnywhere, Category = "PT|Quest")
+    TArray<FPTQuestProgress> AcceptedQuests;
 
 private:
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────
