@@ -9,6 +9,7 @@ class UButton;
 class UTextBlock;
 class UImage;
 class APTLobbyPreviewActor;
+class UMaterialInterface;
 
 UCLASS()
 class PENTAGRAM_API UPTLobbyWidget : public UCommonActivatableWidget
@@ -67,6 +68,8 @@ protected:
     UPROPERTY(EditAnywhere, Category = "PT|Lobby")
     FTransform PreviewSpawnTransform;
 
+    UPROPERTY(EditAnywhere, Category = "PT|Lobby")
+    TObjectPtr<UMaterialInterface> PreviewMaterial;
 private:
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 

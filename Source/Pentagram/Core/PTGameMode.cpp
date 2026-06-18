@@ -13,6 +13,7 @@
 
 APTGameMode::APTGameMode()
 {
+    bUseSeamlessTravel = true;
     GameStateClass = APTGameState::StaticClass();
     PlayerStateClass = APTBasePlayerState::StaticClass();
 }
@@ -215,7 +216,7 @@ AActor* APTGameMode::SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, co
 // 로비 추가
 void APTGameMode::NotifyReadyChanged()
 {
-    if (bIsTraveling)
+    if (!HasAuthority() || bIsTraveling)    // 서버만 / 이동중 차단
     {
         return;
     }
@@ -229,36 +230,58 @@ void APTGameMode::NotifyReadyChanged()
 // 로비 추가
 bool APTGameMode::AreAllPlayersReady() const
 {
-    APTGameState* PTGameState = GetGameState<APTGameState>();
-    if (PTGameState == nullptr)
+    APTGameState* GS = GetGameState<APTGameState>();
+    if (GS == nullptr)
     {
         return false;
     }
 
-    const int32 PlayerCount = PTGameState->GetPlayerCount();
-    if (PlayerCount <= 0)
+    int32 ValidCount = 0;
+    for (APlayerState* PS : GS->PlayerArray)
     {
-        return false;
+        APTBasePlayerState* PTPS = Cast<APTBasePlayerState>(PS);
+        if (PTPS == nullptr || PTPS->IsInactive() || PTPS->IsOnlyASpectator())
+        {
+            continue;   // 집계 제외
+        }
+
+        if (!PTPS->IsReady())
+        {
+            return false;   // 미준비 차단
+        }
+
+        ++ValidCount;
     }
 
-    return PTGameState->GetReadyCount() >= PlayerCount;
+    return ValidCount >= MinPlayersToStart;   // 전원준비+인원
 }
 
-// 로비 추가
 void APTGameMode::TravelToGame()
 {
-    APTGameState* PTGameState = GetGameState<APTGameState>();
-    if (PTGameState == nullptr || PTGameState->GetCurrentPhase() != EGamePhase::Waiting)
+    if (bIsTraveling)    // 중복 차단
     {
-        return;     // 로비에서만
+        return;
     }
-    if (bIsTraveling || GameMapPath.IsEmpty())
+
+    APTGameState* GS = GetGameState<APTGameState>();
+    if (GS == nullptr || GS->GetCurrentPhase() != EGamePhase::Waiting)
+    {
+        return;
+    }
+
+    if (GameMapPath.IsEmpty())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
     {
         return;
     }
 
     bIsTraveling = true;
-    GetWorld()->ServerTravel(GameMapPath);
+    World->ServerTravel(GameMapPath);
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
