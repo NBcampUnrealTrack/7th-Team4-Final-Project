@@ -61,6 +61,13 @@ public:
 
     void OnAtkBuffExpired();
 
+    // 카메라를 가렸을 시 구조물 Alpha 처리
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
+    void OnStructureHidden(AActor* HidingActor);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
+    void OnStructureUnHidden(AActor* UnHiddenActor);
+
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
     FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
 
@@ -126,5 +133,11 @@ protected:
     // 갑옷 장착 스태틱 메시 컴포넌트(추후)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
     TObjectPtr<UStaticMeshComponent> ChestMeshComp;
+
+private:
+    // 직전 프레임에 캐릭터를 가리고 있던 장애물 저장
+    UPROPERTY()
+    TObjectPtr<AActor> LastHidingActor = nullptr;
+    
 
 };
