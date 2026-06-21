@@ -1,14 +1,12 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
-#include "Item/PTItemTypes.h"
 #include "PTInventoryWidget.generated.h"
 
+class UUniformGridPanel;
 class UPTInventorySlotWidget;
-class UPTEquipSlotWidget;
+class UPTInventoryComponent;
 
 UCLASS()
 class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget
@@ -16,10 +14,34 @@ class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget
     GENERATED_BODY()
 
 protected:
-    // 오버라이드
+    // ── 오버라이드 ──
     virtual void NativeOnInitialized() override;
     virtual void NativeOnActivated() override;
-    virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
 
+    // ── 일반 함수 ──
+    void BuildSlots();
+    void RefreshAllSlots();
+
+    // ── 위젯 바인딩 ──
+    UPROPERTY(meta = (BindWidget))
+    UUniformGridPanel* InventoryGrid;
+
+    // ── 설정 ──
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    TSubclassOf<UPTInventorySlotWidget> SlotClass;
+
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    int32 SlotCount = 30;   // 컴포넌트(30칸)와 맞춤
+
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    int32 Columns = 6;
+
+    // ── 멤버 변수 ──
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UPTInventorySlotWidget>> SlotWidgets;
+
+
+private:
+    UPTInventoryComponent* ResolveInventoryComponent() const;
 };
