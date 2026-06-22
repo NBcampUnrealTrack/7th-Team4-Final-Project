@@ -21,11 +21,11 @@ enum class EItemCategory : uint8
 UENUM(BlueprintType)
 enum class EItemType : uint8
 {
-    Weapon       UMETA(DisplayName = "Weapon"), 
-    Chest        UMETA(DisplayName = "Chest"), 
-    Helmet       UMETA(DisplayName = "Helmet"), 
-    Gloves       UMETA(DisplayName = "Gloves"), 
-    Boots        UMETA(DisplayName = "Boots"), 
+    Weapon       UMETA(DisplayName = "Weapon"),
+    Chest        UMETA(DisplayName = "Chest"),
+    Helmet       UMETA(DisplayName = "Helmet"),
+    Gloves       UMETA(DisplayName = "Gloves"),
+    Boots        UMETA(DisplayName = "Boots"),
     Potion       UMETA(DisplayName = "Potion")
 };
 
@@ -34,7 +34,7 @@ enum class EItemType : uint8
 UENUM(BlueprintType)
 enum class EItemGrade : uint8
 {
-    None         UMETA(DisplayName = "None"), 
+    None         UMETA(DisplayName = "None"),
     Common       UMETA(DisplayName = "Common"),
     Rare         UMETA(DisplayName = "Rare")
 };
@@ -66,7 +66,7 @@ struct FItemOptionPoolData
 };
 
 
-// ItemData 구조체 명세 
+// ItemData 구조체 명세
 USTRUCT(BlueprintType)
 struct FItemData : public FTableRowBase
 {
@@ -86,6 +86,10 @@ struct FItemData : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EItemGrade Item_Grade;
+
+    //아이콘 이미지
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+    TSoftObjectPtr<UTexture2D> Item_Icon;
 
     // 기본 성능 (무기/장갑: STR, 갑옷/신발: DEF, 모자: HP 등으로 장비 컴포넌트에서 매칭)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
@@ -110,7 +114,7 @@ struct FItemData : public FTableRowBase
 };
 
 
-// 인벤토리 한 칸을 담당할 구조체 
+// 인벤토리 한 칸을 담당할 구조체
 USTRUCT(BlueprintType)
 struct FInventorySlot
 {
@@ -122,17 +126,17 @@ struct FInventorySlot
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     int32 Quantity;
 
-    // 빈 슬롯인지 확인하는 헬퍼 함수 
+    // 빈 슬롯인지 확인하는 헬퍼 함수
     bool IsEmpty() const { return Quantity <= 0 || ItemData.Item_ID.IsNone(); }
 
     FInventorySlot() : Quantity(0) {}
 
 
-    // 아이템의 3D 외형 
+    // 아이템의 3D 외형
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<UStaticMesh> ItemMeshAsset;
 
-    // UI에 표시될 2D 아이콘 이미지 
+    // UI에 표시될 2D 아이콘 이미지
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<UTexture2D> ItemIconAsset;
 

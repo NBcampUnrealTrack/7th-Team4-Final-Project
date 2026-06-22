@@ -21,7 +21,6 @@ public:
 
 protected:
     // 오버라이드
-    virtual void NativeConstruct() override;
     virtual void BindToPlayerState(APTBasePlayerState* PS) override;
     virtual void UnbindFromPlayerState(APTBasePlayerState* PS) override;
 };

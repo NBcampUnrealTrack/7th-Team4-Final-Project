@@ -45,7 +45,7 @@ private:
 
 protected:
     // 게이지 바
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     TObjectPtr<UProgressBar> PB_Bar;
 
     // 값 라벨

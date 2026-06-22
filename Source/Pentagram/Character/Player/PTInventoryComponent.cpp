@@ -67,6 +67,7 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
     {
         InventorySlots[EmptyIndex].ItemData = NewItemData;
         InventorySlots[EmptyIndex].Quantity = Count;
+        InventorySlots[EmptyIndex].ItemIconAsset = NewItemData.Item_Icon; //이이콘 추가
 
         UE_LOG(LogTemp, Log, TEXT("[인벤토리] 새 슬롯(%d번)에 아이템 등록: %s (%d개)"),
             EmptyIndex, *NewItemData.Item_Name.ToString(), Count);

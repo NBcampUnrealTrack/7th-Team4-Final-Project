@@ -6,6 +6,7 @@
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.generated.h"
 
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTInventoryComponent : public UActorComponent
 {
@@ -25,6 +26,10 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RemoveItem(FName ItemID, int32 Count);
+
+    // 인벤토리 슬롯(UI)
+    UFUNCTION(BlueprintPure, Category = "Inventory")
+    const TArray<FInventorySlot>& GetInventorySlots() const { return InventorySlots; }
 
     // 블루프린트나 캐릭터에서 호출할 물약 사용 함수
     UFUNCTION(BlueprintCallable, Category = "Inventory")

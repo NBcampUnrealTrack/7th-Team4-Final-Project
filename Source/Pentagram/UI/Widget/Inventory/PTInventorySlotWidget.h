@@ -1,11 +1,17 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Item/PTItemTypes.h"
 #include "PTInventorySlotWidget.generated.h"
+
+class UImage;
+class UUserWidget;
+class UDragDropOperation;
+class UPTItemTooltipWidget;
+
+// 해제 요청
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUnequipRequested, EItemType, EquipType, int32, ToIndex);
 
 UCLASS()
 class PENTAGRAM_API UPTInventorySlotWidget : public UCommonUserWidget
@@ -13,34 +19,54 @@ class PENTAGRAM_API UPTInventorySlotWidget : public UCommonUserWidget
     GENERATED_BODY()
 
 public:
-    // 데이터 주입
-    UFUNCTION(BlueprintCallable, Category = "PT|Inventory")
-    void SetSlotData(const FInventorySlot& InSlot);
+    // ── 델리게이트 ──
+    UPROPERTY(BlueprintAssignable, Category = "PT|Inventory")
+    FOnUnequipRequested OnUnequipRequested;
 
-    // 슬롯 비우기
-    UFUNCTION(BlueprintCallable, Category = "PT|Inventory")
+    // ── 일반 함수 ──
+    void SetSlotData(const FInventorySlot& InSlot);
     void ClearSlot();
 
-    UFUNCTION(BlueprintPure, Category = "PT|Inventory")
     bool IsEmpty() const { return SlotData.IsEmpty(); }
-
-    UFUNCTION(BlueprintPure, Category = "PT|Inventory")
     const FInventorySlot& GetSlotData() const { return SlotData; }
 
-    // 인덱스 접근자
     void SetSlotIndex(int32 InIndex) { SlotIndex = InIndex; }
     int32 GetSlotIndex() const { return SlotIndex; }
 
 protected:
-    // 비주얼 갱신
-    UFUNCTION(BlueprintImplementableEvent, Category = "PT|Inventory")
-    void OnRefreshVisual(const FInventorySlot& InSlot);
+    // ── 오버라이드 ──
+    virtual void NativeOnInitialized() override;
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
+    virtual bool NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+    virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
-    // 슬롯 데이터
-    UPROPERTY(BlueprintReadOnly, Category = "PT|Inventory")
+    // ── 일반 함수 ──
+    // 수락 검사
+    virtual bool CanAccept(const FInventorySlot& InSlot) const { return true; }
+
+    UFUNCTION()
+    UWidget* GetItemToolTip();
+
+    // ── 위젯 바인딩 ──
+    UPROPERTY(meta = (BindWidget))
+    UImage* Img_Icon;
+
+    // ── 설정 ──
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    TSubclassOf<UPTItemTooltipWidget> ToolTipClass;
+
+    // 드래그 비주얼
+    UPROPERTY(EditAnywhere, Category = "Inventory")
+    TSubclassOf<UUserWidget> DragVisualClass;
+
+private:
+    // ── 일반 함수 ──
+    void RefreshIcon();
+    UWidget* CreateDragVisual();
+
+    // ── 멤버 변수 ──
     FInventorySlot SlotData;
 
-    // 그리드 인덱스
-    UPROPERTY(BlueprintReadOnly, Category = "PT|Inventory")
     int32 SlotIndex = INDEX_NONE;
 };
