@@ -22,6 +22,9 @@ public:
     bool TryAddItem(const FItemData& NewItemData, int32 Count = 1);
 
     UFUNCTION(BlueprintPure, Category = "Inventory")
+    bool CanAddItem(const FItemData& NewItemData, int32 Count = 1) const;
+
+    UFUNCTION(BlueprintPure, Category = "Inventory")
     int32 GetItemCount(FName ItemID) const;
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")

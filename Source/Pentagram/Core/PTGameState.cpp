@@ -1,5 +1,6 @@
 #include "PTGameState.h"
 
+#include "Subsystems/PTItemSubsystem.h"
 #include "Subsystems/PTQuestSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/Player/PTBasePlayerState.h"    // 로비 추가
@@ -10,6 +11,7 @@ void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
     DOREPLIFETIME(APTGameState, CurrentPhase);
     DOREPLIFETIME(APTGameState, QuestDataTable);
+    DOREPLIFETIME(APTGameState, ItemDataTable);
 }
 
 void APTGameState::SetCurrentPhase(EGamePhase NewPhase)
@@ -40,6 +42,18 @@ void APTGameState::SetQuestDataTable(UDataTable* InQuestDataTable)
     ForceNetUpdate();
 }
 
+void APTGameState::SetItemDataTable(UDataTable* InItemDataTable)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    ItemDataTable = InItemDataTable;
+    ApplyItemDataTable();
+    ForceNetUpdate();
+}
+
 void APTGameState::OnRep_CurrentPhase()
 {
     OnGamePhaseChanged();
@@ -48,6 +62,11 @@ void APTGameState::OnRep_CurrentPhase()
 void APTGameState::OnRep_QuestDataTable()
 {
     ApplyQuestDataTable();
+}
+
+void APTGameState::OnRep_ItemDataTable()
+{
+    ApplyItemDataTable();
 }
 
 void APTGameState::OnGamePhaseChanged()
@@ -107,6 +126,21 @@ void APTGameState::ApplyQuestDataTable() const
     if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->SetQuestDataTable(QuestDataTable);
+    }
+}
+
+void APTGameState::ApplyItemDataTable() const
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTItemSubsystem* ItemSubsystem = GameInstance->GetSubsystem<UPTItemSubsystem>();
+    if (ItemSubsystem != nullptr)
+    {
+        ItemSubsystem->SetItemDataTable(ItemDataTable);
     }
 }
 

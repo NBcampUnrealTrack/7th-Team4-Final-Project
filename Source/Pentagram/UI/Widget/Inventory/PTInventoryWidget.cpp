@@ -5,6 +5,8 @@
 #include "PTInventorySlotWidget.h"
 #include "Character/Player/PTInventoryComponent.h"
 
+#include "Character/Player/PTPlayerController.h"
+
 void UPTInventoryWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
@@ -16,6 +18,16 @@ void UPTInventoryWidget::NativeOnActivated()
     Super::NativeOnActivated();
 
     RefreshAllSlots();
+}
+
+void UPTInventoryWidget::NativeOnDeactivated()
+{
+    if (APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer()))
+    {
+        PlayerController->RestoreGameplayInput();
+    }
+
+    Super::NativeOnDeactivated();
 }
 
 bool UPTInventoryWidget::NativeOnHandleBackAction()

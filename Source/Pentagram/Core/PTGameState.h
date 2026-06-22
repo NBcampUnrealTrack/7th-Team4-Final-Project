@@ -36,6 +36,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|GameState")
     void SetQuestDataTable(UDataTable* InQuestDataTable);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|GameState")
+    void SetItemDataTable(UDataTable* InItemDataTable);
+
 protected:
     UFUNCTION()
     void OnRep_CurrentPhase();
@@ -43,14 +46,21 @@ protected:
     UFUNCTION()
     void OnRep_QuestDataTable();
 
+    UFUNCTION()
+    void OnRep_ItemDataTable();
+
     void OnGamePhaseChanged();
     void ApplyQuestDataTable() const;
+    void ApplyItemDataTable() const;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentPhase)
     EGamePhase CurrentPhase = EGamePhase::Waiting;
 
     UPROPERTY(ReplicatedUsing = OnRep_QuestDataTable, VisibleAnywhere, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ItemDataTable, VisibleAnywhere, Category = "PT|Item")
+    TObjectPtr<UDataTable> ItemDataTable;
 
 public:
     // 로비 갱신 신호 로비 추가

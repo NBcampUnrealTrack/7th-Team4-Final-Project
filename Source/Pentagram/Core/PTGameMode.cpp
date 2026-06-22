@@ -6,6 +6,7 @@
 #include "PTGameState.h"
 #include "Subsystems/PTPlayerLevelSubsystem.h"
 #include "Subsystems/PTQuestSubsystem.h"
+#include "Subsystems/PTItemSubsystem.h"
 #include "Subsystems/PTSaveSubsystem.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -39,6 +40,17 @@ void APTGameMode::BeginPlay()
     if (PlayerLevelSubsystem != nullptr)
     {
         PlayerLevelSubsystem->SetLevelDataTable(LevelDataTable);
+    }
+
+    UPTItemSubsystem* ItemSubsystem = GameInstance->GetSubsystem<UPTItemSubsystem>();
+    if (ItemSubsystem != nullptr)
+    {
+        ItemSubsystem->SetItemDataTable(ItemDataTable);
+    }
+
+    if (PTGameState != nullptr)
+    {
+        PTGameState->SetItemDataTable(ItemDataTable);
     }
 }
 

@@ -52,6 +52,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Level")
     TObjectPtr<UDataTable> LevelDataTable;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Item")
+    TObjectPtr<UDataTable> ItemDataTable;
+
     UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;
 

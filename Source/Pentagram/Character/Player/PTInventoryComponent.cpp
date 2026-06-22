@@ -82,6 +82,22 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
     return false;
 }
 
+bool UPTInventoryComponent::CanAddItem(const FItemData& NewItemData, int32 Count) const
+{
+    if (NewItemData.Item_ID.IsNone() || Count <= 0)
+    {
+        return false;
+    }
+
+    if (NewItemData.Item_Category == EItemCategory::Consumable &&
+        FindSameItemSlot(NewItemData.Item_ID) != INDEX_NONE)
+    {
+        return true;
+    }
+
+    return FindEmptySlot() != INDEX_NONE;
+}
+
 int32 UPTInventoryComponent::GetItemCount(FName ItemID) const
 {
     if (ItemID.IsNone())
