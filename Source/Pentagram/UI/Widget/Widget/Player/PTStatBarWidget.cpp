@@ -13,6 +13,7 @@ void UPTStatBarWidget::NativeDestruct()
     }
     BoundPS = nullptr;
     Super::NativeDestruct();
+
 }
 
 void UPTStatBarWidget::SetValue(float Current, float Max)
