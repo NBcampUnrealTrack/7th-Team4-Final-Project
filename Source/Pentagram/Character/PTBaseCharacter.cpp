@@ -4,8 +4,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Character/Player/PTBasePlayerState.h"
-#include "Character/Player/PTPlayerCharacter.h" 
-#include "Player/PTEquipmentComponent.h"
+#include "Character/Player/PTPlayerCharacter.h"
+#include "UI/Widget/Widget/Player/PTDamageNumberWidget.h"
+#include "Player/PTPlayerController.h"
 
 APTBaseCharacter::APTBaseCharacter()
 {
@@ -31,14 +32,38 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     // 기본 데미지는 DamageAmount로 시작 (때린 놈의 장비 스탯이 있다면 그걸 더해줘야 함)
     float FinalDamageAmount = DamageAmount;
 
+    bool bIsCritical = false;
+
     // 만약 때린 놈(Attacker)이 존재하고, 그 놈이 플레이어 캐릭터라면?
     if (APTPlayerCharacter* AttackerPlayer = Cast<APTPlayerCharacter>(Attacker))
     {
         FinalDamageAmount = AttackerPlayer->GetTotalAttack() * DamageAmount;
+
+        // 크리티컬 판정
+        if (const FPTCharacterRow* Row =
+                AttackerPlayer->CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("Crit")))
+        {
+            if (FMath::FRand() < Row->CriticalChance)
+            {
+                float CritMult = (Row->CriticalATK > 0.f) ? Row->CriticalATK : 2.f;
+                FinalDamageAmount *= CritMult;
+                bIsCritical = true;
+            }
+        }
     }
 
     // [데미지 계산 공식] 기존 DamageAmount 대신 장비 스탯이 합산된 FinalDamageAmount를 사용
     float FinalDamage = FMath::Max(FinalDamageAmount - BaseDef, 1.f);
+
+    if (APawn* AttackerPawn = Cast<APawn>(Attacker))
+    {
+        if (APTPlayerController* AttackerPC =
+                Cast<APTPlayerController>(AttackerPawn->GetController()))
+        {
+            FVector HitDisplayLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
+            AttackerPC->Client_ShowDamageNumber(HitDisplayLocation, FinalDamage, bIsCritical);
+        }
+    }
 
     // HP 감소
     CurrentHP = FMath::Max(CurrentHP - FinalDamage, 0.f);

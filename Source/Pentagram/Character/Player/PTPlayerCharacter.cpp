@@ -123,6 +123,7 @@ void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(APTPlayerCharacter, AtkBuffBonus);
+    DOREPLIFETIME(APTPlayerCharacter, bIsUsingSkill);
 }
 
 void APTPlayerCharacter::OnDeath()
@@ -339,6 +340,19 @@ void APTPlayerCharacter::Multicast_PlayDeathMontage_Implementation()
     {
         PlayAnimMontage(DeathMontage);
     }
+}
+
+void APTPlayerCharacter::Server_StopAttack_Implementation()
+{
+    Multicast_StopAttack();
+}
+
+void APTPlayerCharacter::Multicast_StopAttack_Implementation()
+{
+    StopAnimMontage();
+    bIsAttacking = false;
+    bCanCombo    = false;
+    ComboIndex   = 0;
 }
 
 // 무기 외형 실시간 변경
