@@ -69,7 +69,7 @@ bool UPTQuestSubsystem::AcceptQuest(APTBasePlayerState* PlayerState, FName Quest
     }
 
     const FPTQuestDataRow* QuestData = GetQuestData(QuestID);
-    if (QuestData == nullptr)
+    if (QuestData == nullptr || !AreQuestRequirementsMet(PlayerState, QuestID))
     {
         return false;
     }
@@ -201,6 +201,7 @@ bool UPTQuestSubsystem::RewardQuest(FName QuestID, APTBasePlayerState* RewardPla
     QuestProgress->State = EPTQuestProgressState::Rewarded;
     RewardPlayerState->ForceNetUpdate();
     OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
+    OnQuestListChanged.Broadcast();
     return true;
 }
 
@@ -216,6 +217,50 @@ bool UPTQuestSubsystem::IsQuestRewarded(const APTBasePlayerState* PlayerState, F
 {
     const FPTQuestProgress* QuestProgress = GetQuestProgress(PlayerState, QuestID);
     return QuestProgress != nullptr && QuestProgress->State == EPTQuestProgressState::Rewarded;
+}
+
+bool UPTQuestSubsystem::ArePrerequisiteQuestsRewarded(
+    const APTBasePlayerState* PlayerState,
+    FName QuestID) const
+{
+    const FPTQuestDataRow* QuestData = GetQuestData(QuestID);
+    if (PlayerState == nullptr || QuestData == nullptr)
+    {
+        return false;
+    }
+
+    for (FName PrerequisiteQuestID : QuestData->PrerequisiteQuestIDs)
+    {
+        if (!PrerequisiteQuestID.IsNone() &&
+            !IsQuestRewarded(PlayerState, PrerequisiteQuestID))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UPTQuestSubsystem::IsPlayerLevelRequirementMet(
+    const APTBasePlayerState* PlayerState,
+    FName QuestID) const
+{
+    const FPTQuestDataRow* QuestData = GetQuestData(QuestID);
+    if (PlayerState == nullptr || QuestData == nullptr)
+    {
+        return false;
+    }
+
+    const int32 RequiredPlayerLevel = FMath::Max(QuestData->RequiredPlayerLevel, 1);
+    return PlayerState->PlayerLevel >= RequiredPlayerLevel;
+}
+
+bool UPTQuestSubsystem::AreQuestRequirementsMet(
+    const APTBasePlayerState* PlayerState,
+    FName QuestID) const
+{
+    return ArePrerequisiteQuestsRewarded(PlayerState, QuestID) &&
+        IsPlayerLevelRequirementMet(PlayerState, QuestID);
 }
 
 TArray<FPTQuestProgress> UPTQuestSubsystem::GetAcceptedQuestProgresses(const APTBasePlayerState* PlayerState) const

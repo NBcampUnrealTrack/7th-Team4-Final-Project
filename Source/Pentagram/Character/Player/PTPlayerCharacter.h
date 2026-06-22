@@ -54,12 +54,25 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayDeathMontage();
 
+    UFUNCTION(Server, Reliable)
+    void Server_StopAttack();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_StopAttack();
+
     // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
     void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset);
 
     void ApplyBuff(float BonusMultiplier, float Duration);
 
     void OnAtkBuffExpired();
+
+    // 카메라를 가렸을 시 구조물 Alpha 처리
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
+    void OnStructureHidden(AActor* HidingActor);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
+    void OnStructureUnHidden(AActor* UnHiddenActor);
 
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
     FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
@@ -88,6 +101,9 @@ public:
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     bool bIsAttacking = false;  // 공격 중 여부
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Skill")
+    bool bIsUsingSkill = false;
 
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
@@ -126,5 +142,11 @@ protected:
     // 갑옷 장착 스태틱 메시 컴포넌트(추후)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
     TObjectPtr<UStaticMeshComponent> ChestMeshComp;
+
+private:
+    // 직전 프레임에 캐릭터를 가리고 있던 장애물 저장
+    UPROPERTY()
+    TObjectPtr<AActor> LastHidingActor = nullptr;
+    
 
 };

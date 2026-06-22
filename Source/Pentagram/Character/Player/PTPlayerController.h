@@ -4,6 +4,7 @@
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
 #include "UI/Data/PTDelegates.h"
+#include "UI/Widget/Widget/Player/PTDamageNumberWidget.h"
 #include "PTPlayerController.generated.h"
 
 class UCommonActivatableWidget;
@@ -73,6 +74,10 @@ public:
 
     UFUNCTION(Server, Reliable)
     void Server_SetReady(bool bReady);
+
+    UFUNCTION(Client, Unreliable)
+    void Client_ShowDamageNumber(FVector WorldLocation, float DamageAmount, bool bIsCritical);
+
 protected:
     void PlayAttackMontage();
 
@@ -154,6 +159,8 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> DeathMenuClass;
 
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UPTDamageNumberWidget> DamageNumberWidgetClass;
 
 private:
     FVector MoveDestination = FVector::ZeroVector;

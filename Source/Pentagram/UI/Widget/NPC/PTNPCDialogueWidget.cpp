@@ -80,10 +80,23 @@ void UPTNPCDialogueWidget::BuildQuestList()
         return;
     }
 
+    APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+
     for (FName QuestID : TargetNPC->GetQuestIDs())
     {
+        if (QuestSubsystem->IsQuestRewarded(PlayerState, QuestID))
+        {
+            continue;
+        }
+
         const FPTQuestDataRow* QuestData = QuestSubsystem->GetQuestData(QuestID);
         if (QuestData == nullptr)
+        {
+            continue;
+        }
+
+        if (!QuestSubsystem->HasAcceptedQuest(PlayerState, QuestID) &&
+            !QuestSubsystem->AreQuestRequirementsMet(PlayerState, QuestID))
         {
             continue;
         }
@@ -121,6 +134,11 @@ void UPTNPCDialogueWidget::BuildAcceptedQuestList()
 
     for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses(PlayerState))
     {
+        if (QuestProgress.State == EPTQuestProgressState::Rewarded)
+        {
+            continue;
+        }
+
         const FPTQuestDataRow* QuestData = QuestSubsystem->GetQuestData(QuestProgress.QuestID);
         if (QuestData == nullptr)
         {
@@ -196,23 +214,39 @@ void UPTNPCDialogueWidget::RefreshQuestText()
     if (Txt_Objective != nullptr)
     {
         FText ObjectiveText;
-        for (const FPTQuestCondition& Condition : QuestData->Conditions)
+        APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+        const FPTQuestProgress* QuestProgress =
+            QuestSubsystem->GetQuestProgress(PlayerState, SelectedQuestID);
+
+        for (int32 ConditionIndex = 0; ConditionIndex < QuestData->Conditions.Num(); ++ConditionIndex)
         {
+            const FPTQuestCondition& Condition = QuestData->Conditions[ConditionIndex];
             if (Condition.ObjectiveText.IsEmpty())
             {
                 continue;
             }
+
+            const int32 RequiredCount = FMath::Max(Condition.RequiredCount, 1);
+            const int32 CurrentCount =
+                QuestProgress != nullptr && QuestProgress->Conditions.IsValidIndex(ConditionIndex)
+                    ? QuestProgress->Conditions[ConditionIndex].CurrentCount
+                    : 0;
+            const FText ConditionText = FText::Format(
+                NSLOCTEXT("PTQuest", "ObjectiveProgress", "{0} ({1}/{2})"),
+                Condition.ObjectiveText,
+                FText::AsNumber(CurrentCount),
+                FText::AsNumber(RequiredCount));
 
             if (!ObjectiveText.IsEmpty())
             {
                 ObjectiveText = FText::Format(
                     NSLOCTEXT("PTQuest", "ObjectiveList", "{0}\n{1}"),
                     ObjectiveText,
-                    Condition.ObjectiveText);
+                    ConditionText);
             }
             else
             {
-                ObjectiveText = Condition.ObjectiveText;
+                ObjectiveText = ConditionText;
             }
         }
 
@@ -351,6 +385,17 @@ void UPTNPCDialogueWidget::HandleQuestProgressChanged(FName QuestID, const FPTQu
 
 void UPTNPCDialogueWidget::HandleQuestListChanged()
 {
+    if (!SelectedQuestID.IsNone())
+    {
+        UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+        APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+        if (QuestSubsystem != nullptr && QuestSubsystem->IsQuestRewarded(PlayerState, SelectedQuestID))
+        {
+            SelectedQuestID = NAME_None;
+            ClearQuestText();
+        }
+    }
+
     RefreshVisibleQuestList();
 }
 

@@ -13,6 +13,7 @@ void UPTAnimNotify_AttackEnd::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
         Player->bIsAttacking = false;
         Player->bCanCombo = false;
         Player->ComboIndex = 0;
+        Player->bIsUsingSkill = false;
 
         Player->GetCharacterMovement()->bOrientRotationToMovement = true;
         Player->GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);

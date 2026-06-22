@@ -116,6 +116,47 @@ void APTPlayerCharacter::BeginPlay()
 void APTPlayerCharacter::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
+    // 개인의 플레이어 화면에서만 레이트레이스를 발사하도록 최적화
+    if (!IsLocallyControlled() || !CameraComp) return;
+
+    // 시작점(카메라 위치), 끝점(캐릭터 위치) 설정
+    FVector StartPos = CameraComp->GetComponentLocation();
+    FVector EndPos = GetActorLocation();
+
+    FHitResult HitResult;
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this); // 나 자신은 검사 대상에서 필터링
+
+    // 카메라와 내 몸 사이에 Visibility 채널 기준의 장애물이 있는지 실시간 체크
+    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartPos, EndPos, ECC_WorldDynamic, QueryParams);
+
+    if (bHit && HitResult.GetActor())
+    {
+        AActor* CurrentHitActor = HitResult.GetActor();
+
+        // 새로 충돌한 물체가 기존 충돌 물체와 다른 새로운 장애물일 때만 신호 발송
+        if (CurrentHitActor != LastHidingActor)
+        {
+            if (LastHidingActor)
+            {
+                OnStructureUnHidden(LastHidingActor);
+            }
+
+            // 블루프린트로 전송: 이 물체를 가려라!
+            OnStructureHidden(CurrentHitActor);
+            LastHidingActor = CurrentHitActor;
+        }
+    }
+    else
+    {
+        // 장애물 영역을 완전히 벗어났을 경우 기존 장애물 원상복구
+        if (LastHidingActor)
+        {
+            OnStructureUnHidden(LastHidingActor);
+            LastHidingActor = nullptr;
+        }
+    }
 }
 
 void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -123,6 +164,7 @@ void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(APTPlayerCharacter, AtkBuffBonus);
+    DOREPLIFETIME(APTPlayerCharacter, bIsUsingSkill);
 }
 
 void APTPlayerCharacter::OnDeath()
@@ -339,6 +381,19 @@ void APTPlayerCharacter::Multicast_PlayDeathMontage_Implementation()
     {
         PlayAnimMontage(DeathMontage);
     }
+}
+
+void APTPlayerCharacter::Server_StopAttack_Implementation()
+{
+    Multicast_StopAttack();
+}
+
+void APTPlayerCharacter::Multicast_StopAttack_Implementation()
+{
+    StopAnimMontage();
+    bIsAttacking = false;
+    bCanCombo    = false;
+    ComboIndex   = 0;
 }
 
 // 무기 외형 실시간 변경

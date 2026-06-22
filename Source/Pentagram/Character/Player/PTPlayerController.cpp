@@ -216,6 +216,24 @@ void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 }
 
 
+void APTPlayerController::Client_ShowDamageNumber_Implementation(FVector WorldLocation, float DamageAmount, bool bIsCritical)
+{
+    if (!DamageNumberWidgetClass) return;
+
+    UPTDamageNumberWidget* Widget = CreateWidget<UPTDamageNumberWidget>(
+        this, DamageNumberWidgetClass);
+    if (!Widget) return;
+
+    Widget->AddToViewport(10);
+    Widget->InitDamageNumber(DamageAmount, bIsCritical);
+
+    FVector2D ScreenPos;
+    if (ProjectWorldLocationToScreen(WorldLocation, ScreenPos))
+    {
+        Widget->SetPositionInViewport(ScreenPos, false);
+    }
+}
+
 void APTPlayerController::PlayAttackMontage()
 {
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
@@ -253,8 +271,16 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
-    if (PC->bIsAttacking) return;
     if (PC->bIsDodging) return;
+
+    if (PC->bIsAttacking)
+    {
+        PC->StopAnimMontage();
+        PC->Server_StopAttack();
+        PC->bIsAttacking = false;
+        PC->bCanCombo    = false;
+        PC->ComboIndex   = 0;
+    }
 
     FHitResult HitResult;
     GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
@@ -269,6 +295,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
     if (PlayerCharacter->bIsDodging) return;
+    if (PlayerCharacter->bIsUsingSkill) return;
 
     bMoveToDestination = false;
     StopMovement();

@@ -60,6 +60,9 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlaySkillMontageWithOffset(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset, FName SkillID);
 
+    UFUNCTION(NetMulticast, Unreliable)
+void Multicast_PlayHitSound(USoundBase* Sound, FVector Location);
+
 protected:
 
     virtual void BeginPlay() override;
