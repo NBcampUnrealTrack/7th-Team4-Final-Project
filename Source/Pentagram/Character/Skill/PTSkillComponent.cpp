@@ -17,6 +17,12 @@ UPTSkillComponent::UPTSkillComponent()
     bIsCooldown.Init(false, MaxSkillSlots);
 }
 
+void UPTSkillComponent::Multicast_PlayHitSound_Implementation(USoundBase* Sound, FVector Location)
+{
+    if (!Sound) return;
+    UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
+}
+
 void UPTSkillComponent::BeginPlay()
 {
     Super::BeginPlay();

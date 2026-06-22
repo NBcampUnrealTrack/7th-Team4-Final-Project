@@ -107,14 +107,20 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
         }
 
         // 관통 스킬이면 충돌 무시
+        if (UAnimInstance* AnimInst = Owner->GetMesh()->GetAnimInstance())
+        {
+            AnimInst->OnMontageEnded.AddUniqueDynamic(
+                this, &UPTPlayerSkillComponent::OnSkillMontageEnded);
+        }
+
         if (SkillData->bPenetrate)
         {
             Multicast_SetPenetration(true);
+        }
 
-            if (UAnimInstance* AnimInst = Owner->GetMesh()->GetAnimInstance())
-            {
-                AnimInst->OnMontageEnded.AddUniqueDynamic(this, &UPTPlayerSkillComponent::OnSkillMontageEnded);
-            }
+        if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(Owner))
+        {
+            PC->bIsUsingSkill = true;
         }
 
         // 이펙트/사운드 에셋 로드 (서버에서 한 번만 로드 후 Multicast로 전달)
@@ -265,6 +271,8 @@ void UPTPlayerSkillComponent::OnSkillMontageEnded(UAnimMontage* Montage, bool bI
     {
         AnimInst->OnMontageEnded.RemoveDynamic(this, &UPTPlayerSkillComponent::OnSkillMontageEnded);
     }
+
+    PC->bIsUsingSkill = false;
 
     Multicast_SetPenetration(false);
 }

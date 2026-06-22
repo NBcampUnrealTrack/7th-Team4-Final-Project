@@ -54,6 +54,12 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayDeathMontage();
 
+    UFUNCTION(Server, Reliable)
+    void Server_StopAttack();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_StopAttack();
+
     // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
     void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset);
 
@@ -95,6 +101,9 @@ public:
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     bool bIsAttacking = false;  // 공격 중 여부
+
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "Skill")
+    bool bIsUsingSkill = false;
 
     UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열

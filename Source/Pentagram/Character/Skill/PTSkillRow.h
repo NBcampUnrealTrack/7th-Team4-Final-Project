@@ -75,6 +75,10 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UNiagaraSystem> SkillEffect;
 
+    // 투사체 이펙트
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    TSoftObjectPtr<UNiagaraSystem> ProjectileEffect;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
     float KnockbackForce = 300.f;
 
