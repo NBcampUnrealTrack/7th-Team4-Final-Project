@@ -2,9 +2,17 @@
 
 #include "PTShopSlotWidget.h"
 
+#include "Components/TextBlock.h"
+
 void UPTShopSlotWidget::SetShopData(const FInventorySlot& InSlot, int32 InPrice)
 {
     SlotData = InSlot;
+
+    if (Txt_ItemName != nullptr)
+    {
+        Txt_ItemName->SetText(SlotData.IsEmpty() ? FText::GetEmpty() : SlotData.ItemData.Item_Name);
+    }
+
     OnRefreshVisual(SlotData); // 아이템 갱신
     SetPrice(InPrice);
 }
@@ -19,6 +27,12 @@ void UPTShopSlotWidget::ClearSlot()
 {
     SlotData = FInventorySlot();
     Price = 0;
+
+    if (Txt_ItemName != nullptr)
+    {
+        Txt_ItemName->SetText(FText::GetEmpty());
+    }
+
     OnRefreshVisual(SlotData);
     OnRefreshPrice(Price);
 }

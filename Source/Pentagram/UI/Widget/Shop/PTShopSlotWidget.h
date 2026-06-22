@@ -8,6 +8,8 @@
 #include "UI/Data/PTDelegates.h"
 #include "PTShopSlotWidget.generated.h"
 
+class UTextBlock;
+
 /**
  *
  */
@@ -58,6 +60,9 @@ protected:
     // 가격 갱신
     UFUNCTION(BlueprintImplementableEvent, Category = "PT|Shop")
     void OnRefreshPrice(int32 InPrice);
+
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    TObjectPtr<UTextBlock> Txt_ItemName;
 
     // 슬롯 데이터
     UPROPERTY(BlueprintReadOnly, Category = "PT|Shop")
