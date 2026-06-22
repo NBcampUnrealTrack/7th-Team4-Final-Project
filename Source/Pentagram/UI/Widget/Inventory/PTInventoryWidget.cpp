@@ -5,17 +5,24 @@
 #include "PTInventorySlotWidget.h"
 #include "Character/Player/PTInventoryComponent.h"
 
+#include "Character/Player/PTPlayerController.h"
+
 void UPTInventoryWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
     BuildSlots();
 }
 
-void UPTInventoryWidget::NativeOnActivated()
+void UPTInventoryWidget::NativeOnDeactivated()
 {
-    Super::NativeOnActivated();
+    if (APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer()))
+    {
+        PlayerController->RestoreGameplayInput();
+    }
 
-    RefreshAllSlots();
+    Super::NativeOnDeactivated();
+
+     RefreshAllSlots();
 }
 
 bool UPTInventoryWidget::NativeOnHandleBackAction()

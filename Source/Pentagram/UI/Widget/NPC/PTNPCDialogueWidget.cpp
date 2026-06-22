@@ -34,6 +34,16 @@ void UPTNPCDialogueWidget::NativeDestruct()
     Super::NativeDestruct();
 }
 
+void UPTNPCDialogueWidget::NativeOnDeactivated()
+{
+    if (APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer()))
+    {
+        PlayerController->RestoreGameplayInput();
+    }
+
+    Super::NativeOnDeactivated();
+}
+
 void UPTNPCDialogueWidget::SetupDialogue(APTQuestNPCCharacter* InNPC)
 {
     TargetNPC = InNPC;

@@ -12,13 +12,19 @@
 #include "Item/PTDropItemActorBase.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/NPC/PTQuestNPCCharacter.h"
+#include "Character/NPC/PTShopNPCCharacter.h"
 #include "Core/PTGameMode.h"
+#include "Core/Subsystems/PTEconomySubsystem.h"
+#include "Core/Subsystems/PTItemSubsystem.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
 #include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
+#include "UI/Widget/Shop/PTShopWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "TimerManager.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -175,6 +181,47 @@ void APTPlayerController::Client_OpenQuestDialogue_Implementation(
     }
 }
 
+void APTPlayerController::Client_OpenShop_Implementation(
+    APTShopNPCCharacter* ShopNPC,
+    TSubclassOf<UPTShopWidget> ShopWidgetClass)
+{
+    if (!IsLocalPlayerController() || ShopNPC == nullptr)
+    {
+        return;
+    }
+
+    TSubclassOf<UCommonActivatableWidget> WidgetClass = ShopWidgetClass;
+    if (WidgetClass == nullptr)
+    {
+        WidgetClass = ShopClass;
+    }
+
+    if (WidgetClass == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Shop widget class is not configured."));
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    if (LocalPlayer == nullptr)
+    {
+        return;
+    }
+
+    UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>();
+    if (UIManager == nullptr)
+    {
+        return;
+    }
+
+    UPTShopWidget* ShopWidget = Cast<UPTShopWidget>(
+        UIManager->PushWidget(WidgetClass, EPTUILayer::GameMenu));
+    if (ShopWidget != nullptr)
+    {
+        ShopWidget->SetupShop(ShopNPC);
+    }
+}
+
 void APTPlayerController::ServerAcceptQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
 {
     if (QuestNPC == nullptr || QuestID.IsNone() || !QuestNPC->GetQuestIDs().Contains(QuestID))
@@ -209,10 +256,105 @@ void APTPlayerController::ServerRewardQuest_Implementation(APTQuestNPCCharacter*
     }
 }
 
+void APTPlayerController::ServerBuyItem_Implementation(APTShopNPCCharacter* ShopNPC, FName ItemID)
+{
+    if (ShopNPC == nullptr || ItemID.IsNone() || !ShopNPC->GetProductIDs().Contains(ItemID))
+    {
+        return;
+    }
+
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+    if (PlayerCharacter == nullptr || PTPlayerState == nullptr)
+    {
+        return;
+    }
+
+    const float Distance = FVector::Dist(PlayerCharacter->GetActorLocation(), ShopNPC->GetActorLocation());
+    if (Distance > 350.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Purchase rejected because the player is too far from the shop."));
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTItemSubsystem* ItemSubsystem = GameInstance->GetSubsystem<UPTItemSubsystem>();
+    UPTEconomySubsystem* EconomySubsystem = GameInstance->GetSubsystem<UPTEconomySubsystem>();
+    UPTInventoryComponent* InventoryComponent = PlayerCharacter->GetInventoryComponent();
+    if (ItemSubsystem == nullptr || EconomySubsystem == nullptr || InventoryComponent == nullptr)
+    {
+        return;
+    }
+
+    const FItemData* ItemData = ItemSubsystem->GetItemData(ItemID);
+    if (ItemData == nullptr || ItemData->BuyPrice <= 0)
+    {
+        return;
+    }
+
+    if (!InventoryComponent->CanAddItem(*ItemData) ||
+        !EconomySubsystem->CanAfford(PTPlayerState, ItemData->BuyPrice))
+    {
+        return;
+    }
+
+    if (!EconomySubsystem->SpendGold(PTPlayerState, ItemData->BuyPrice))
+    {
+        return;
+    }
+
+    if (!InventoryComponent->TryAddItem(*ItemData))
+    {
+        EconomySubsystem->AddGold(PTPlayerState, ItemData->BuyPrice);
+        return;
+    }
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Shop] Purchased %s for %d gold."),
+        *ItemData->Item_Name.ToString(),
+        ItemData->BuyPrice);
+}
+
 void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     RemoveUIInputMapping();
     Super::EndPlay(EndPlayReason);
+}
+
+void APTPlayerController::RestoreGameplayInput()
+{
+    if (!IsLocalPlayerController())
+    {
+        return;
+    }
+
+    TWeakObjectPtr<APTPlayerController> WeakThis(this);
+    GetWorldTimerManager().SetTimerForNextTick(
+        FTimerDelegate::CreateLambda(
+            [WeakThis]()
+            {
+                if (!WeakThis.IsValid())
+                {
+                    return;
+                }
+
+                APTPlayerController* PlayerController = WeakThis.Get();
+                UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(
+                    PlayerController,
+                    nullptr,
+                    EMouseLockMode::DoNotLock,
+                    false,
+                    true);
+                UWidgetBlueprintLibrary::SetFocusToGameViewport();
+                PlayerController->SetShowMouseCursor(true);
+            }));
 }
 
 

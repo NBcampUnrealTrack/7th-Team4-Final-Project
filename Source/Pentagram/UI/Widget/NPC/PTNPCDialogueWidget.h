@@ -38,6 +38,7 @@ public:
 protected:
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
 
     void BuildQuestList();

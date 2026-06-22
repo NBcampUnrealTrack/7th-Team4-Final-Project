@@ -15,6 +15,8 @@ class UPTNPCDialogueWidget;
 class APTDropItemActorBase;
 class APTMonsterCharacter;
 class APTQuestNPCCharacter;
+class APTShopNPCCharacter;
+class UPTShopWidget;
 
 UCLASS()
 class PENTAGRAM_API APTPlayerController : public APlayerController
@@ -39,16 +41,26 @@ public:
     void OnShopPressed();
     void OnQuestPressed();
 
+    void RestoreGameplayInput();
+
     UFUNCTION(Client, Reliable)
     void Client_OpenQuestDialogue(
         APTQuestNPCCharacter* QuestNPC,
         TSubclassOf<UPTNPCDialogueWidget> QuestDialogueWidgetClass);
+
+    UFUNCTION(Client, Reliable)
+    void Client_OpenShop(
+        APTShopNPCCharacter* ShopNPC,
+        TSubclassOf<UPTShopWidget> ShopWidgetClass);
 
     UFUNCTION(Server, Reliable)
     void ServerAcceptQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);
 
     UFUNCTION(Server, Reliable)
     void ServerRewardQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);
+
+    UFUNCTION(Server, Reliable)
+    void ServerBuyItem(APTShopNPCCharacter* ShopNPC, FName ItemID);
 
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);

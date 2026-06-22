@@ -95,6 +95,20 @@ struct FItemData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     int32 Item_Base_Stat;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Shop",
+        meta = (ClampMin = "1", UIMin = "1"))
+    int32 BuyPrice = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Shop")
+    bool bCanSell = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Shop",
+        meta = (EditCondition = "bCanSell", ClampMin = "-1", UIMin = "-1"))
+    int32 SellPriceOverride = -1;
+
+    bool CanSell() const;
+    int32 GetSellPrice() const;
+
     // 아이템(혹은 부위)에 붙을 수 있는 랜덤 옵션 후보 목록
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Random Option")
     TArray<FItemOptionPoolData> OptionPool;
