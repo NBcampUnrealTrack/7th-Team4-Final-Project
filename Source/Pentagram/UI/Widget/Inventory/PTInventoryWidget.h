@@ -17,6 +17,7 @@ protected:
     // ── 오버라이드 ──
     virtual void NativeOnInitialized() override;
     virtual void NativeOnActivated() override;
+    virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
 
     // ── 일반 함수 ──

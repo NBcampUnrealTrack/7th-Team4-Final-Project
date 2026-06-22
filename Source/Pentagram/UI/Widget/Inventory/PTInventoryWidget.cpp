@@ -13,6 +13,13 @@ void UPTInventoryWidget::NativeOnInitialized()
     BuildSlots();
 }
 
+void UPTInventoryWidget::NativeOnActivated()
+{
+    Super::NativeOnActivated();
+
+    RefreshAllSlots();
+}
+
 void UPTInventoryWidget::NativeOnDeactivated()
 {
     if (APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer()))
@@ -21,8 +28,6 @@ void UPTInventoryWidget::NativeOnDeactivated()
     }
 
     Super::NativeOnDeactivated();
-
-     RefreshAllSlots();
 }
 
 bool UPTInventoryWidget::NativeOnHandleBackAction()
