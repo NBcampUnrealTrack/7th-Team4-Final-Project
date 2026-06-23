@@ -8,6 +8,8 @@
 class UDataTable;
 class UPTMonsterSkillComponent;
 class APTBossProjectile;
+class APTAreaWarning;
+class UNiagaraSystem;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTBossPatternComponent : public UActorComponent
@@ -21,10 +23,16 @@ public:
 	void PreloadAllSkills();
 
 	UFUNCTION(BlueprintCallable, Category = "PT|Boss|Pattern")
-	bool ExecuteSkillForPhase(int32 Phase);
+	float ExecuteSkillForPhase(int32 Phase);
 
     UFUNCTION(BlueprintCallable, Category = "PT|Boss|Pattern")
-    void ExecutePendingSkill(int32 Phase);
+    void ExecutePendingSkill();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastSpawnAreaWarningBatch(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastSpawnAreaFX(FVector CastLocation, bool bHasSafeZone, FVector SafeZoneCenter, UNiagaraSystem* CastFX, UNiagaraSystem* SafeZoneFX, float SafeZoneRadius, float AreaAttackDelay);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Boss|Pattern")
 	TObjectPtr<UDataTable> BossSkillDataTable;
@@ -70,6 +78,8 @@ private:
     FPTBossSkillRow PendingSkillSnapshot;
     bool bHasPendingSkill = false;
 
-    FTimerHandle AreaAttackTimer;
+    TArray<FTimerHandle> AreaAttackTimers;
     bool bSkillAssetsLoaded = false;
+
+    bool bAreaAttackInProgress = false;
 };

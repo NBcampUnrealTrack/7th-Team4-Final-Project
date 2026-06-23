@@ -17,6 +17,6 @@ void UPTAnimNotify_BossFireSkill::Notify(USkeletalMeshComponent* MeshComp, UAnim
 
     if (UPTBossPatternComponent* PatternComp = Boss->GetBossPatternComponent())
     {
-        PatternComp->ExecutePendingSkill(Boss->GetCurrentPhase());
+        PatternComp->ExecutePendingSkill();
     }
 }
