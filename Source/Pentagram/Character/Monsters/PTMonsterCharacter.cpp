@@ -29,6 +29,11 @@ APTMonsterCharacter::APTMonsterCharacter()
 
 float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 {
+    if (HasAuthority() && IsValid(Attacker))
+    {
+        RegisterDamageContributor(Attacker);
+    }
+
     if (IsDead())
     {
         return 0.f;
@@ -45,8 +50,6 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     {
         if (IsValid(Attacker))
         {
-            RegisterDamageContributor(Attacker);
-
             APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Attacker);
             if (Player)
             {
@@ -67,6 +70,11 @@ float APTMonsterCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 
 float APTMonsterCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo)
 {
+    if (HasAuthority() && IsValid(Attacker))
+    {
+        RegisterDamageContributor(Attacker);
+    }
+
     if (IsDead())
     {
         return 0.f;
@@ -82,7 +90,6 @@ float APTMonsterCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attack
     {
         if (IsValid(Attacker))
         {
-            RegisterDamageContributor(Attacker);
             if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Attacker))
             {
                 if (APTPlayerController* PC = Cast<APTPlayerController>(Player->GetController()))

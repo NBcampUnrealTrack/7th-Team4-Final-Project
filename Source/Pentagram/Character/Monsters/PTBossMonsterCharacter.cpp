@@ -153,9 +153,15 @@ float APTBossMonsterCharacter::StartAttack()
 {
     HitActors.Empty();
 
-    if (BossPatternComponent)
+    const int32 Phase = GetCurrentPhase();
+
+    if (IsValid(BossPatternComponent))
     {
-        BossPatternComponent->ExecuteSkillForPhase(GetCurrentPhase());
+        const float SkillPlayLength = BossPatternComponent->ExecuteSkillForPhase(Phase);
+        if (SkillPlayLength > 0.f)
+        {
+            return SkillPlayLength;
+        }
     }
 
     UAnimMontage* Montage = GetAttackMontageForPhase(GetCurrentPhase());
