@@ -1,4 +1,6 @@
 ﻿#include "PTInventoryWidget.h"
+
+#include "PTEquipPanelWidget.h"
 #include "Components/UniformGridPanel.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
@@ -11,6 +13,25 @@ void UPTInventoryWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
     BuildSlots();
+
+    if (EquipPanel)
+    {
+        EquipPanel->OnEquipRequested.AddUniqueDynamic(this, &UPTInventoryWidget::HandleEquipRequested);
+    }
+
+    for (UPTInventorySlotWidget* SlotWidget : SlotWidgets)
+    {
+        if (SlotWidget)
+        {
+            SlotWidget->OnUnequipRequested.AddUniqueDynamic(this, &UPTInventoryWidget::HandleUnequipRequested);
+        }
+    }
+
+    UPTInventoryComponent* Inven = ResolveInventoryComponent();
+    if (Inven)
+    {
+        Inven->OnInventorySlotsUpdated.AddUniqueDynamic(this, &UPTInventoryWidget::RefreshAllSlots);
+    }
 }
 
 void UPTInventoryWidget::NativeOnActivated()
@@ -83,4 +104,20 @@ UPTInventoryComponent* UPTInventoryWidget::ResolveInventoryComponent() const
     if (!Pawn) return nullptr;
 
     return Pawn->FindComponentByClass<UPTInventoryComponent>();
+}
+
+void UPTInventoryWidget::HandleEquipRequested(int32 FromIndex, EItemType EquipType)
+{
+    APTPlayerController* PC = Cast<APTPlayerController>(GetOwningPlayer());
+    if (!PC) return;
+
+    PC->RequestEquipItem(FromIndex, EquipType);
+}
+
+void UPTInventoryWidget::HandleUnequipRequested(EItemType EquipType, int32 ToIndex)
+{
+    APTPlayerController* PC = Cast<APTPlayerController>(GetOwningPlayer());
+    if (!PC) return;
+
+    PC->RequestUnequipItem(EquipType, ToIndex);
 }

@@ -46,12 +46,11 @@ APTPlayerCharacter::APTPlayerCharacter()
     if (GetMesh())
     {
         // 무기 소켓에 붙일 메시 컴포넌트 설정
-        WeaponMeshComp->SetupAttachment(GetMesh(), TEXT("weapon_r"));
+        WeaponMeshComp->SetupAttachment(GetMesh(), TEXT("weapon_right"));
     }
     // 공격 판정은AnimNotify에서 처리하므로 무기 자체의 물리 충돌은 꺼둠
     WeaponMeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
     WeaponMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
 
     GetCharacterMovement()->bOrientRotationToMovement    = true;
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
@@ -399,6 +398,8 @@ void APTPlayerCharacter::Multicast_StopAttack_Implementation()
 // 무기 외형 실시간 변경
 void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset)
 {
+    UE_LOG(LogTemp, Warning, TEXT("[UpdateWeaponVisual] 호출됨, IsNull: %d"), NewMeshAsset.IsNull());
+
     if (!WeaponMeshComp) return;
 
     if (NewMeshAsset.IsNull())

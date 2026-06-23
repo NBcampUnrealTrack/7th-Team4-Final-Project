@@ -1,5 +1,6 @@
 #include "PTInventoryComponent.h"
 
+#include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
@@ -12,6 +13,12 @@ UPTInventoryComponent::UPTInventoryComponent()
 
     // 네트워크 리플리케이트 활성화
     SetIsReplicatedByDefault(true);
+}
+
+void UPTInventoryComponent::OnRep_InventorySlots()
+{
+    // 열려있는 위젯에 직접 델리게이트로 알려줌
+    OnInventorySlotsUpdated.Broadcast();
 }
 
 void UPTInventoryComponent::BeginPlay()
