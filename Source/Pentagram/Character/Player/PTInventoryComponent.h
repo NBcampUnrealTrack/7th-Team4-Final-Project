@@ -6,6 +6,7 @@
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventorySlotsUpdated);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTInventoryComponent : public UActorComponent
@@ -47,7 +48,9 @@ public:
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_UsePotion(int32 SlotIndex);
 
-protected:
+    UFUNCTION()
+    void OnRep_InventorySlots();
+public:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void BeginPlay() override;
@@ -61,9 +64,11 @@ protected:
     const int32 MaxSlotCount = 30;
 
     // 인벤토리 실제 데이터를 담는 배열
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Inventory")
-    TArray<FInventorySlot> InventorySlots;
+    UPROPERTY(ReplicatedUsing=OnRep_InventorySlots, VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+    TArray<FInventorySlot> InventorySlots;;
 
+    UPROPERTY(BlueprintAssignable)
+    FOnInventorySlotsUpdated OnInventorySlotsUpdated;
 private:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 

@@ -5,6 +5,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "PTBasePlayerState.h"
+#include "PTEquipmentComponent.h"
 #include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
@@ -374,6 +375,103 @@ void APTPlayerController::Client_ShowDamageNumber_Implementation(FVector WorldLo
     {
         Widget->SetPositionInViewport(ScreenPos, false);
     }
+}
+
+void APTPlayerController::RequestEquipItem(int32 InventoryIndex, EItemType EquipType)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[RequestEquipItem] Index=%d, HasAuthority=%d"), InventoryIndex, HasAuthority());
+
+    if (!HasAuthority())
+    {
+        Server_RequestEquipItem(InventoryIndex, EquipType);
+        return;
+    }
+
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    UE_LOG(LogTemp, Warning, TEXT("[RequestEquipItem] PlayerCharacter=%d"), PlayerCharacter != nullptr);
+    if (!PlayerCharacter) return;
+
+    UPTInventoryComponent* Inven = PlayerCharacter->InventoryComponent;
+    UPTEquipmentComponent* Equip = PlayerCharacter->EquipmentComponent;
+    UE_LOG(LogTemp, Warning, TEXT("[RequestEquipItem] Inven=%d, Equip=%d"), Inven != nullptr, Equip != nullptr);
+    if (!Inven || !Equip) return;
+
+    // 슬롯 유효성 검사
+    const TArray<FInventorySlot>& Slots = Inven->GetInventorySlots();
+    UE_LOG(LogTemp, Warning, TEXT("[RequestEquipItem] SlotValid=%d, IsEmpty=%d"), Slots.IsValidIndex(InventoryIndex), Slots.IsValidIndex(InventoryIndex) ? Slots[InventoryIndex].IsEmpty() : true);
+    if (!Slots.IsValidIndex(InventoryIndex)) return;
+
+    const FInventorySlot& TargetSlot = Slots[InventoryIndex];
+    if (TargetSlot.IsEmpty()) return;
+
+    UE_LOG(LogTemp, Warning, TEXT("[RequestEquipItem] ItemType=%d, EquipType=%d"), (int32)TargetSlot.ItemData.Item_Type, (int32)EquipType);
+    // 장비 타입 일치 검사 (드래그 검증 2차)
+    if (TargetSlot.ItemData.Item_Type != EquipType) return;
+
+    // 장착 요청 (내부에서 클라면 Server RPC 자동 호출)
+    FItemData OldItem;
+    Equip->EquipItem(TargetSlot.ItemData, OldItem);
+
+    // 인벤토리에서 해당 슬롯 제거
+    // 클라이언트에서는 낙관적 UI 업데이트 (서버 복제로 덮어씌워짐)
+    Inven->RemoveItem(TargetSlot.ItemData.Item_ID, 1);
+
+    // 교체된 구장비가 있으면 인벤토리에 돌려놓기
+    if (!OldItem.Item_ID.IsNone())
+    {
+        Inven->TryAddItem(OldItem, 1);
+    }
+}
+
+void APTPlayerController::RequestUnequipItem(EItemType EquipType, int32 ToInventoryIndex)
+{
+    if (!HasAuthority())
+    {
+        Server_RequestUnequipItem(EquipType);
+        return;
+    }
+
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PlayerCharacter) return;
+
+    UPTInventoryComponent* Inven = PlayerCharacter->InventoryComponent;
+    UPTEquipmentComponent* Equip = PlayerCharacter->EquipmentComponent;
+    if (!Inven || !Equip) return;
+
+    // EItemType → EEquipSlotType 변환
+    EEquipSlotType SlotType = EEquipSlotType::Weapon;
+    switch (EquipType)
+    {
+    case EItemType::Weapon: SlotType = EEquipSlotType::Weapon; break;
+    case EItemType::Chest:  SlotType = EEquipSlotType::Chest;  break;
+    case EItemType::Helmet: SlotType = EEquipSlotType::Helmet; break;
+    case EItemType::Gloves: SlotType = EEquipSlotType::Gloves; break;
+    case EItemType::Boots:  SlotType = EEquipSlotType::Boots;  break;
+    default: return;
+    }
+
+    FItemData UnequippedItem;
+    if (Equip->UnequipItem(SlotType, UnequippedItem))
+    {
+        if (!UnequippedItem.Item_ID.IsNone())
+        {
+            Inven->TryAddItem(UnequippedItem, 1);
+        }
+    }
+}
+
+void APTPlayerController::Server_RequestEquipItem_Implementation(int32 InventoryIndex, EItemType EquipType)
+{
+    RequestEquipItem(InventoryIndex, EquipType);
+}
+
+void APTPlayerController::Server_RequestUnequipItem_Implementation(EItemType EquipType)
+{
+    RequestUnequipItem(EquipType, 0);
+}
+
+void APTPlayerController::RefreshInventoryUI()
+{
 }
 
 void APTPlayerController::PlayAttackMontage()

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "Item/PTItemTypes.h"
 #include "PTInventoryWidget.generated.h"
 
 class UUniformGridPanel;
@@ -22,11 +23,22 @@ protected:
 
     // ── 일반 함수 ──
     void BuildSlots();
+
+    UFUNCTION()
     void RefreshAllSlots();
+
+    UFUNCTION()
+    void HandleEquipRequested(int32 FromIndex, EItemType EquipType);
+
+    UFUNCTION()
+    void HandleUnequipRequested(EItemType EquipType, int32 ToIndex);
 
     // ── 위젯 바인딩 ──
     UPROPERTY(meta = (BindWidget))
     UUniformGridPanel* InventoryGrid;
+
+    UPROPERTY(meta = (BindWidget))
+    UPTEquipPanelWidget* EquipPanel;
 
     // ── 설정 ──
     UPROPERTY(EditAnywhere, Category = "Inventory")
