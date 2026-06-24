@@ -834,6 +834,12 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
         if (Dead->CurrentHP > 0.f) return; // 생존 시 차단
     }
 
+    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+    {
+        PS->CurrentHP = PS->MaxHP;
+        PS->BroadcastAllStats(); // 클라이언트 UI 및 스탯 동기화 강제 브로드캐스팅
+    }
+
     // 시체 정리
     if (DeadPawn)
     {
