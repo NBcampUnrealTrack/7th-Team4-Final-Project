@@ -125,6 +125,15 @@ struct FItemData : public FTableRowBase
     // 무기/장비의 외형을 담당할 스태틱 메시 에셋 경로
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<UStaticMesh> ItemMeshAsset;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    FVector WeaponRelativeLocation = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    FRotator WeaponRelativeRotation = FRotator::ZeroRotator;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    FVector WeaponRelativeScale = FVector(1.f, 1.f, 1.f);
 };
 
 

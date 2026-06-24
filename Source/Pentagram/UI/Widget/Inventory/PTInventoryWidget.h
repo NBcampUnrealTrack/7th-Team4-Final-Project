@@ -8,6 +8,7 @@
 class UUniformGridPanel;
 class UPTInventorySlotWidget;
 class UPTInventoryComponent;
+class UPTEquipPanelWidget;
 
 UCLASS()
 class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget

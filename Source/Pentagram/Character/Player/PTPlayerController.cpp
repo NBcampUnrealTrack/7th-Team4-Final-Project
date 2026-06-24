@@ -537,6 +537,13 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     if (PlayerCharacter->bIsDodging) return;
     if (PlayerCharacter->bIsUsingSkill) return;
 
+    /*  무기 장착 여부 검사
+    if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+    {
+        return;
+    }
+    */
+
     bMoveToDestination = false;
     StopMovement();
 
@@ -607,6 +614,13 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[0]) return;
@@ -624,6 +638,13 @@ void APTPlayerController::OnSkill2(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[1]) return;
@@ -640,6 +661,13 @@ void APTPlayerController::OnSkill3(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[2]) return;
@@ -655,6 +683,13 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
+
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
 
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
