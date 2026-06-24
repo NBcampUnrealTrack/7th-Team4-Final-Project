@@ -245,6 +245,8 @@ float APTMonsterCharacter::StartAttack()
 
 void APTMonsterCharacter::StopAttack()
 {
+    SetSuperArmor(false);
+
     USkeletalMeshComponent* MeshComp = GetMesh();
     if (!IsValid(MeshComp))
     {
@@ -323,6 +325,7 @@ void APTMonsterCharacter::BeginPlay()
 void APTMonsterCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     GetWorldTimerManager().ClearTimer(DestroyTimerHandle);
+    GetWorldTimerManager().ClearTimer(StaggerResumeTimerHandle);
 
     Super::EndPlay(EndPlayReason);
 }
@@ -345,6 +348,9 @@ void APTMonsterCharacter::OnDeath()
     {
         return;
     }
+
+    SetSuperArmor(false);
+    GetWorldTimerManager().ClearTimer(StaggerResumeTimerHandle);
 
     Super::OnDeath();
 
@@ -388,6 +394,74 @@ float APTMonsterCharacter::GetAttackDamage() const
 void APTMonsterCharacter::OnRep_CurrentHP()
 {
     OnHPChanged.Broadcast(CurrentHP, MaxHP);
+}
+
+void APTMonsterCharacter::Multicast_PlayHitReactionMontage_Implementation(EHitReactionType ReactionType)
+{
+    if (bHasSuperArmor)
+    {
+        return;
+    }
+
+    Super::Multicast_PlayHitReactionMontage_Implementation(ReactionType);
+}
+
+void APTMonsterCharacter::ApplyHit(const FPTHitInfo& HitInfo)
+{
+    if (bHasSuperArmor)
+    {
+        ApplyHitStop(HitInfo.HitStopDuration);
+
+        if (APTBaseCharacter* AttackerChar = Cast<APTBaseCharacter>(HitInfo.Attacker))
+        {
+            AttackerChar->RequestHitStop(HitInfo.HitStopDuration * 0.5f);
+        }
+
+        return;
+    }
+
+    if (HitInfo.StaggerDuration > 0.f)
+    {
+        RestartBTAfterStagger(HitInfo.StaggerDuration);
+    }
+
+    Super::ApplyHit(HitInfo);
+}
+
+void APTMonsterCharacter::RestartBTAfterStagger(float Duration)
+{
+    AAIController* AIC = Cast<AAIController>(GetController());
+    if (!IsValid(AIC) || !IsValid(AIC->BrainComponent))
+    {
+        return;
+    }
+
+    GetWorldTimerManager().ClearTimer(StaggerResumeTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        StaggerResumeTimerHandle,
+        this, &APTMonsterCharacter::OnStaggerEnd,
+        Duration, false
+    );
+}
+
+void APTMonsterCharacter::OnStaggerEnd()
+{
+    if (IsDead())
+    {
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("After Stagger MaxWalkSpeed: %f"),
+        GetCharacterMovement()->MaxWalkSpeed);
+
+    AAIController* AIC = Cast<AAIController>(GetController());
+    if (!IsValid(AIC) || !IsValid(AIC->BrainComponent))
+    {
+        return;
+    }
+
+    AIC->StopMovement();
+    AIC->BrainComponent->RestartLogic();
 }
 
 void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)

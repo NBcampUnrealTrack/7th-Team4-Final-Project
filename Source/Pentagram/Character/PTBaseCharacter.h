@@ -37,6 +37,7 @@ public:
     float GetAttackSpeed() const { return AttackSpeed; }
     float GetBaseAtk()     const { return BaseAtk; }
     FName GetCharacterDataRowName() const { return CharacterDataHandle.RowName; }
+    void RequestHitStop(float Duration);
 
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
@@ -44,10 +45,15 @@ protected:
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
-    void ApplyHit(const FPTHitInfo& HitInfo);
+    virtual void ApplyHit(const FPTHitInfo& HitInfo);
     void ApplyHitStop(float Duration);
     void RestoreHitStop();
     void ApplyKnockback(const FPTHitInfo& HitInfo);
+
+    UFUNCTION(NetMulticast, Unreliable)
+    virtual void Multicast_PlayHitReactionMontage(EHitReactionType ReactionType);
+
+    virtual void Multicast_PlayHitReactionMontage_Implementation(EHitReactionType ReactionType);
 
 public:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────

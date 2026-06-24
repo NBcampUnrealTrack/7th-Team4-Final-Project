@@ -63,6 +63,8 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|Combat")
     TObjectPtr<UPTMonsterSkillComponent> SkillComponent;
 
+    void SetSuperArmor(bool bEnable) { bHasSuperArmor = bEnable; }
+
 protected:
     UFUNCTION()
     void OnRep_CurrentState();
@@ -73,6 +75,12 @@ protected:
     virtual void OnDeath() override;
     virtual float GetAttackDamage() const;
     virtual void OnRep_CurrentHP() override;
+
+    virtual void Multicast_PlayHitReactionMontage_Implementation(EHitReactionType ReactionType) override;
+    virtual void ApplyHit(const FPTHitInfo& HitInfo) override;
+
+    void RestartBTAfterStagger(float Duration);
+    void OnStaggerEnd();
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentState, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     EMonsterState CurrentState = EMonsterState::Idle;
@@ -146,7 +154,10 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
     float DestroyDelayAfterMontage = 1.5f;
 
+    bool bHasSuperArmor = false;
+
     FTimerHandle DestroyTimerHandle;
+    FTimerHandle StaggerResumeTimerHandle;
 
     void RegisterDamageContributor(AActor* DamageCauser);
     void DestroyAfterDeath();
