@@ -11,13 +11,18 @@ UPTEquipmentComponent::UPTEquipmentComponent()
 
     EquippedWeapon = FEquipmentSlot(EEquipSlotType::Weapon);
     EquippedChest  = FEquipmentSlot(EEquipSlotType::Chest);
-    EquippedHelmet = FEquipmentSlot(EEquipSlotType::Helmet); 
-    EquippedGloves = FEquipmentSlot(EEquipSlotType::Gloves); 
-    EquippedBoots = FEquipmentSlot(EEquipSlotType::Boots); 
+    EquippedHelmet = FEquipmentSlot(EEquipSlotType::Helmet);
+    EquippedGloves = FEquipmentSlot(EEquipSlotType::Gloves);
+    EquippedBoots = FEquipmentSlot(EEquipSlotType::Boots);
 
     TotalBonusStr = 0;
     TotalBonusDef = 0;
     TotalBonusHp  = 0;
+}
+
+bool UPTEquipmentComponent::IsWeaponEquipped() const
+{
+    return EquippedWeapon.bIsEquipped;
 }
 
 void UPTEquipmentComponent::BeginPlay()
@@ -25,7 +30,7 @@ void UPTEquipmentComponent::BeginPlay()
     Super::BeginPlay();
 }
 
-// 리플리케이션 규칙 
+// 리플리케이션 규칙
 void UPTEquipmentComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -61,7 +66,7 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
     if (NewItem.Item_Type == EItemType::Weapon)     TargetSlot = &EquippedWeapon;
     else if (NewItem.Item_Type == EItemType::Chest)  TargetSlot = &EquippedChest;
     else if (NewItem.Item_Type == EItemType::Helmet) TargetSlot = &EquippedHelmet;
-    else if (NewItem.Item_Type == EItemType::Gloves) TargetSlot = &EquippedGloves; 
+    else if (NewItem.Item_Type == EItemType::Gloves) TargetSlot = &EquippedGloves;
     else if (NewItem.Item_Type == EItemType::Boots)  TargetSlot = &EquippedBoots;
     if (!TargetSlot) return false;
 
@@ -96,7 +101,7 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
         if (OwnerCharacter)
         {
             // 데이터베이스에서 세팅한 메시를 캐릭터에게 전달
-            OwnerCharacter->UpdateWeaponVisual(NewItem.ItemMeshAsset);
+            OwnerCharacter->UpdateWeaponVisual(NewItem.ItemMeshAsset, NewItem);
         }
     }
 
@@ -180,7 +185,7 @@ void UPTEquipmentComponent::Server_UnequipItem_Implementation(EEquipSlotType Slo
     FItemData DummyUnequippedItem;
     UnequipItem(SlotType, DummyUnequippedItem);
 
-    /* TODO : [테스트 중 데이터 꼬임없이 서버와 클라이언트 간에 장착/해제 및 스탯계산이 완벽하다면 
+    /* TODO : [테스트 중 데이터 꼬임없이 서버와 클라이언트 간에 장착/해제 및 스탯계산이 완벽하다면
     해제된 장비를 인벤토리에 다시 넣어주는 연동 처리를 나중에 여기에 구현하기] */
 }
 
@@ -200,7 +205,7 @@ void UPTEquipmentComponent::UpdateTotalBonusStats()
 
     for (FEquipmentSlot* Slot : Slots)
     {
-        if (Slot && Slot->bIsEquipped) // 기본 옵션 파싱 
+        if (Slot && Slot->bIsEquipped) // 기본 옵션 파싱
         {
             // (무기/장갑: STR)
             if (Slot->EquippedSlotType == EEquipSlotType::Weapon || Slot->EquippedSlotType == EEquipSlotType::Gloves)
@@ -253,7 +258,7 @@ void UPTEquipmentComponent::OnRep_EquippedWeapon()
         if (EquippedWeapon.bIsEquipped)
         {
             // 장착 중이라면 복제되어 온 MountedItem의 메시를 손에 쥐여줍니다.
-            OwnerCharacter->UpdateWeaponVisual(EquippedWeapon.MountedItem.ItemMeshAsset);
+            OwnerCharacter->UpdateWeaponVisual(EquippedWeapon.MountedItem.ItemMeshAsset, EquippedWeapon.MountedItem);
         }
         else
         {

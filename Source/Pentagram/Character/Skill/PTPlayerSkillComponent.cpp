@@ -2,6 +2,7 @@
 
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
+#include "Character/Player/PTEquipmentComponent.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -97,12 +98,12 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
 
     if (UAnimMontage* Montage = SkillData->SkillMontage.LoadSynchronous())
     {
-        APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(Owner);
-        if (PlayerCharacter)
+        APTPlayerCharacter* PlayerChar = Cast<APTPlayerCharacter>(Owner);
+        if (PlayerChar)
         {
-            PlayerCharacter->bIsAttacking = false;
-            PlayerCharacter->bCanCombo    = false;
-            PlayerCharacter->ComboIndex   = 0;
+            PlayerChar->bIsAttacking = false;
+            PlayerChar->bCanCombo    = false;
+            PlayerChar->ComboIndex   = 0;
             Owner->StopAnimMontage();
         }
 
