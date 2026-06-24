@@ -47,6 +47,7 @@ public:
     FPTPlayerSaveData CaptureFromPlayerState(const APTBasePlayerState* PlayerState) const;
     void ApplyToPlayerState(APTBasePlayerState* PlayerState, const FPTPlayerSaveData& PlayerSaveData) const;
     bool HasPlayerSaveData(const APTBasePlayerState* PlayerState) const;
+    void NotifyWorldReadyForAutoSave();
 
 private:
     void StartAutoSave();

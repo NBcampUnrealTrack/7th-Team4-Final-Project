@@ -32,7 +32,7 @@ void APTShopNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 
 void APTShopNPCCharacter::OpenShop(APlayerController* InteractPlayerController)
 {
-    if (InteractPlayerController == nullptr)
+    if (!HasAuthority() || InteractPlayerController == nullptr)
     {
         return;
     }

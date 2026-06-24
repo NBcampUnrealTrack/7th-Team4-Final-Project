@@ -48,6 +48,12 @@ public:
     void ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass);
 
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    UCommonActivatableWidget* OpenInventoryForShop(TSubclassOf<UCommonActivatableWidget> InventoryClass);
+
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void CloseShopInventory();
+
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestClass);
 
     // 레이아웃 조회
@@ -59,6 +65,9 @@ protected:
 
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> ShopInstance;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UCommonActivatableWidget> ShopInventoryInstance;
 
     UPROPERTY(Transient)
     TObjectPtr<UPTNPCDialogueWidget> QuestInstance;

@@ -49,15 +49,17 @@ void APTBasePlayerState::OnRep_PlayerLevel()
 // 로비 추가
 void APTBasePlayerState::OnRep_IsReady()
 {
-    if (APTGameState* PTGameState = GetWorld()->GetGameState<APTGameState>())
+    UWorld* World = GetWorld();
+    if (APTGameState* PTGameState = World != nullptr ? World->GetGameState<APTGameState>() : nullptr)
     {
         PTGameState->NotifyLobbyUpdated();
     }
 }
 void APTBasePlayerState::OnRep_AcceptedQuests()
 {
-    
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTQuestSubsystem* QuestSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
     if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->BroadcastQuestListChanged();
@@ -95,7 +97,8 @@ void APTBasePlayerState::SetReady(bool bNewReady)
     bIsReady = bNewReady;
     OnRep_IsReady();    // 서버 반영
 
-    if (APTGameMode* PTGameMode = GetWorld()->GetAuthGameMode<APTGameMode>())
+    UWorld* World = GetWorld();
+    if (APTGameMode* PTGameMode = World != nullptr ? World->GetAuthGameMode<APTGameMode>() : nullptr)
     {
         PTGameMode->NotifyReadyChanged();
     }

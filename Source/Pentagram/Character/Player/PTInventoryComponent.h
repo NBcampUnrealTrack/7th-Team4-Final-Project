@@ -6,7 +6,7 @@
 #include "Item/PTDropItemActorBase.h"
 #include "PTInventoryComponent.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventorySlotsUpdated);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnInventoryChanged);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTInventoryComponent : public UActorComponent
@@ -31,6 +31,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RemoveItem(FName ItemID, int32 Count);
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool RemoveItemAtSlot(int32 SlotIndex, int32 Count = 1);
+
     // 인벤토리 슬롯(UI)
     UFUNCTION(BlueprintPure, Category = "Inventory")
     const TArray<FInventorySlot>& GetInventorySlots() const { return InventorySlots; }
@@ -41,6 +44,9 @@ public:
 
     // 디버깅용 : 현재 인벤토리 상태를 로그창에 출력
     void PrintInventoryLog();
+
+    UPROPERTY(BlueprintAssignable, Category = "Inventory")
+    FPTOnInventoryChanged OnInventoryChanged;
 
     // ── RPC 함수 ─────────────────────────────────────────────────────────────
 
@@ -58,14 +64,17 @@ public:
     // 네트워크 리플리케이트를 위한 프로퍼티 등록 함수 오버라이드
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
+    UFUNCTION()
+    void OnRep_InventorySlots();
+
     // ── 멤버 변수 (protected) ────────────────────────────────────────────────
 
     // 가방 크기 총 30칸
     const int32 MaxSlotCount = 30;
 
     // 인벤토리 실제 데이터를 담는 배열
-    UPROPERTY(ReplicatedUsing=OnRep_InventorySlots, VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
-    TArray<FInventorySlot> InventorySlots;;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventorySlots, Category = "Inventory")
+    TArray<FInventorySlot> InventorySlots;
 
     UPROPERTY(BlueprintAssignable)
     FOnInventorySlotsUpdated OnInventorySlotsUpdated;
@@ -81,6 +90,7 @@ private:
     // 실제 캐릭터를 찾아서 피를 채워줄 내부 틱 함수 (5초간 매초 실행)
     void ExecutePotionHealing();
     void NotifyQuestItemCollected(const FItemData& ItemData, int32 Count) const;
+    void BroadcastInventoryChanged();
 
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 

@@ -8,11 +8,19 @@
 class UUniformGridPanel;
 class UPTInventorySlotWidget;
 class UPTInventoryComponent;
+class UPTShopWidget;
 
 UCLASS()
 class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget
 {
     GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "PT|Inventory|Shop")
+    void SetShopSellTarget(UPTShopWidget* InShopWidget);
+
+    UFUNCTION(BlueprintCallable, Category = "PT|Inventory|Shop")
+    void ClearShopSellTarget();
 
 protected:
     // ── 오버라이드 ──
@@ -26,6 +34,14 @@ protected:
 
     UFUNCTION()
     void RefreshAllSlots();
+    void BindInventoryChanged();
+    void UnbindInventoryChanged();
+
+    UFUNCTION()
+    void HandleInventoryChanged();
+
+    UFUNCTION()
+    void HandleSlotClicked(int32 SlotIndex);
 
     UFUNCTION()
     void HandleEquipRequested(int32 FromIndex, EItemType EquipType);
@@ -53,6 +69,11 @@ protected:
     // ── 멤버 변수 ──
     UPROPERTY(Transient)
     TArray<TObjectPtr<UPTInventorySlotWidget>> SlotWidgets;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UPTShopWidget> ShopWidgetForSell;
+
+    TWeakObjectPtr<UPTInventoryComponent> BoundInventoryComponent;
 
 
 private:

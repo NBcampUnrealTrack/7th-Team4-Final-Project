@@ -26,7 +26,8 @@ void UPTInventoryComponent::BeginPlay()
     Super::BeginPlay();
 
     // [네트워크 최적화] 슬롯 초기화는 '서버'에서만 수행해도 리플리케이션을 통해 클라이언트에 전달됨.
-    if (GetOwner()->HasAuthority())
+    AActor* Owner = GetOwner();
+    if (Owner != nullptr && Owner->HasAuthority())
     {
         // 게임 시작 시 30칸의 빈 슬롯을 미리 확보.
         InventorySlots.Init(FInventorySlot(), MaxSlotCount);
@@ -42,10 +43,16 @@ void UPTInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePro
     DOREPLIFETIME(UPTInventoryComponent, InventorySlots);
 }
 
+void UPTInventoryComponent::OnRep_InventorySlots()
+{
+    BroadcastInventoryChanged();
+}
+
 bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count)
 {
     // [멀티플레이어] 아이템 획득 연산은 무조건 '서버'에서만 수행되어야 합니다.
-    if (!GetOwner()->HasAuthority()) return false;
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority()) return false;
 
     // 유효하지 않은 데이터나 수량 방어 코드
     if (NewItemData.Item_ID.IsNone() || Count <= 0) return false;
@@ -62,6 +69,7 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
             UE_LOG(LogTemp, Log, TEXT("[인벤토리] 기존 슬롯에 수량 추가: %s (+%d개, 총 %d개)"),
                 *NewItemData.Item_Name.ToString(), Count, InventorySlots[TargetIndex].Quantity);
 
+            BroadcastInventoryChanged();
             PrintInventoryLog();
             NotifyQuestItemCollected(NewItemData, Count);
             return true;
@@ -79,6 +87,7 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
         UE_LOG(LogTemp, Log, TEXT("[인벤토리] 새 슬롯(%d번)에 아이템 등록: %s (%d개)"),
             EmptyIndex, *NewItemData.Item_Name.ToString(), Count);
 
+        BroadcastInventoryChanged();
         PrintInventoryLog();
         NotifyQuestItemCollected(NewItemData, Count);
         return true;
@@ -126,7 +135,8 @@ int32 UPTInventoryComponent::GetItemCount(FName ItemID) const
 
 bool UPTInventoryComponent::RemoveItem(FName ItemID, int32 Count)
 {
-    if (!GetOwner()->HasAuthority() || ItemID.IsNone() || Count <= 0)
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority() || ItemID.IsNone() || Count <= 0)
     {
         return false;
     }
@@ -159,6 +169,35 @@ bool UPTInventoryComponent::RemoveItem(FName ItemID, int32 Count)
         }
     }
 
+    BroadcastInventoryChanged();
+    PrintInventoryLog();
+    return true;
+}
+
+bool UPTInventoryComponent::RemoveItemAtSlot(int32 SlotIndex, int32 Count)
+{
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority() ||
+        !InventorySlots.IsValidIndex(SlotIndex) ||
+        InventorySlots[SlotIndex].IsEmpty() ||
+        Count <= 0)
+    {
+        return false;
+    }
+
+    FInventorySlot& Slot = InventorySlots[SlotIndex];
+    if (Slot.Quantity < Count)
+    {
+        return false;
+    }
+
+    Slot.Quantity -= Count;
+    if (Slot.Quantity <= 0)
+    {
+        Slot = FInventorySlot();
+    }
+
+    BroadcastInventoryChanged();
     PrintInventoryLog();
     return true;
 }
@@ -177,7 +216,10 @@ void UPTInventoryComponent::NotifyQuestItemCollected(const FItemData& ItemData, 
         return;
     }
 
-    UPTQuestSubsystem* QuestSubsystem = GetWorld()->GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UWorld* World = GetWorld();
+    UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+    UPTQuestSubsystem* QuestSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
     if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->UpdateQuestProgress(
@@ -202,7 +244,13 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
 
     // [멀티플레이어 핵심 분기]
     // 클라이언트가 UI에서 우클릭 등으로 이 함수를 호출한 경우, 직접 개수를 깎으면 데이터 변조 위험이 있으므로 결정권을 서버한테 넘기는 방식
-    if (!GetOwner()->HasAuthority())
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr)
+    {
+        return false;
+    }
+
+    if (!Owner->HasAuthority())
     {
         // 클라이언트가 서버에게 안전하게 "나 몇 번 슬롯 물약 쓰겠다" 라고 무전(RPC)을 보내고 리턴.
         Server_UsePotion(SlotIndex);
@@ -210,6 +258,7 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
     }
 
     // 소비 아이템 개수 차감
+    const FText UsedItemName = InventorySlots[SlotIndex].ItemData.Item_Name;
     InventorySlots[SlotIndex].Quantity--;
 
     // 수량이 0 이하가 되었다면 완전히 빈 슬롯으로 초기화
@@ -218,18 +267,24 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
         InventorySlots[SlotIndex] = FInventorySlot();
     }
 
-    UE_LOG(LogTemp, Log, TEXT("%s 아이템 사용. 남은 수량: %d개"),
-        *InventorySlots[SlotIndex].ItemData.Item_Name.ToString(), InventorySlots[SlotIndex].Quantity);
+    UE_LOG(LogTemp, Log, TEXT("[Inventory] Used item: %s / Remaining: %d"),
+        *UsedItemName.ToString(), InventorySlots[SlotIndex].Quantity);
 
-    // 가방 상황 로그 출력
+    BroadcastInventoryChanged();
     PrintInventoryLog();
 
-    // 5초 동안 매초 서서히 회복되는 타이머 가동
-    GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle); // 기존에 돌던 포션 타이머가 있다면 초기화
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return false;
+    }
+
+    World->GetTimerManager().ClearTimer(PotionTimerHandle); // 기존에 돌던 포션 타이머가 있다면 초기화
     PotionTickCount = 0;                                         // 틱 카운터 초기화
 
     // 1초마다 ExecutePotionHealing 함수를 반복 호출 (총 5회)
-    GetWorld()->GetTimerManager().SetTimer(PotionTimerHandle, this, &UPTInventoryComponent::ExecutePotionHealing, 1.0f, true);
+    PotionTickCount = 0;
+    World->GetTimerManager().SetTimer(PotionTimerHandle, this, &UPTInventoryComponent::ExecutePotionHealing, 1.0f, true);
 
     return true;
 }
@@ -255,13 +310,17 @@ bool UPTInventoryComponent::Server_UsePotion_Validate(int32 SlotIndex)
 void UPTInventoryComponent::ExecutePotionHealing() // 포션 회복
 {
     // 이 코드를 실행하는게 서버가 아니라면 함수를 즉시 리턴
-    if (!GetOwner()->HasAuthority()) return;
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority()) return;
+
+    UWorld* World = GetWorld();
+    if (World == nullptr) return;
 
     // 이 컴포넌트를 들고 있는 주인(캐릭터) 가져오기
     APTBaseCharacter* OwnerCharacter = Cast<APTBaseCharacter>(GetOwner());
     if (!OwnerCharacter)
     {
-        GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle);
+        World->GetTimerManager().ClearTimer(PotionTimerHandle);
         return;
     }
 
@@ -279,7 +338,7 @@ void UPTInventoryComponent::ExecutePotionHealing() // 포션 회복
     // 5초(5번 틱)가 지나면 타이머 종료
     if (PotionTickCount >= 5)
     {
-        GetWorld()->GetTimerManager().ClearTimer(PotionTimerHandle);
+        World->GetTimerManager().ClearTimer(PotionTimerHandle);
         UE_LOG(LogTemp, Log, TEXT("[포션 효과 끝남]"));
     }
 }
@@ -326,4 +385,9 @@ void UPTInventoryComponent::PrintInventoryLog()
         }
     }
     UE_LOG(LogTemp, Log, TEXT("======================================"));
+}
+
+void UPTInventoryComponent::BroadcastInventoryChanged()
+{
+    OnInventoryChanged.Broadcast();
 }

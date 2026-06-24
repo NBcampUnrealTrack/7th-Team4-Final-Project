@@ -78,8 +78,10 @@ void UPTRewardSubsystem::GiveExpToContributors(APTMonsterCharacter* DeadMonster)
 
 void UPTRewardSubsystem::UpdateKillMonsterQuestProgress(APTMonsterCharacter* DeadMonster)
 {
-    UGameInstance* GI = GetWorld()->GetGameInstance();
-    UPTQuestSubsystem* QuestSubsystem = GI->GetSubsystem<UPTQuestSubsystem>();
+    UWorld* World = GetWorld();
+    UGameInstance* GI = World != nullptr ? World->GetGameInstance() : nullptr;
+    UPTQuestSubsystem* QuestSubsystem =
+        GI != nullptr ? GI->GetSubsystem<UPTQuestSubsystem>() : nullptr;
     if (QuestSubsystem == nullptr)
     {
         return;
