@@ -2,11 +2,46 @@
 
 #include "PTShopSlotWidget.h"
 
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
+
+void UPTShopSlotWidget::NativeOnMouseEnter(
+    const FGeometry& InGeometry,
+    const FPointerEvent& InMouseEvent)
+{
+    Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+
+    if (!IsEmpty())
+    {
+        OnHovered.Broadcast(SlotIndex);
+    }
+}
+
+void UPTShopSlotWidget::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
+{
+    Super::NativeOnMouseLeave(InMouseEvent);
+
+    if (!IsEmpty())
+    {
+        OnUnhovered.Broadcast(SlotIndex);
+    }
+}
 
 void UPTShopSlotWidget::SetShopData(const FInventorySlot& InSlot, int32 InPrice)
 {
     SlotData = InSlot;
+
+    if (Img_Icon != nullptr)
+    {
+        if (!SlotData.IsEmpty() && !SlotData.ItemData.Item_Icon.IsNull())
+        {
+            Img_Icon->SetBrushFromSoftTexture(SlotData.ItemData.Item_Icon, true);
+        }
+        else
+        {
+            Img_Icon->SetBrushFromTexture(nullptr);
+        }
+    }
 
     if (Txt_ItemName != nullptr)
     {
@@ -28,6 +63,11 @@ void UPTShopSlotWidget::ClearSlot()
     SlotData = FInventorySlot();
     Price = 0;
 
+    if (Img_Icon != nullptr)
+    {
+        Img_Icon->SetBrushFromTexture(nullptr);
+    }
+
     if (Txt_ItemName != nullptr)
     {
         Txt_ItemName->SetText(FText::GetEmpty());
@@ -44,5 +84,5 @@ void UPTShopSlotWidget::RequestBuy()
         return;
     }
 
-    OnBuyClicked.Broadcast(SlotIndex); // 구매 통지
+    OnSelected.Broadcast(SlotIndex);
 }

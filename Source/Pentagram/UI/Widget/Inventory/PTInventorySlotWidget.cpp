@@ -24,6 +24,18 @@ FReply UPTInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
     return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 }
 
+FReply UPTInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    if (IsEmpty() || !InMouseEvent.GetEffectingButton().IsValid() ||
+        InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+    {
+        return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+    }
+
+    OnClicked.Broadcast(SlotIndex);
+    return FReply::Handled();
+}
+
 void UPTInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
 {
     if (IsEmpty()) return;

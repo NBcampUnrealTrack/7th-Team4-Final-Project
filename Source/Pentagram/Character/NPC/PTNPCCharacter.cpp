@@ -81,11 +81,15 @@ void APTNPCCharacter::Interact_Implementation(AActor* InteractorCharacter)
 
     if (!NPCID.IsNone())
     {
-        UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-        if (QuestSubsystem != nullptr)
+        UGameInstance* GameInstance = GetGameInstance();
+        UPTQuestSubsystem* QuestSubsystem =
+            GameInstance != nullptr ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+        APTBasePlayerState* PlayerState =
+            InteractPlayerController->GetPlayerState<APTBasePlayerState>();
+        if (QuestSubsystem != nullptr && PlayerState != nullptr)
         {
             QuestSubsystem->UpdateQuestProgress(
-                InteractPlayerController->GetPlayerState<APTBasePlayerState>(),
+                PlayerState,
                 EPTQuestConditionType::TalkToNPC,
                 NPCID);
         }

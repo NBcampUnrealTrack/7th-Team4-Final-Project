@@ -42,6 +42,7 @@ public:
     void OnQuestPressed();
 
     void RestoreGameplayInput();
+    void SetGameplayInputBlockedByUI(bool bBlocked);
 
     UFUNCTION(Client, Reliable)
     void Client_OpenQuestDialogue(
@@ -53,14 +54,17 @@ public:
         APTShopNPCCharacter* ShopNPC,
         TSubclassOf<UPTShopWidget> ShopWidgetClass);
 
-    UFUNCTION(Server, Reliable)
+    UFUNCTION(Server, Reliable, WithValidation)
     void ServerAcceptQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);
 
-    UFUNCTION(Server, Reliable)
+    UFUNCTION(Server, Reliable, WithValidation)
     void ServerRewardQuest(APTQuestNPCCharacter* QuestNPC, FName QuestID);
 
-    UFUNCTION(Server, Reliable)
+    UFUNCTION(Server, Reliable, WithValidation)
     void ServerBuyItem(APTShopNPCCharacter* ShopNPC, FName ItemID);
+
+    UFUNCTION(Server, Reliable, WithValidation)
+    void ServerSellItem(APTShopNPCCharacter* ShopNPC, int32 InventorySlotIndex, FName ExpectedItemID, int32 Count);
 
     UFUNCTION(Server, Reliable)
     void Server_SetActorRotation(FRotator NewRotation);
@@ -77,7 +81,7 @@ public:
     void Client_ShowDeathMenu();
 
     // 부활 요청
-    UFUNCTION(Server, Reliable)
+    UFUNCTION(Server, Reliable, WithValidation)
     void Server_RequestRespawn();
 
     // [디버그] 즉사
@@ -197,4 +201,5 @@ private:
     TObjectPtr<UPTPrimaryLayout> PrimaryLayout;
 
     bool bUIInputMappingAdded = false;
+    bool bGameplayInputBlockedByUI = false;
 };

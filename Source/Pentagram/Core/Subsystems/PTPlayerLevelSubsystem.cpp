@@ -41,12 +41,17 @@ void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpA
 
     PlayerState->RequiredExp = CalculateRequiredExp(PlayerState->PlayerLevel);
 
-    PlayerState->CurrentExp += ExpAmount;
+    const int64 NewExp = static_cast<int64>(PlayerState->CurrentExp) + static_cast<int64>(ExpAmount);
+    PlayerState->CurrentExp = static_cast<int32>(FMath::Clamp<int64>(NewExp, 0, MAX_int32));
 
-    while (PlayerState->CurrentExp >= PlayerState->RequiredExp)
+    int32 LevelUpCount = 0;
+    while (PlayerState->RequiredExp > 0 &&
+        PlayerState->CurrentExp >= PlayerState->RequiredExp &&
+        LevelUpCount < 1000)
     {
         PlayerState->CurrentExp -= PlayerState->RequiredExp;
         LevelUp(PlayerState);
+        ++LevelUpCount;
     }
 
     OnExpChanged.Broadcast(PlayerState, PlayerState->CurrentExp);
@@ -56,6 +61,11 @@ void UPTPlayerLevelSubsystem::AddExp(APTBasePlayerState* PlayerState, int32 ExpA
 void UPTPlayerLevelSubsystem::LevelUp(APTBasePlayerState* PlayerState)
 {
     if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return;
+    }
+
+    if (PlayerState->PlayerLevel >= MAX_int32)
     {
         return;
     }
@@ -139,5 +149,6 @@ int32 UPTPlayerLevelSubsystem::CalculateRequiredExp(int32 PlayerLevel) const
         return *RequiredExp;
     }
 
-    return SafePlayerLevel * 100;
+    const int64 FallbackRequiredExp = static_cast<int64>(SafePlayerLevel) * 100;
+    return static_cast<int32>(FMath::Clamp<int64>(FallbackRequiredExp, 1, MAX_int32));
 }
