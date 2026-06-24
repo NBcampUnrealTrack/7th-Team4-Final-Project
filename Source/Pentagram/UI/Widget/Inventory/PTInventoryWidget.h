@@ -8,6 +8,7 @@
 class UUniformGridPanel;
 class UPTInventorySlotWidget;
 class UPTInventoryComponent;
+class UPTEquipPanelWidget;
 class UPTShopWidget;
 
 UCLASS()

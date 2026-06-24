@@ -29,11 +29,6 @@ void UPTInventoryWidget::NativeOnInitialized()
         }
     }
 
-    UPTInventoryComponent* Inven = ResolveInventoryComponent();
-    if (Inven)
-    {
-        Inven->OnInventorySlotsUpdated.AddUniqueDynamic(this, &UPTInventoryWidget::RefreshAllSlots);
-    }
 }
 
 void UPTInventoryWidget::SetShopSellTarget(UPTShopWidget* InShopWidget)

@@ -18,7 +18,7 @@ UPTInventoryComponent::UPTInventoryComponent()
 void UPTInventoryComponent::OnRep_InventorySlots()
 {
     // 열려있는 위젯에 직접 델리게이트로 알려줌
-    OnInventorySlotsUpdated.Broadcast();
+    BroadcastInventoryChanged();
 }
 
 void UPTInventoryComponent::BeginPlay()
@@ -41,11 +41,6 @@ void UPTInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 
     // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동 동기화.
     DOREPLIFETIME(UPTInventoryComponent, InventorySlots);
-}
-
-void UPTInventoryComponent::OnRep_InventorySlots()
-{
-    BroadcastInventoryChanged();
 }
 
 bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count)

@@ -54,8 +54,6 @@ public:
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_UsePotion(int32 SlotIndex);
 
-    UFUNCTION()
-    void OnRep_InventorySlots();
 public:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
@@ -76,8 +74,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventorySlots, Category = "Inventory")
     TArray<FInventorySlot> InventorySlots;
 
-    UPROPERTY(BlueprintAssignable)
-    FOnInventorySlotsUpdated OnInventorySlotsUpdated;
 private:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
