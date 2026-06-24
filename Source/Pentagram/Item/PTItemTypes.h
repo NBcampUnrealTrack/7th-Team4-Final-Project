@@ -79,6 +79,9 @@ struct FItemData : public FTableRowBase
     FText Item_Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+    FText Item_Description;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EItemCategory Item_Category;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")

@@ -201,6 +201,11 @@ bool UPTSaveSubsystem::HasPlayerSaveData(const APTBasePlayerState* PlayerState) 
     return UGameplayStatics::DoesSaveGameExist(MakeSaveSlotName(PlayerSaveID), PTSaveUserIndex);
 }
 
+void UPTSaveSubsystem::NotifyWorldReadyForAutoSave()
+{
+    StartAutoSave();
+}
+
 bool UPTSaveSubsystem::WriteSlotDataToSlot(const FString& SlotName, const FPTPlayerSaveData& PlayerSaveData)
 {
     if (SlotName.IsEmpty())

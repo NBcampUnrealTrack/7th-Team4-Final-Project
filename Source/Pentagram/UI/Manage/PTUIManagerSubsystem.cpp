@@ -1,4 +1,6 @@
 ﻿#include "UI/Manage/PTUIManagerSubsystem.h"
+#include "CommonActivatableWidget.h"
+#include "GameFramework/PlayerController.h"
 #include "UI/HUD/PTHUDWidget.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
@@ -19,6 +21,15 @@ void UPTUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTUIManagerSubsystem::Deinitialize()
 {
+    CloseShopInventory();
+    RemoveWidget(InventoryInstance);
+    InventoryInstance = nullptr;
+    RemoveWidget(ShopInstance);
+    ShopInstance = nullptr;
+    RemoveWidget(QuestInstance);
+    QuestInstance = nullptr;
+    RemoveWidget(CurrentUIWidget);
+    CurrentUIWidget = nullptr;
     PrimaryLayout.Reset();
     Super::Deinitialize();
 }
@@ -85,15 +96,21 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     }
 
     // 매핑된 UI 푸시
-    if (UClass* WidgetClass = Entry->WidgetClass.LoadSynchronous())
+    if (UClass* WidgetClass = Entry->WidgetClass.Get())
     {
         CurrentUIWidget = PushWidget(WidgetClass, Entry->Layer);
+    }
+    else if (!Entry->WidgetClass.IsNull())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Widget class for level %s is not loaded yet."), *LevelName.ToString());
     }
 }
 
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
 {
     if (!InventoryClass) return;
+
+    CloseShopInventory();
 
     bool bIsInventoryOpen = false;
     if (InventoryInstance)
@@ -132,11 +149,64 @@ void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> Sho
     {
         RemoveWidget(ShopInstance);
         ShopInstance = nullptr;
+        CloseShopInventory();
     }
     else
     {
         ShopInstance = PushWidget(ShopClass, EPTUILayer::GameMenu);
     }
+}
+
+UCommonActivatableWidget* UPTUIManagerSubsystem::OpenInventoryForShop(
+    TSubclassOf<UCommonActivatableWidget> InventoryClass)
+{
+    if (!InventoryClass)
+    {
+        return nullptr;
+    }
+
+    if (ShopInventoryInstance &&
+        (ShopInventoryInstance->IsActivated() || ShopInventoryInstance->IsInViewport()))
+    {
+        return ShopInventoryInstance;
+    }
+
+    if (InventoryInstance)
+    {
+        RemoveWidget(InventoryInstance);
+        InventoryInstance = nullptr;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    UWorld* World = GetWorld();
+    APlayerController* PlayerController =
+        LocalPlayer != nullptr && World != nullptr ? LocalPlayer->GetPlayerController(World) : nullptr;
+    if (PlayerController == nullptr)
+    {
+        return nullptr;
+    }
+
+    ShopInventoryInstance = CreateWidget<UCommonActivatableWidget>(PlayerController, InventoryClass);
+    if (ShopInventoryInstance == nullptr)
+    {
+        return nullptr;
+    }
+
+    ShopInventoryInstance->AddToPlayerScreen(20);
+    ShopInventoryInstance->ActivateWidget();
+    return ShopInventoryInstance;
+}
+
+void UPTUIManagerSubsystem::CloseShopInventory()
+{
+    if (ShopInventoryInstance == nullptr)
+    {
+        return;
+    }
+
+    ShopInventoryInstance->DeactivateWidget();
+    ShopInventoryInstance->RemoveFromParent();
+    ShopInventoryInstance = nullptr;
 }
 
 void UPTUIManagerSubsystem::ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestClass)

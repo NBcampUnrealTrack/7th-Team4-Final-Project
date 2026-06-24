@@ -5,10 +5,12 @@
 #include "PTNPCDialogueWidget.generated.h"
 
 class APTQuestNPCCharacter;
+class APTBasePlayerState;
 class UCommonButtonBase;
 class UTextBlock;
 class UVerticalBox;
 class UPTQuestListEntryWidget;
+class UPTQuestSubsystem;
 struct FPTQuestProgress;
 
 UCLASS()
@@ -40,6 +42,9 @@ protected:
     virtual void NativeDestruct() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
+    virtual FReply NativeOnPreviewKeyDown(
+        const FGeometry& InGeometry,
+        const FKeyEvent& InKeyEvent) override;
 
     void BuildQuestList();
     void BuildAcceptedQuestList();
@@ -55,6 +60,8 @@ protected:
     void HandleQuestCompleted(FName QuestID);
     void HandleQuestProgressChanged(FName QuestID, const FPTQuestProgress& QuestProgress);
     void HandleQuestListChanged();
+    UPTQuestSubsystem* ResolveQuestSubsystem() const;
+    APTBasePlayerState* ResolveOwningPlayerState() const;
 
     UPROPERTY(BlueprintReadOnly, Category = "PT|NPC")
     TObjectPtr<APTQuestNPCCharacter> TargetNPC;

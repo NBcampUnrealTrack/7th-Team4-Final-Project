@@ -19,6 +19,8 @@ public:
     virtual void PostLogin(APlayerController* NewPlayer) override;
     virtual void Logout(AController* Exiting) override;    // 로비 추가
     virtual void RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform) override;
+    virtual void PostSeamlessTravel() override;
+    virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 
     void SetGamePhase(EGamePhase NewPhase);
     void StartGame();
@@ -42,6 +44,7 @@ protected:
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
     void SavePlayerState(AController* PlayerController) const;
+    void StartAutoSaveIfAvailable() const;
 
     void TravelToGame();    // 서버 트래블 로비 추가
 

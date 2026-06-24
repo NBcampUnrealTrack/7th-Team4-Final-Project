@@ -7,6 +7,7 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
+#include "InputCoreTypes.h"
 #include "UI/Components/PTCommonButtonBase.h"
 #include "UI/Widget/NPC/PTQuestListEntryWidget.h"
 
@@ -44,6 +45,18 @@ void UPTNPCDialogueWidget::NativeOnDeactivated()
     Super::NativeOnDeactivated();
 }
 
+UPTQuestSubsystem* UPTNPCDialogueWidget::ResolveQuestSubsystem() const
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    return GameInstance != nullptr ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
+}
+
+APTBasePlayerState* UPTNPCDialogueWidget::ResolveOwningPlayerState() const
+{
+    APlayerController* PlayerController = GetOwningPlayer();
+    return PlayerController != nullptr ? PlayerController->GetPlayerState<APTBasePlayerState>() : nullptr;
+}
+
 void UPTNPCDialogueWidget::SetupDialogue(APTQuestNPCCharacter* InNPC)
 {
     TargetNPC = InNPC;
@@ -58,6 +71,8 @@ void UPTNPCDialogueWidget::SetupQuestJournal()
 {
     TargetNPC = nullptr;
     SelectedQuestID = NAME_None;
+    SetIsFocusable(true);
+    SetFocus();
 
     if (AcceptButton != nullptr)
     {
@@ -84,13 +99,17 @@ void UPTNPCDialogueWidget::BuildQuestList()
 
     QuestList->ClearChildren();
 
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
     if (QuestSubsystem == nullptr)
     {
         return;
     }
 
-    APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+    APTBasePlayerState* PlayerState = ResolveOwningPlayerState();
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
 
     for (FName QuestID : TargetNPC->GetQuestIDs())
     {
@@ -134,13 +153,17 @@ void UPTNPCDialogueWidget::BuildAcceptedQuestList()
 
     QuestList->ClearChildren();
 
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
     if (QuestSubsystem == nullptr)
     {
         return;
     }
 
-    APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+    APTBasePlayerState* PlayerState = ResolveOwningPlayerState();
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
 
     for (const FPTQuestProgress& QuestProgress : QuestSubsystem->GetAcceptedQuestProgresses(PlayerState))
     {
@@ -199,7 +222,7 @@ void UPTNPCDialogueWidget::RefreshQuestText()
         return;
     }
 
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
     if (QuestSubsystem == nullptr)
     {
         return;
@@ -224,7 +247,7 @@ void UPTNPCDialogueWidget::RefreshQuestText()
     if (Txt_Objective != nullptr)
     {
         FText ObjectiveText;
-        APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+        APTBasePlayerState* PlayerState = ResolveOwningPlayerState();
         const FPTQuestProgress* QuestProgress =
             QuestSubsystem->GetQuestProgress(PlayerState, SelectedQuestID);
 
@@ -271,10 +294,10 @@ void UPTNPCDialogueWidget::RefreshQuestActionButtons()
 
     if (TargetNPC != nullptr && !SelectedQuestID.IsNone())
     {
-        UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-        if (QuestSubsystem != nullptr)
+        UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
+        APTBasePlayerState* PlayerState = ResolveOwningPlayerState();
+        if (QuestSubsystem != nullptr && PlayerState != nullptr)
         {
-            APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
             const bool bHasAcceptedQuest = QuestSubsystem->HasAcceptedQuest(PlayerState, SelectedQuestID);
             const bool bIsCompleted = QuestSubsystem->IsQuestCompleted(PlayerState, SelectedQuestID);
             const bool bIsRewarded = QuestSubsystem->IsQuestRewarded(PlayerState, SelectedQuestID);
@@ -306,13 +329,18 @@ void UPTNPCDialogueWidget::HandleQuestActionButtonClicked()
         return;
     }
 
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
     if (QuestSubsystem == nullptr)
     {
         return;
     }
 
-    APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+    APTBasePlayerState* PlayerState = ResolveOwningPlayerState();
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
     if (QuestSubsystem->IsQuestCompleted(PlayerState, SelectedQuestID) &&
         !QuestSubsystem->IsQuestRewarded(PlayerState, SelectedQuestID))
     {
@@ -328,7 +356,7 @@ void UPTNPCDialogueWidget::HandleQuestActionButtonClicked()
 
 void UPTNPCDialogueWidget::BindQuestDelegates()
 {
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
     if (QuestSubsystem == nullptr)
     {
         return;
@@ -347,7 +375,7 @@ void UPTNPCDialogueWidget::BindQuestDelegates()
 
 void UPTNPCDialogueWidget::UnbindQuestDelegates()
 {
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
     if (QuestSubsystem == nullptr)
     {
         return;
@@ -397,8 +425,8 @@ void UPTNPCDialogueWidget::HandleQuestListChanged()
 {
     if (!SelectedQuestID.IsNone())
     {
-        UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
-        APTBasePlayerState* PlayerState = GetOwningPlayer()->GetPlayerState<APTBasePlayerState>();
+        UPTQuestSubsystem* QuestSubsystem = ResolveQuestSubsystem();
+        APTBasePlayerState* PlayerState = ResolveOwningPlayerState();
         if (QuestSubsystem != nullptr && QuestSubsystem->IsQuestRewarded(PlayerState, SelectedQuestID))
         {
             SelectedQuestID = NAME_None;
@@ -447,4 +475,17 @@ bool UPTNPCDialogueWidget::NativeOnHandleBackAction()
     bIsBackHandler = true;
     CloseDialogue();
     return true;
+}
+
+FReply UPTNPCDialogueWidget::NativeOnPreviewKeyDown(
+    const FGeometry& InGeometry,
+    const FKeyEvent& InKeyEvent)
+{
+    if (TargetNPC == nullptr && InKeyEvent.GetKey() == EKeys::J)
+    {
+        CloseDialogue();
+        return FReply::Handled();
+    }
+
+    return Super::NativeOnPreviewKeyDown(InGeometry, InKeyEvent);
 }

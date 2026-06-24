@@ -9,6 +9,7 @@
 #include "PTShopSlotWidget.generated.h"
 
 class UTextBlock;
+class UImage;
 
 /**
  *
@@ -31,7 +32,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|Shop")
     void ClearSlot();
 
-    // 구매 요청
+    // 기존 Blueprint 연결을 유지하기 위한 상품 선택 요청
     UFUNCTION(BlueprintCallable, Category = "PT|Shop")
     void RequestBuy();
 
@@ -48,11 +49,24 @@ public:
     void SetSlotIndex(int32 InIndex) { SlotIndex = InIndex; }
     int32 GetSlotIndex() const { return SlotIndex; }
 
-    // 구매 델리게이트
+    // 상품 선택 델리게이트
     UPROPERTY(BlueprintAssignable, Category = "PT|Shop")
-    FPTOnShopBuyRequested OnBuyClicked;
+    FPTOnShopBuyRequested OnSelected;
+
+    UPROPERTY(BlueprintAssignable, Category = "PT|Shop")
+    FPTOnShopSlotHoverEvent OnHovered;
+
+    UPROPERTY(BlueprintAssignable, Category = "PT|Shop")
+    FPTOnShopSlotHoverEvent OnUnhovered;
 
 protected:
+    virtual void NativeOnMouseEnter(
+        const FGeometry& InGeometry,
+        const FPointerEvent& InMouseEvent) override;
+
+    virtual void NativeOnMouseLeave(
+        const FPointerEvent& InMouseEvent) override;
+
     // 비주얼 갱신
     UFUNCTION(BlueprintImplementableEvent, Category = "PT|Shop")
     void OnRefreshVisual(const FInventorySlot& InSlot);
@@ -63,6 +77,9 @@ protected:
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     TObjectPtr<UTextBlock> Txt_ItemName;
+
+    UPROPERTY(BlueprintReadOnly, Category = "PT|Shop", meta = (BindWidgetOptional))
+    TObjectPtr<UImage> Img_Icon;
 
     // 슬롯 데이터
     UPROPERTY(BlueprintReadOnly, Category = "PT|Shop")

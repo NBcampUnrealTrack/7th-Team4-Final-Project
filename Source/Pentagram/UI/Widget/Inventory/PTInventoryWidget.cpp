@@ -2,12 +2,14 @@
 
 #include "PTEquipPanelWidget.h"
 #include "Components/UniformGridPanel.h"
+#include "Components/Widget.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "PTInventorySlotWidget.h"
 #include "Character/Player/PTInventoryComponent.h"
 
 #include "Character/Player/PTPlayerController.h"
+#include "UI/Widget/Shop/PTShopWidget.h"
 
 void UPTInventoryWidget::NativeOnInitialized()
 {
@@ -27,22 +29,37 @@ void UPTInventoryWidget::NativeOnInitialized()
         }
     }
 
-    UPTInventoryComponent* Inven = ResolveInventoryComponent();
-    if (Inven)
-    {
-        Inven->OnInventorySlotsUpdated.AddUniqueDynamic(this, &UPTInventoryWidget::RefreshAllSlots);
-    }
+}
+
+void UPTInventoryWidget::SetShopSellTarget(UPTShopWidget* InShopWidget)
+{
+    ShopWidgetForSell = InShopWidget;
+}
+
+void UPTInventoryWidget::ClearShopSellTarget()
+{
+    ShopWidgetForSell = nullptr;
 }
 
 void UPTInventoryWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
 
+    SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    if (UWidget* RootWidget = GetRootWidget())
+    {
+        RootWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    }
+
+    BindInventoryChanged();
     RefreshAllSlots();
 }
 
 void UPTInventoryWidget::NativeOnDeactivated()
 {
+    UnbindInventoryChanged();
+    ClearShopSellTarget();
+
     if (APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer()))
     {
         PlayerController->RestoreGameplayInput();
@@ -70,6 +87,8 @@ void UPTInventoryWidget::BuildSlots()
         if (!InventorySlot) continue;
 
         InventorySlot->SetSlotIndex(i);
+        InventorySlot->OnClicked.RemoveDynamic(this, &UPTInventoryWidget::HandleSlotClicked);
+        InventorySlot->OnClicked.AddDynamic(this, &UPTInventoryWidget::HandleSlotClicked);
         InventoryGrid->AddChildToUniformGrid(InventorySlot, i / Columns, i % Columns);
         SlotWidgets.Add(InventorySlot);
     }
@@ -93,6 +112,52 @@ void UPTInventoryWidget::RefreshAllSlots()
         else
             SlotWidgets[i]->ClearSlot();
     }
+}
+
+void UPTInventoryWidget::BindInventoryChanged()
+{
+    UPTInventoryComponent* Inventory = ResolveInventoryComponent();
+    if (Inventory == nullptr)
+    {
+        return;
+    }
+
+    if (BoundInventoryComponent.IsValid() && BoundInventoryComponent.Get() != Inventory)
+    {
+        UnbindInventoryChanged();
+    }
+
+    Inventory->OnInventoryChanged.RemoveDynamic(this, &UPTInventoryWidget::HandleInventoryChanged);
+    Inventory->OnInventoryChanged.AddDynamic(this, &UPTInventoryWidget::HandleInventoryChanged);
+    BoundInventoryComponent = Inventory;
+}
+
+void UPTInventoryWidget::UnbindInventoryChanged()
+{
+    if (BoundInventoryComponent.IsValid())
+    {
+        BoundInventoryComponent->OnInventoryChanged.RemoveDynamic(this, &UPTInventoryWidget::HandleInventoryChanged);
+    }
+
+    BoundInventoryComponent.Reset();
+}
+
+void UPTInventoryWidget::HandleInventoryChanged()
+{
+    RefreshAllSlots();
+}
+
+void UPTInventoryWidget::HandleSlotClicked(int32 SlotIndex)
+{
+    if (ShopWidgetForSell == nullptr || !SlotWidgets.IsValidIndex(SlotIndex) ||
+        SlotWidgets[SlotIndex] == nullptr || SlotWidgets[SlotIndex]->IsEmpty())
+    {
+        return;
+    }
+
+    ShopWidgetForSell->SelectInventoryItemForSell(
+        SlotIndex,
+        SlotWidgets[SlotIndex]->GetSlotData());
 }
 
 UPTInventoryComponent* UPTInventoryWidget::ResolveInventoryComponent() const

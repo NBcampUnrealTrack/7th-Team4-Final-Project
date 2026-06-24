@@ -22,6 +22,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/PTHUDWidget.h"
 #include "UI/Manage/PTUIManagerSubsystem.h"
+#include "UI/Widget/Inventory/PTInventoryWidget.h"
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
 #include "UI/Widget/Shop/PTShopWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -220,6 +221,20 @@ void APTPlayerController::Client_OpenShop_Implementation(
     if (ShopWidget != nullptr)
     {
         ShopWidget->SetupShop(ShopNPC);
+
+        if (InventoryClass != nullptr)
+        {
+            UPTInventoryWidget* InventoryWidget = Cast<UPTInventoryWidget>(
+                UIManager->OpenInventoryForShop(InventoryClass));
+            if (InventoryWidget != nullptr)
+            {
+                InventoryWidget->SetShopSellTarget(ShopWidget);
+            }
+        }
+    }
+    else
+    {
+        UIManager->CloseShopInventory();
     }
 }
 
@@ -230,11 +245,18 @@ void APTPlayerController::ServerAcceptQuest_Implementation(APTQuestNPCCharacter*
         return;
     }
 
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTQuestSubsystem* QuestSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
     if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->AcceptQuest(GetPlayerState<APTBasePlayerState>(), QuestID);
     }
+}
+
+bool APTPlayerController::ServerAcceptQuest_Validate(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    return QuestNPC != nullptr && !QuestID.IsNone();
 }
 
 void APTPlayerController::ServerRewardQuest_Implementation(APTQuestNPCCharacter* QuestNPC, FName QuestID)
@@ -250,11 +272,18 @@ void APTPlayerController::ServerRewardQuest_Implementation(APTQuestNPCCharacter*
         return;
     }
 
-    UPTQuestSubsystem* QuestSubsystem = GetGameInstance()->GetSubsystem<UPTQuestSubsystem>();
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTQuestSubsystem* QuestSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTQuestSubsystem>() : nullptr;
     if (QuestSubsystem != nullptr)
     {
         QuestSubsystem->RewardQuest(QuestID, PTPlayerState);
     }
+}
+
+bool APTPlayerController::ServerRewardQuest_Validate(APTQuestNPCCharacter* QuestNPC, FName QuestID)
+{
+    return QuestNPC != nullptr && !QuestID.IsNone();
 }
 
 void APTPlayerController::ServerBuyItem_Implementation(APTShopNPCCharacter* ShopNPC, FName ItemID)
@@ -323,6 +352,105 @@ void APTPlayerController::ServerBuyItem_Implementation(APTShopNPCCharacter* Shop
         ItemData->BuyPrice);
 }
 
+bool APTPlayerController::ServerBuyItem_Validate(APTShopNPCCharacter* ShopNPC, FName ItemID)
+{
+    return ShopNPC != nullptr && !ItemID.IsNone();
+}
+
+void APTPlayerController::ServerSellItem_Implementation(
+    APTShopNPCCharacter* ShopNPC,
+    int32 InventorySlotIndex,
+    FName ExpectedItemID,
+    int32 Count)
+{
+    if (ShopNPC == nullptr || InventorySlotIndex < 0 || ExpectedItemID.IsNone() || Count <= 0)
+    {
+        return;
+    }
+
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+    if (PlayerCharacter == nullptr || PTPlayerState == nullptr)
+    {
+        return;
+    }
+
+    const float Distance = FVector::Dist(PlayerCharacter->GetActorLocation(), ShopNPC->GetActorLocation());
+    if (Distance > 350.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Sale rejected because the player is too far from the shop."));
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
+    UPTEconomySubsystem* EconomySubsystem = GameInstance->GetSubsystem<UPTEconomySubsystem>();
+    UPTInventoryComponent* InventoryComponent = PlayerCharacter->GetInventoryComponent();
+    if (EconomySubsystem == nullptr || InventoryComponent == nullptr)
+    {
+        return;
+    }
+
+    const TArray<FInventorySlot>& InventorySlots = InventoryComponent->GetInventorySlots();
+    if (!InventorySlots.IsValidIndex(InventorySlotIndex) ||
+        InventorySlots[InventorySlotIndex].IsEmpty())
+    {
+        return;
+    }
+
+    const FInventorySlot SlotToSell = InventorySlots[InventorySlotIndex];
+    if (SlotToSell.ItemData.Item_ID != ExpectedItemID)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Sale rejected because slot item changed. Expected=%s Actual=%s"),
+            *ExpectedItemID.ToString(),
+            *SlotToSell.ItemData.Item_ID.ToString());
+        return;
+    }
+
+    if (!SlotToSell.ItemData.CanSell())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Shop] Item cannot be sold: %s"),
+            *SlotToSell.ItemData.Item_Name.ToString());
+        return;
+    }
+
+    const int32 SellCount = FMath::Clamp(Count, 1, SlotToSell.Quantity);
+    const int32 UnitSellPrice = SlotToSell.ItemData.GetSellPrice();
+    if (UnitSellPrice <= 0)
+    {
+        return;
+    }
+
+    if (!InventoryComponent->RemoveItemAtSlot(InventorySlotIndex, SellCount))
+    {
+        return;
+    }
+
+    const int32 TotalSellPrice = UnitSellPrice * SellCount;
+    EconomySubsystem->AddGold(PTPlayerState, TotalSellPrice);
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Shop] Sold %s x%d for %d gold."),
+        *SlotToSell.ItemData.Item_Name.ToString(),
+        SellCount,
+        TotalSellPrice);
+}
+
+bool APTPlayerController::ServerSellItem_Validate(
+    APTShopNPCCharacter* ShopNPC,
+    int32 InventorySlotIndex,
+    FName ExpectedItemID,
+    int32 Count)
+{
+    return ShopNPC != nullptr && InventorySlotIndex >= 0 && !ExpectedItemID.IsNone() && Count > 0;
+}
+
 void APTPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     RemoveUIInputMapping();
@@ -356,6 +484,27 @@ void APTPlayerController::RestoreGameplayInput()
                 UWidgetBlueprintLibrary::SetFocusToGameViewport();
                 PlayerController->SetShowMouseCursor(true);
             }));
+}
+
+void APTPlayerController::SetGameplayInputBlockedByUI(bool bBlocked)
+{
+    bGameplayInputBlockedByUI = bBlocked;
+
+    if (!bGameplayInputBlockedByUI)
+    {
+        return;
+    }
+
+    bMoveToDestination = false;
+    StopMovement();
+
+    if (ACharacter* MyCharacter = Cast<ACharacter>(GetPawn()))
+    {
+        if (UCharacterMovementComponent* MovementComponent = MyCharacter->GetCharacterMovement())
+        {
+            MovementComponent->StopMovementImmediately();
+        }
+    }
 }
 
 
@@ -509,6 +658,8 @@ void APTPlayerController::RotateTowardsMouse()
 
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
+    if (bGameplayInputBlockedByUI) return;
+
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
     if (PC->bIsDodging) return;
@@ -532,6 +683,8 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 
 void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 {
+    if (bGameplayInputBlockedByUI) return;
+
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
     if (PlayerCharacter->bIsDodging) return;
@@ -858,7 +1011,8 @@ void APTPlayerController::Client_ShowDeathMenu_Implementation()
 // 부활 요청
 void APTPlayerController::Server_RequestRespawn_Implementation()
 {
-    APTGameMode* GM = Cast<APTGameMode>(GetWorld()->GetAuthGameMode());
+    UWorld* World = GetWorld();
+    APTGameMode* GM = World != nullptr ? Cast<APTGameMode>(World->GetAuthGameMode()) : nullptr;
     if (!GM) return;
 
     // 사망 검증
@@ -867,6 +1021,12 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
     if (APTBaseCharacter* Dead = Cast<APTBaseCharacter>(DeadPawn))
     {
         if (Dead->CurrentHP > 0.f) return; // 생존 시 차단
+    }
+
+    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+    {
+        PS->CurrentHP = PS->MaxHP;
+        PS->BroadcastAllStats(); // 클라이언트 UI 및 스탯 동기화 강제 브로드캐스팅
     }
 
     // 시체 정리
@@ -880,6 +1040,11 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
 }
 
 // [디버그] 즉사 입력
+bool APTPlayerController::Server_RequestRespawn_Validate()
+{
+    return true;
+}
+
 void APTPlayerController::OnDebugKillPressed()
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());

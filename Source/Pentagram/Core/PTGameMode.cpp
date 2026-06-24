@@ -24,6 +24,11 @@ void APTGameMode::BeginPlay()
     Super::BeginPlay();
 
     UGameInstance* GameInstance = GetGameInstance();
+    if (GameInstance == nullptr)
+    {
+        return;
+    }
+
     UPTQuestSubsystem* QuestSubsystem = GameInstance->GetSubsystem<UPTQuestSubsystem>();
     if (QuestSubsystem != nullptr)
     {
@@ -52,6 +57,8 @@ void APTGameMode::BeginPlay()
     {
         PTGameState->SetItemDataTable(ItemDataTable);
     }
+
+    StartAutoSaveIfAvailable();
 }
 
 void APTGameMode::PostLogin(APlayerController* NewPlayer)
@@ -66,11 +73,15 @@ void APTGameMode::PostLogin(APlayerController* NewPlayer)
     APTBasePlayerState* PlayerState = NewPlayer->GetPlayerState<APTBasePlayerState>();
     InitializePlayerState(PlayerState);
 
-    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
     if (SaveSubsystem != nullptr)
     {
         SaveSubsystem->LoadPlayer(PlayerState);
     }
+
+    StartAutoSaveIfAvailable();
 }
 
 void APTGameMode::Logout(AController* Exiting)
@@ -118,7 +129,8 @@ void APTGameMode::OnAllPlayersDead()
     SetGamePhase(EGamePhase::GameOver);
 }
 
-void APTGameMode::RespawnPlayer(AController* PlayerController)
+void APTGameMode::
+Player(AController* PlayerController)
 {
     if (PlayerController == nullptr)
     {
@@ -327,8 +339,9 @@ void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const
     PlayerState->CurrentExp = FMath::Max(PlayerState->CurrentExp, 0);
     PlayerState->CurrentGold = FMath::Max(PlayerState->CurrentGold, 0);
 
+    UGameInstance* GameInstance = GetGameInstance();
     UPTPlayerLevelSubsystem* PlayerLevelSubsystem =
-        GetGameInstance()->GetSubsystem<UPTPlayerLevelSubsystem>();
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTPlayerLevelSubsystem>() : nullptr;
     if (PlayerLevelSubsystem != nullptr)
     {
         PlayerLevelSubsystem->SetProgress(PlayerState, PlayerState->PlayerLevel, PlayerState->CurrentExp);
@@ -351,13 +364,38 @@ void APTGameMode::SavePlayerState(AController* PlayerController) const
         return;
     }
 
-    UPTSaveSubsystem* SaveSubsystem = GetGameInstance()->GetSubsystem<UPTSaveSubsystem>();
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
     if (SaveSubsystem == nullptr)
     {
         return;
     }
 
     SaveSubsystem->SavePlayer(PlayerState);
+}
+
+void APTGameMode::StartAutoSaveIfAvailable() const
+{
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+    if (SaveSubsystem != nullptr)
+    {
+        SaveSubsystem->NotifyWorldReadyForAutoSave();
+    }
+}
+
+void APTGameMode::PostSeamlessTravel()
+{
+    Super::PostSeamlessTravel();
+    StartAutoSaveIfAvailable();
+}
+
+void APTGameMode::HandleSeamlessTravelPlayer(AController*& C)
+{
+    Super::HandleSeamlessTravelPlayer(C);
+    StartAutoSaveIfAvailable();
 }
 
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)

@@ -7,6 +7,7 @@
 #include "Engine/GameInstance.h"
 #include "GameFramework/Controller.h"
 #include "PTEconomySubsystem.h"
+#include "PTItemSubsystem.h"
 #include "PTPlayerLevelSubsystem.h"
 
 void UPTQuestSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -451,15 +452,6 @@ bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBa
         return false;
     }
 
-    if (!QuestData.RewardItemIDs.IsEmpty())
-    {
-        UE_LOG(
-            LogTemp,
-            Warning,
-            TEXT("[QuestReward] %s quest item rewards are skipped because item reward data is not wired yet."),
-            *QuestData.QuestID.ToString());
-    }
-
     if (!HasRequiredCollectItems(QuestData, RewardPlayerState))
     {
         return false;
@@ -469,6 +461,79 @@ bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBa
     if (GameInstance == nullptr)
     {
         return false;
+    }
+
+    UPTInventoryComponent* InventoryComponent = GetRewardPlayerInventory(RewardPlayerState);
+    TArray<FItemData> RewardItems;
+    if (!QuestData.RewardItemIDs.IsEmpty())
+    {
+        if (InventoryComponent == nullptr)
+        {
+            return false;
+        }
+
+        UPTItemSubsystem* ItemSubsystem = GameInstance->GetSubsystem<UPTItemSubsystem>();
+        if (ItemSubsystem == nullptr)
+        {
+            return false;
+        }
+
+        TArray<FInventorySlot> SimulatedSlots = InventoryComponent->GetInventorySlots();
+        for (FName RewardItemID : QuestData.RewardItemIDs)
+        {
+            if (RewardItemID.IsNone())
+            {
+                return false;
+            }
+
+            const FItemData* RewardItemData = ItemSubsystem->GetItemData(RewardItemID);
+            if (RewardItemData == nullptr)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[QuestReward] Reward item data was not found: %s"),
+                    *RewardItemID.ToString());
+                return false;
+            }
+
+            bool bCanPlaceRewardItem = false;
+            if (RewardItemData->Item_Category == EItemCategory::Consumable)
+            {
+                for (FInventorySlot& SimulatedSlot : SimulatedSlots)
+                {
+                    if (!SimulatedSlot.IsEmpty() &&
+                        SimulatedSlot.ItemData.Item_Category == EItemCategory::Consumable &&
+                        SimulatedSlot.ItemData.Item_ID == RewardItemData->Item_ID)
+                    {
+                        ++SimulatedSlot.Quantity;
+                        bCanPlaceRewardItem = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!bCanPlaceRewardItem)
+            {
+                for (FInventorySlot& SimulatedSlot : SimulatedSlots)
+                {
+                    if (SimulatedSlot.IsEmpty())
+                    {
+                        SimulatedSlot.ItemData = *RewardItemData;
+                        SimulatedSlot.Quantity = 1;
+                        SimulatedSlot.ItemIconAsset = RewardItemData->Item_Icon;
+                        bCanPlaceRewardItem = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!bCanPlaceRewardItem)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[QuestReward] Not enough inventory space for reward item: %s"),
+                    *RewardItemID.ToString());
+                return false;
+            }
+
+            RewardItems.Add(*RewardItemData);
+        }
     }
 
     UPTEconomySubsystem* EconomySubsystem = nullptr;
@@ -494,6 +559,16 @@ bool UPTQuestSubsystem::GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBa
     if (!ConsumeRequiredCollectItems(QuestData, RewardPlayerState))
     {
         return false;
+    }
+
+    for (const FItemData& RewardItem : RewardItems)
+    {
+        if (InventoryComponent == nullptr || !InventoryComponent->TryAddItem(RewardItem, 1))
+        {
+            UE_LOG(LogTemp, Error, TEXT("[QuestReward] Failed to grant prevalidated reward item: %s"),
+                *RewardItem.Item_ID.ToString());
+            return false;
+        }
     }
 
     if (QuestData.RewardGold > 0)
