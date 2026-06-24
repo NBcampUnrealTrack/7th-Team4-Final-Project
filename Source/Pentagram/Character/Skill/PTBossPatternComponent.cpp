@@ -10,10 +10,15 @@
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/DataTable.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraComponent.h"
+#include "Character/Monsters/Skill/PTAreaWarning.h"
+#include "DrawDebugHelpers.h"
 
 UPTBossPatternComponent::UPTBossPatternComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
+    SetIsReplicatedByDefault(true);
 }
 
 void UPTBossPatternComponent::BeginPlay()
@@ -35,7 +40,13 @@ void UPTBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
         {
             World->GetTimerManager().ClearTimer(Pair.Value);
         }
-        World->GetTimerManager().ClearTimer(AreaAttackTimer);
+
+        for (FTimerHandle& Handle : AreaAttackTimers)
+        {
+            World->GetTimerManager().ClearTimer(Handle);
+        }
+
+        AreaAttackTimers.Empty();
     }
 
     Super::EndPlay(EndPlayReason);
@@ -74,6 +85,10 @@ void UPTBossPatternComponent::PreloadAllSkills()
         Row->SkillEffect.LoadSynchronous();
         Row->SkillSound.LoadSynchronous();
         Row->SkillHitSound.LoadSynchronous();
+        Row->AreaFallEffect.LoadSynchronous();
+        Row->AreaCastEffect.LoadSynchronous();
+        Row->AreaImpactEffect.LoadSynchronous();
+        Row->SafeZoneEffect.LoadSynchronous();
     };
 
     for (const FName& RowName : Phase0SkillRowNames)
@@ -100,22 +115,22 @@ void UPTBossPatternComponent::PreloadAllSkills()
     bSkillAssetsLoaded = (FailCount < TotalRows);
 }
 
-bool UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
+float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 {
     if (!bSkillAssetsLoaded)
     {
         UE_LOG(LogTemp, Warning, TEXT("[BossPattern] 스킬 에셋 미로드 — PreloadAllSkills 호출 확인"));
-        return false;
+        return 0.f;
     }
 
     if (!IsValid(SkillComponent))
     {
-        return false;
+        return 0.f;
     }
 
     if (!GetOwner() || !GetOwner()->HasAuthority())
     {
-        return false;
+        return 0.f;
     }
 
     bHasPendingSkill = false;
@@ -123,7 +138,7 @@ bool UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
     auto [RowName, Row] = PickNextSkill(Phase);
     if (!Row)
     {
-        return false;
+        return 0.f;
     }
 
     UE_LOG(LogTemp, Log, TEXT("[BossPattern] 선택 성공 — %s"), *RowName.ToString());
@@ -136,42 +151,61 @@ bool UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
     const bool bActivated = SkillComponent->TryActivateSkillChecked(Request);
     if (!bActivated)
     {
-        return false;
+        return 0.f;
     }
 
     PendingSkillSnapshot = *Row;
     bHasPendingSkill     = true;
     UE_LOG(LogTemp, Log, TEXT("[BossPattern] Pending Skill Set: %s"), *RowName.ToString());
 
-    if (Row->PatternCooldown <= 0.f)
+    if (Row->SkillType == EBossSkillType::Area && Row->bHoldMontageUntilDelay)
     {
-        return true;
+        bAreaAttackInProgress = true;
     }
 
-    UWorld* World = GetWorld();
-    if (!IsValid(World))
+    if (Row->PatternCooldown > 0.f)
     {
-        return true;
-    }
-
-    PatternCooldownFlags.Add(RowName, true);
-    FTimerHandle& Timer = PatternCooldownTimers.FindOrAdd(RowName);
-
-    UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 시작 — %s (%.1f초)"),
-        *RowName.ToString(), Row->PatternCooldown);
-
-    World->GetTimerManager().SetTimer(Timer,
-        [this, RowName]()
+        UWorld* World = GetWorld();
+        if (IsValid(World))
         {
-            PatternCooldownFlags.Add(RowName, false);
-            UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 종료 — %s"), *RowName.ToString());
-        },
-        Row->PatternCooldown, false);
+            PatternCooldownFlags.Add(RowName, true);
+            FTimerHandle& Timer = PatternCooldownTimers.FindOrAdd(RowName);
 
-    return true;
+            UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 시작 — %s (%.1f초)"),
+                *RowName.ToString(), Row->PatternCooldown);
+
+            World->GetTimerManager().SetTimer(Timer,
+                [this, RowName]()
+                {
+                    PatternCooldownFlags.Add(RowName, false);
+                    UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 종료 — %s"), *RowName.ToString());
+                },
+                Row->PatternCooldown, false);
+        }
+    }
+
+    UAnimMontage* PlayedMontage = nullptr;
+
+    if (!Row->OverrideMontage.IsNull())
+    {
+        PlayedMontage = Row->OverrideMontage.LoadSynchronous();
+    }
+    else if (!Row->SkillMontage.IsNull())
+    {
+        PlayedMontage = Row->SkillMontage.LoadSynchronous();
+    }
+
+    if (Row->SkillType == EBossSkillType::Area && Row->bHoldMontageUntilDelay)
+    {
+        return IsValid(PlayedMontage)
+            ? PlayedMontage->GetPlayLength() + Row->AreaAttackDelay
+            : Row->AreaAttackDelay;
+    }
+
+    return IsValid(PlayedMontage) ? PlayedMontage->GetPlayLength() : 0.f;
 }
 
-void UPTBossPatternComponent::ExecutePendingSkill(int32 Phase)
+void UPTBossPatternComponent::ExecutePendingSkill()
 {
     if (!bHasPendingSkill)
     {
@@ -193,6 +227,70 @@ void UPTBossPatternComponent::ExecutePendingSkill(int32 Phase)
 
     default:
         break;
+    }
+}
+
+void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[MulticastSpawnAreaWarning] HasAuth: %d"), GetOwner()->HasAuthority());
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World) || !WarningClass)
+    {
+        return;
+    }
+
+    for (int32 i = 0; i < DropLocations.Num(); ++i)
+    {
+        FActorSpawnParameters Params;
+        Params.Owner = GetOwner();
+
+        APTAreaWarning* Area = World->SpawnActor<APTAreaWarning>(WarningClass, DropLocations[i], FRotator::ZeroRotator, Params);
+        if (IsValid(Area))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[Multicast] MaxRadius 전달: %.1f"), MaxRadius);
+            Area->Launch(
+                DropLocations[i],
+                BaseDelay + Interval * i,
+                FallEffect, ImpactEffect,
+                StartHeight, MaxRadius
+            );
+        }
+    }
+}
+
+void UPTBossPatternComponent::MulticastSpawnAreaFX_Implementation(FVector CastLocation, bool bHasSafeZone, FVector SafeZoneCenter, UNiagaraSystem* CastFX, UNiagaraSystem* SafeZoneFX, float SafeZoneRadius, float AreaAttackDelay)
+{
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    if (CastFX)
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, CastFX, CastLocation, FRotator::ZeroRotator);
+    }
+
+    if (bHasSafeZone && SafeZoneFX)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[SafeZone] SafeZoneRadius: %.1f"), SafeZoneRadius);
+
+        UNiagaraComponent* SafeZoneComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, SafeZoneFX, SafeZoneCenter, FRotator::ZeroRotator, FVector::OneVector, false);
+        if (IsValid(SafeZoneComp))
+        {
+            FTimerHandle SafeZoneTimer;
+            World->GetTimerManager().SetTimer(
+                SafeZoneTimer, FTimerDelegate::CreateWeakLambda(this, [SafeZoneComp]()
+                {
+                    if (IsValid(SafeZoneComp))
+                    {
+                        SafeZoneComp->Deactivate();
+                        SafeZoneComp->DestroyComponent();
+                    }
+                }),
+                AreaAttackDelay, false);
+        } 
     }
 }
 
@@ -242,6 +340,11 @@ TPair<FName, FPTBossSkillRow*> UPTBossPatternComponent::PickNextSkill(int32 Phas
         }
 
         if (PatternCooldownFlags.FindRef(RowName))
+        {
+            continue;
+        }
+
+        if (bAreaAttackInProgress && PendingSkillSnapshot.bHoldMontageUntilDelay)
         {
             continue;
         }
@@ -352,51 +455,179 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
         return;
     }
 
+    for (FTimerHandle& Handle : AreaAttackTimers)
+    {
+        World->GetTimerManager().ClearTimer(Handle);
+    }
+    AreaAttackTimers.Empty();
+
+    if (!RowSnapshot.bHoldMontageUntilDelay)
+    {
+        bAreaAttackInProgress = false;
+    }
+    else
+    {
+        if (UAnimInstance* AnimInstance = Boss->GetMesh()->GetAnimInstance())
+        {
+            AnimInstance->Montage_Pause(nullptr);
+        }
+    }
+
+    const FVector BossLocation   = Boss->GetActorLocation();
     const FVector TargetLocation = Target->GetActorLocation();
 
-    // TODO : 바닥에 이펙트
+    const FVector BaseDropLocation = RowSnapshot.bHasDirectionalSafeZone ? BossLocation : TargetLocation;
+
+    const int32 Count = FMath::Max(1, RowSnapshot.AreaAttackCount);
+    TArray<FVector> DropLocations;
+    DropLocations.Reserve(Count);
+
+    for (int32 i = 0; i < Count; ++i)
+    {
+        FVector DropPos = BaseDropLocation;
+
+        if (RowSnapshot.AreaAttackSpreadRadius > 0.f)
+        {
+            const float Angle = FMath::FRandRange(0.f, 360.f);
+            const float Dist  = FMath::FRandRange(0.f, RowSnapshot.AreaAttackSpreadRadius);
+            DropPos.X += FMath::Cos(FMath::DegreesToRadians(Angle)) * Dist;
+            DropPos.Y += FMath::Sin(FMath::DegreesToRadians(Angle)) * Dist;
+        }
+
+        DropLocations.Add(DropPos);
+    }
+
+    FVector SafeZoneCenter = FVector::ZeroVector;
+
+    if (RowSnapshot.bHasDirectionalSafeZone)
+    {
+        const FVector Cardinals[] = {
+            FVector( 1.f,  0.f, 0.f), // N
+            FVector(-1.f,  0.f, 0.f), // S
+            FVector( 0.f,  1.f, 0.f), // E
+            FVector( 0.f, -1.f, 0.f), // W
+        };
+
+        const int32 SafeIndex       = FMath::RandRange(0, 3);
+        const FVector SafeDirection = Cardinals[SafeIndex];
+
+        SafeZoneCenter = BossLocation + SafeDirection * RowSnapshot.SafeZoneDistance;
+
+        DrawDebugSphere(World, SafeZoneCenter, RowSnapshot.SafeZoneRadius,
+            16, FColor::Green, false, RowSnapshot.AreaAttackDelay + 1.f);
+    }
+
+    for (const FVector& DropPos : DropLocations)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Impact] AreaAttackRadius: %.1f"), RowSnapshot.AreaAttackRadius);
+        DrawDebugSphere(World, DropPos, RowSnapshot.AreaAttackRadius,
+            16, FColor::Red, false, RowSnapshot.AreaAttackDelay + 1.f);
+    }
+
+    {
+        FVector CastLoc = Boss->GetMesh()->DoesSocketExist(ProjectileSpawnSocket)
+            ? Boss->GetMesh()->GetSocketLocation(ProjectileSpawnSocket)
+            : Boss->GetActorLocation();
+
+        MulticastSpawnAreaFX(
+            CastLoc, RowSnapshot.bHasDirectionalSafeZone,
+            SafeZoneCenter, RowSnapshot.AreaCastEffect.Get(),
+            RowSnapshot.SafeZoneEffect.Get(),
+            RowSnapshot.SafeZoneRadius,
+            RowSnapshot.AreaAttackDelay
+        );
+    }
 
     const FPTBossSkillRow Snapshot = RowSnapshot;
+    AreaAttackTimers.SetNum(Count);
 
-    World->GetTimerManager().SetTimer(
-        AreaAttackTimer,
-        FTimerDelegate::CreateWeakLambda(this, [this, Boss, TargetLocation, Snapshot]()
-            {
-                UWorld* InnerWorld = GetWorld();
-                if (!IsValid(InnerWorld) || !IsValid(Boss))
+    UE_LOG(LogTemp, Warning, TEXT("[SpawnArea] AreaAttackRadius: %.1f"), Snapshot.AreaAttackRadius);
+
+    MulticastSpawnAreaWarningBatch(
+        DropLocations,
+        Snapshot.AreaAttackDelay,
+        Snapshot.AreaAttackInterval,
+        Snapshot.AreaFallEffect.Get(),
+        Snapshot.AreaImpactEffect.Get(),
+        Snapshot.AreaStartHeight,
+        Snapshot.AreaWarningClass,
+        Snapshot.AreaAttackRadius
+    );
+
+    bAreaAttackInProgress = true;
+
+    for (int32 i = 0; i < Count; ++i)
+    {
+        const float Delay = Snapshot.AreaAttackDelay + Snapshot.AreaAttackInterval * i;
+        const bool bIsFirst = (i == 0);
+        const bool bIsLast  = (i == Count - 1);
+
+        World->GetTimerManager().SetTimer(
+            AreaAttackTimers[i],
+            FTimerDelegate::CreateWeakLambda(this, [this, Boss, DropLoc = DropLocations[i], Snapshot, SafeZoneCenter, bIsFirst, bIsLast]()
                 {
-                    return;
-                }
-
-                TArray<FHitResult> HitResults;
-                TSet<AActor*> LocalHitActors;
-                FCollisionQueryParams Params;
-                Params.AddIgnoredActor(Boss);
-
-                InnerWorld->SweepMultiByChannel(
-                    HitResults, TargetLocation, TargetLocation, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(Snapshot.AreaAttackRadius), Params);
-
-                const float FinalDamage = Boss->GetBaseAtk() * Snapshot.DamageMultiplier * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
-
-                for (const FHitResult& Hit : HitResults)
-                {
-                    AActor* HitActor = Hit.GetActor();
-                    if (!IsValid(HitActor) || LocalHitActors.Contains(HitActor))
+                    UWorld* InnerWorld = GetWorld();
+                    if (!IsValid(InnerWorld) || !IsValid(Boss))
                     {
-                        continue;
+                        if (bIsLast)
+                        {
+                            bAreaAttackInProgress = false;
+                            return;
+                        }
+
+                        if (bIsFirst && Snapshot.bHoldMontageUntilDelay)
+                        {
+                            if (UAnimInstance* AnimInstance = Boss->GetMesh()->GetAnimInstance())
+                            {
+                                AnimInstance->Montage_Stop(0.25f, nullptr);
+                            }
+                        }
                     }
 
-                    LocalHitActors.Add(HitActor);
+                    TArray<FHitResult>    HitResults;
+                    TSet<AActor*>         LocalHitActors;
+                    FCollisionQueryParams Params;
+                    Params.AddIgnoredActor(Boss);
 
-                    if (APTBaseCharacter* Victim = Cast<APTBaseCharacter>(HitActor))
+                    InnerWorld->SweepMultiByChannel(
+                        HitResults, DropLoc, DropLoc, FQuat::Identity, ECC_Pawn, FCollisionShape::MakeSphere(Snapshot.AreaAttackRadius), Params);
+
+                    const float FinalDamage = Boss->GetBaseAtk() * Snapshot.DamageMultiplier * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
+
+                    for (const FHitResult& Hit : HitResults)
                     {
-                        FPTHitInfo HitInfo = Snapshot.MakeHitInfo(Boss);
-                        HitInfo.HitDirection = (HitActor->GetActorLocation() - TargetLocation).GetSafeNormal();
-                        Victim->ApplyDamageWithHit(FinalDamage, Boss, HitInfo);
+                        AActor* HitActor = Hit.GetActor();
+                        if (!IsValid(HitActor) || LocalHitActors.Contains(HitActor))
+                        {
+                            continue;
+                        }
+
+                        LocalHitActors.Add(HitActor);
+
+                        if (Snapshot.bHasDirectionalSafeZone)
+                        {
+                            const float DistToSafe = FVector::Dist2D(HitActor->GetActorLocation(), SafeZoneCenter);
+                            if (DistToSafe <= Snapshot.SafeZoneRadius)
+                            {
+                                continue;
+                            }
+                        }
+
+                        if (APTBaseCharacter* Victim = Cast<APTBaseCharacter>(HitActor))
+                        {
+                            FPTHitInfo HitInfo = Snapshot.MakeHitInfo(Boss);
+                            HitInfo.HitDirection = (HitActor->GetActorLocation() - DropLoc).GetSafeNormal();
+                            Victim->ApplyDamageWithHit(FinalDamage, Boss, HitInfo);
+                        }
                     }
-                }
-            }),
-        RowSnapshot.AreaAttackDelay, false);
+
+                    if (bIsLast)
+                    {
+                        bAreaAttackInProgress = false;
+                    }
+                }),
+            Delay, false);
+    }
 }
 
 AActor* UPTBossPatternComponent::GetTargetActor() const

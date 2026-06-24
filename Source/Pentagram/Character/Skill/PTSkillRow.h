@@ -147,4 +147,43 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
     float AreaAttackRadius = 300.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    int32 AreaAttackCount = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    float AreaAttackSpreadRadius = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    float AreaAttackInterval = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    bool bHasDirectionalSafeZone = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area", meta = (EditCondition = "bHasDirectionalSafeZone"))
+    float SafeZoneDistance = 500.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area", meta = (EditCondition = "bHasDirectionalSafeZone"))
+    float SafeZoneRadius = 200.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    TSoftObjectPtr<UNiagaraSystem> AreaCastEffect;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    TSoftObjectPtr<UNiagaraSystem> AreaFallEffect;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    TSoftObjectPtr<UNiagaraSystem> AreaImpactEffect;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    TSubclassOf<class APTAreaWarning> AreaWarningClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    float AreaStartHeight = 2000.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area", meta = (EditCondition = "bHasDirectionalSafeZone"))
+    TSoftObjectPtr<UNiagaraSystem> SafeZoneEffect;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    bool bHoldMontageUntilDelay = false;
 };

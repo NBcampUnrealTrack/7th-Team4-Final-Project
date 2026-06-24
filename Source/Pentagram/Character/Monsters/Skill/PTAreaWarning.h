@@ -1,0 +1,52 @@
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
+#include "PTAreaWarning.generated.h"
+
+class UNiagaraComponent;
+class UNiagaraSystem;
+class USceneComponent;
+class UStaticMeshComponent;
+
+UCLASS()
+class PENTAGRAM_API APTAreaWarning : public AActor
+{
+	GENERATED_BODY()
+	
+public:	
+	APTAreaWarning();
+
+    void Launch(const FVector& GroundLocation, float InFallDuration,
+        UNiagaraSystem* InFallEffect, UNiagaraSystem* InImpactEffect,
+        float StartHeight = 2000.f, float InMaxRedius = 300.f);
+
+protected:
+    virtual void Tick(float DeltaTime) override;
+
+private:
+    void OnLanded();
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<USceneComponent> SceneRoot;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UNiagaraComponent> FallEffectComp;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UStaticMeshComponent> WarningMesh;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<UStaticMeshComponent> BorderMesh;
+
+    FVector StartLocation;
+    FVector TargetLocation;
+    float FallDuration      = 1.f;
+    float ElapsedTime       = 0.f;
+    bool bLaunched          = false;
+    bool bLanded            = false;
+    float MaxRadius         = 300.f;
+    float CachedStartHeight = 2000.f;
+
+    TObjectPtr<UNiagaraSystem> PendingImpactEffect;
+};

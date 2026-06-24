@@ -90,6 +90,20 @@ public:
     UFUNCTION(Client, Unreliable)
     void Client_ShowDamageNumber(FVector WorldLocation, float DamageAmount, bool bIsCritical);
 
+    UFUNCTION()
+    void RequestEquipItem(int32 InventoryIndex, EItemType EquipType);
+
+    UFUNCTION()
+    void RequestUnequipItem(EItemType EquipType, int32 ToInventoryIndex);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestEquipItem(int32 InventoryIndex, EItemType EquipType);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestUnequipItem(EItemType EquipType);
+
+    UFUNCTION()
+    void RefreshInventoryUI();
 protected:
     void PlayAttackMontage();
 

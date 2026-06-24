@@ -8,6 +8,7 @@ APTBossProjectile::APTBossProjectile()
 {
 	PrimaryActorTick.bCanEverTick = false;
     bReplicates = true;
+    SetReplicateMovement(true);
 
     CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComp"));
     CollisionComp->InitSphereRadius(20.f);
@@ -19,6 +20,7 @@ APTBossProjectile::APTBossProjectile()
     RootComponent = CollisionComp;
 
     ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
+    ProjectileMovement->UpdatedComponent = CollisionComp;
     ProjectileMovement->bRotationFollowsVelocity = true;
     ProjectileMovement->ProjectileGravityScale   = 0.f;
 
