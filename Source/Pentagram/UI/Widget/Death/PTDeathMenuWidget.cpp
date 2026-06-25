@@ -12,7 +12,8 @@ void UPTDeathMenuWidget::NativeOnActivated()
     {
         // 재활성화 중복 바인딩 방지
         Btn_Respawn->OnClicked.AddUniqueDynamic(this, &UPTDeathMenuWidget::OnRespawnClicked);
-        Btn_Respawn->SetIsEnabled(false); // 처음엔 잠금
+        Btn_Respawn->SetStyle(LockedButtonStyle); // 대기 이미지
+        Btn_Respawn->SetIsEnabled(false);         // 처음엔 잠금
     }
 
     // 대기 시작
@@ -51,7 +52,7 @@ void UPTDeathMenuWidget::UpdateCountdown()
         if (Text_Countdown)
         {
             Text_Countdown->SetText(FText::FromString(
-                FString::Printf(TEXT("부활까지 남은 시간 %d"), RemainingSeconds)));
+                FString::Printf(TEXT("Respawn in %d"), RemainingSeconds)));
         }
         --RemainingSeconds;
         return;
@@ -62,11 +63,12 @@ void UPTDeathMenuWidget::UpdateCountdown()
 
     if (Text_Countdown)
     {
-        Text_Countdown->SetText(FText::FromString(TEXT("부활")));
+        Text_Countdown->SetText(FText::FromString(TEXT("Click to Respawn")));
     }
 
     if (Btn_Respawn)
     {
+        Btn_Respawn->SetStyle(ReadyButtonStyle); // 활성 이미지
         Btn_Respawn->SetIsEnabled(true);
         Btn_Respawn->SetFocus();
     }
