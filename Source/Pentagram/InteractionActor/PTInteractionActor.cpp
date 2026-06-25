@@ -60,7 +60,7 @@ void APTInteractionActor::Interact_Implementation(AActor* InteractorCharacter)
         // 리스폰 지점은 개인화 처리
         if (APTBasePlayerState* PS = PlayerChar->GetPlayerState<APTBasePlayerState>())
         {
-            FVector RespawnLocation = GetActorLocation();
+            FVector RespawnLocation = PlayerChar->GetActorLocation();
             PS->SetSavedRespawnLocation(RespawnLocation);
             UE_LOG(LogTemp, Log, TEXT("리스폰 지점 등록 완료: %s"), *RespawnLocation.ToString());
 

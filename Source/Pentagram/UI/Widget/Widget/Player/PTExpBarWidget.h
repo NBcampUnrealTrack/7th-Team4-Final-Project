@@ -8,6 +8,7 @@
 #include "PTExpBarWidget.generated.h"
 
 class APTBasePlayerState;
+class UTextBlock;
 
 UCLASS()
 class PENTAGRAM_API UPTExpBarWidget : public UPTStatBarWidget
@@ -29,7 +30,15 @@ protected:
     virtual void BindToPlayerState(APTBasePlayerState* PS) override;
     virtual void UnbindFromPlayerState(APTBasePlayerState* PS) override;
 
+    // 레벨 텍스트 갱신
+    void UpdateLevelText(int32 NewLevel);
+
     // 레벨업 연출
     UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|StatBar")
     void OnLevelUpVisual(int32 NewLevel);
+
+protected:
+    // 위젯
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    TObjectPtr<UTextBlock> Txt_Level;
 };

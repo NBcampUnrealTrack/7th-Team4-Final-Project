@@ -2,6 +2,7 @@
 
 #include "PTExpBarWidget.h"
 #include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "Character/Player/PTBasePlayerState.h"
 
 void UPTExpBarWidget::HandleExpChanged(float Current, float Required)
@@ -11,6 +12,9 @@ void UPTExpBarWidget::HandleExpChanged(float Current, float Required)
 
 void UPTExpBarWidget::HandleLevelChanged(int32 NewLevel)
 {
+    // 레벨 텍스트
+    UpdateLevelText(NewLevel);
+
     // 레벨업 초기화
     SetValueInstant(0.f, MaxValue);
     OnLevelUpVisual(NewLevel);
@@ -36,4 +40,12 @@ void UPTExpBarWidget::UnbindFromPlayerState(APTBasePlayerState* PS)
 {
     PS->OnExpChanged.RemoveDynamic(this, &UPTExpBarWidget::HandleExpChanged);
     PS->OnLevelChanged.RemoveDynamic(this, &UPTExpBarWidget::HandleLevelChanged);
+}
+
+void UPTExpBarWidget::UpdateLevelText(int32 NewLevel)
+{
+    if (Txt_Level)
+    {
+        Txt_Level->SetText(FText::FromString(FString::Printf(TEXT("Lv %d"), NewLevel)));
+    }
 }

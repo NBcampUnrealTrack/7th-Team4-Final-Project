@@ -5,10 +5,13 @@
 #include "Character/PTCharacterRow.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "Core/PTGameMode.h"
+#include "Animation/AnimInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "PTInventoryComponent.h"
 #include "PTEquipmentComponent.h"
@@ -374,6 +377,66 @@ void APTPlayerCharacter::Multicast_PlayDeathMontage_Implementation()
     if (DeathMontage)
     {
         PlayAnimMontage(DeathMontage);
+    }
+}
+
+void APTPlayerCharacter::RespawnAtLocation(const FVector& RespawnLocation)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    CurrentHP = MaxHP;
+
+    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+    {
+        PS->CurrentHP = CurrentHP;
+        PS->MaxHP = MaxHP;
+        PS->BroadcastAllStats();
+    }
+
+    SetActorLocation(RespawnLocation, false, nullptr, ETeleportType::TeleportPhysics);
+
+    if (UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
+    {
+        MovementComponent->StopMovementImmediately();
+        MovementComponent->SetMovementMode(MOVE_Walking);
+    }
+
+    if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
+    {
+        CapsuleComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+    }
+
+    Multicast_ResetAfterRespawn();
+}
+
+void APTPlayerCharacter::Multicast_ResetAfterRespawn_Implementation()
+{
+    if (USkeletalMeshComponent* MeshComponent = GetMesh())
+    {
+        if (UAnimInstance* AnimInstance = MeshComponent->GetAnimInstance())
+        {
+            AnimInstance->StopAllMontages(0.15f);
+        }
+    }
+
+    bIsAttacking = false;
+    bCanCombo = false;
+    ComboIndex = 0;
+    bIsUsingSkill = false;
+    bIsDodging = false;
+
+    if (UCharacterMovementComponent* MovementComponent = GetCharacterMovement())
+    {
+        MovementComponent->StopMovementImmediately();
+        MovementComponent->SetMovementMode(MOVE_Walking);
+    }
+
+    if (UCapsuleComponent* CapsuleComp = GetCapsuleComponent())
+    {
+        CapsuleComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
     }
 }
 

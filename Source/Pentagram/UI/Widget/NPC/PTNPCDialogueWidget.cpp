@@ -3,12 +3,11 @@
 #include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/Player/PTPlayerController.h"
-#include "CommonButtonBase.h"
+#include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "InputCoreTypes.h"
-#include "UI/Components/PTCommonButtonBase.h"
 #include "UI/Widget/NPC/PTQuestListEntryWidget.h"
 
 void UPTNPCDialogueWidget::NativeConstruct()
@@ -19,7 +18,7 @@ void UPTNPCDialogueWidget::NativeConstruct()
 
     if (AcceptButton != nullptr)
     {
-        AcceptButton->OnClicked().AddUObject(this, &UPTNPCDialogueWidget::HandleQuestActionButtonClicked);
+        AcceptButton->OnClicked.AddUniqueDynamic(this, &UPTNPCDialogueWidget::HandleQuestActionButtonClicked);
     }
 }
 
@@ -27,7 +26,7 @@ void UPTNPCDialogueWidget::NativeDestruct()
 {
     if (AcceptButton != nullptr)
     {
-        AcceptButton->OnClicked().RemoveAll(this);
+        AcceptButton->OnClicked.RemoveDynamic(this, &UPTNPCDialogueWidget::HandleQuestActionButtonClicked);
     }
 
     UnbindQuestDelegates();
@@ -311,14 +310,14 @@ void UPTNPCDialogueWidget::RefreshQuestActionButtons()
     {
         AcceptButton->SetVisibility(bShowActionButton ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
         AcceptButton->SetIsEnabled(bShowActionButton);
+    }
 
-        if (UPTCommonButtonBase* QuestActionButton = Cast<UPTCommonButtonBase>(AcceptButton))
-        {
-            QuestActionButton->SetButtonText(
-                bUseRewardAction
-                    ? NSLOCTEXT("PTQuest", "RewardQuestButton", "보상 받기")
-                    : NSLOCTEXT("PTQuest", "AcceptQuestButton", "수락"));
-        }
+    if (Txt_AcceptButtonText != nullptr)
+    {
+        Txt_AcceptButtonText->SetText(
+            bUseRewardAction
+                ? NSLOCTEXT("PTQuest", "RewardQuestButton", "보상 받기")
+                : NSLOCTEXT("PTQuest", "AcceptQuestButton", "수락"));
     }
 }
 

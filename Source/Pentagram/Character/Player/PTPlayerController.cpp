@@ -1028,30 +1028,46 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
 {
     UWorld* World = GetWorld();
     APTGameMode* GM = World != nullptr ? Cast<APTGameMode>(World->GetAuthGameMode()) : nullptr;
-    if (!GM) return;
 
     // 사망 검증
     APawn* DeadPawn = GetPawn();
-
-    if (APTBaseCharacter* Dead = Cast<APTBaseCharacter>(DeadPawn))
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(DeadPawn);
+    if (!PlayerCharacter)
     {
-        if (Dead->CurrentHP > 0.f) return; // 생존 시 차단
+        if (GM)
+        {
+            GM->RespawnPlayer(this);
+        }
+        return;
     }
+
+    if (PlayerCharacter->CurrentHP > 0.f)
+    {
+        return;
+    }
+
+    FVector RespawnLocation = PlayerCharacter->GetActorLocation();
+    bool bHasRespawnLocation = false;
 
     if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
     {
-        PS->CurrentHP = PS->MaxHP;
-        PS->BroadcastAllStats(); // 클라이언트 UI 및 스탯 동기화 강제 브로드캐스팅
+        if (PS->HasRespawnLocation())
+        {
+            RespawnLocation = PS->GetSavedRespawnLocation();
+            bHasRespawnLocation = true;
+        }
     }
 
-    // 시체 정리
-    if (DeadPawn)
+    if (!bHasRespawnLocation && GM != nullptr)
     {
-        UnPossess();
-        DeadPawn->Destroy();
+        if (AActor* RespawnStartSpot = GM->FindPlayerStart(this))
+        {
+            RespawnLocation = RespawnStartSpot->GetActorLocation();
+            bHasRespawnLocation = true;
+        }
     }
 
-    GM->RespawnPlayer(this);
+    PlayerCharacter->RespawnAtLocation(RespawnLocation);
 }
 
 // [디버그] 즉사 입력
