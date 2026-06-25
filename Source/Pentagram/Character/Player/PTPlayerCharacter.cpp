@@ -170,7 +170,7 @@ void APTPlayerCharacter::OnDeath()
 {
     Super::OnDeath();
 
-    if (!HasAuthority()) return
+    if (!HasAuthority()) return;
 
     GetWorldTimerManager().ClearTimer(HPRegenTimerHandle);
 
@@ -204,11 +204,6 @@ void APTPlayerCharacter::OnDeath()
     //
     // // 분리되서 껍데기만 남은 캐릭터는 메모리에서 소멸시킨다
     // Destroy();
-
-    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
-    {
-        PS->SetSavedRespawnLocation(GetActorLocation());
-    }
 
     if (APTPlayerController* PC = Cast<APTPlayerController>(GetController()))
     {
