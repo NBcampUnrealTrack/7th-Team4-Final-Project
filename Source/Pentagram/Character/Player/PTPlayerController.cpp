@@ -789,12 +789,11 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
-    /*  무기 장착 여부 검사
-      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      // 무기 장착 여부 검사
+      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
       {
           return;
       }
-      */
 
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
@@ -813,12 +812,10 @@ void APTPlayerController::OnSkill2(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
-    /*  무기 장착 여부 검사
-      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
       {
           return;
       }
-      */
 
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
@@ -836,12 +833,10 @@ void APTPlayerController::OnSkill3(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
-    /*  무기 장착 여부 검사
-      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
       {
           return;
       }
-      */
 
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
@@ -859,12 +854,10 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
-    /*  무기 장착 여부 검사
-      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
       {
           return;
       }
-      */
 
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
