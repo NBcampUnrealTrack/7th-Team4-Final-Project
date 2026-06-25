@@ -129,8 +129,7 @@ void APTGameMode::OnAllPlayersDead()
     SetGamePhase(EGamePhase::GameOver);
 }
 
-void APTGameMode::
-Player(AController* PlayerController)
+void APTGameMode::RespawnPlayer(AController* PlayerController)
 {
     if (PlayerController == nullptr)
     {
