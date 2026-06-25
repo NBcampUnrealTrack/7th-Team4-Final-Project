@@ -87,6 +87,11 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 
 float APTBaseCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo)
 {
+    if (CurrentHP <= 0.f)
+    {
+        return 0.f;
+    }
+
     const float FinalDamage = ApplyDamage(DamageAmount, Attacker);
 
     if (FinalDamage <= 0.f)
