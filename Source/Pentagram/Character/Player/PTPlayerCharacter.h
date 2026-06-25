@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Character/PTBaseCharacter.h"
 #include "InputActionValue.h"
+#include "Item/PTItemTypes.h"
 #include "PTPlayerCharacter.generated.h"
 
 class UPTInventoryComponent;
@@ -61,7 +62,7 @@ public:
     void Multicast_StopAttack();
 
     // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
-    void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset);
+    void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset, const FItemData& ItemData = FItemData());
 
     void ApplyBuff(float BonusMultiplier, float Duration);
 
@@ -147,6 +148,6 @@ private:
     // 직전 프레임에 캐릭터를 가리고 있던 장애물 저장
     UPROPERTY()
     TObjectPtr<AActor> LastHidingActor = nullptr;
-    
+
 
 };

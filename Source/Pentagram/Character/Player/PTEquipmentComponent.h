@@ -6,12 +6,12 @@
 #include "PTEquipmentComponent.generated.h"
 
 UENUM(BlueprintType)
-enum class EEquipSlotType : uint8 
+enum class EEquipSlotType : uint8
 {
-    Weapon  UMETA(DisplayName = "Weapon"), 
-    Chest   UMETA(DisplayName = "Chest"), 
-    Helmet  UMETA(DisplayName = "Helmet"), 
-    Gloves  UMETA(DisplayName = "Gloves"), 
+    Weapon  UMETA(DisplayName = "Weapon"),
+    Chest   UMETA(DisplayName = "Chest"),
+    Helmet  UMETA(DisplayName = "Helmet"),
+    Gloves  UMETA(DisplayName = "Gloves"),
     Boots   UMETA(DisplayName = "Boots")
 };
 
@@ -46,6 +46,7 @@ public:
     UPTEquipmentComponent();
 
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
+    bool IsWeaponEquipped() const;
 
     // 장착 함수 (기존에 장착되어 있던 아이템 데이터를 OutOldItem, true 반환)
     // 서버 권한이 있으면 직접 연산, 클라이언트면 Server RPC 호출

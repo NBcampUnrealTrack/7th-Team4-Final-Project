@@ -13,9 +13,9 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     APTPlayerCharacter* OwnerPlayer = Cast<APTPlayerCharacter>(MeshComp->GetOwner());
     if (!OwnerPlayer) return;
 
-    FVector BoxExtent = FVector(50.f, 100.f, 60.f);
+    FVector BoxExtent = FVector(120.f, 180.f, 60.f);
     FVector BoxCenter = OwnerPlayer->GetActorLocation()
-                      + OwnerPlayer->GetActorForwardVector() * 150.f
+                      + OwnerPlayer->GetActorForwardVector() * 60.f
                       + FVector(0.f, 0.f, 50.f);
     FRotator BoxRotation = OwnerPlayer->GetActorRotation();
 
@@ -58,12 +58,16 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
                     FRotator::ZeroRotator
                 );
 
-            if (HitSFX)
+            TArray<USoundBase*> ValidSFX = HitSFXList.FilterByPredicate([](USoundBase* SFX) { return SFX != nullptr; });
+            if (ValidSFX.Num() > 0)
+            {
+                USoundBase* PickedSFX = ValidSFX[FMath::RandRange(0, ValidSFX.Num() - 1)];
                 UGameplayStatics::PlaySoundAtLocation(
                     OwnerPlayer->GetWorld(),
-                    HitSFX,
+                    PickedSFX,
                     Target->GetActorLocation()
-                );
+                    );
+            }
         }
     }
 
@@ -78,8 +82,15 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
         {
             if (APTBaseCharacter* BaseChar = Cast<APTBaseCharacter>(HitActor))
             {
+                FVector HitDirection = (BaseChar->GetActorLocation() - OwnerPlayer->GetActorLocation()).GetSafeNormal();
+
+                FPTHitInfo HitInfo;
+                HitInfo.Attacker        = OwnerPlayer;
+                HitInfo.HitDirection    = HitDirection;
+                HitInfo.HitReactionType = EHitReactionType::Light;
+
                 // 부모의 ApplyDamage로 기본 공격력을 넘기면, 장비 보너스가 자동 합산됨
-                BaseChar->ApplyDamage(OwnerPlayer->BaseAtk, OwnerPlayer);
+                BaseChar->ApplyDamageWithHit(OwnerPlayer->BaseAtk, OwnerPlayer, HitInfo);
             }
         }
     }

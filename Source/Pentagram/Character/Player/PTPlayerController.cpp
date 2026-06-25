@@ -712,6 +712,13 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     if (PlayerCharacter->bIsDodging) return;
     if (PlayerCharacter->bIsUsingSkill) return;
 
+    /*  무기 장착 여부 검사
+    if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+    {
+        return;
+    }
+    */
+
     bMoveToDestination = false;
     StopMovement();
 
@@ -782,6 +789,13 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[0]) return;
@@ -799,6 +813,13 @@ void APTPlayerController::OnSkill2(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[1]) return;
@@ -815,6 +836,13 @@ void APTPlayerController::OnSkill3(const FInputActionValue& Value)
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
 
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[2]) return;
@@ -830,6 +858,13 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
+
+    /*  무기 장착 여부 검사
+      if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
+      {
+          return;
+      }
+      */
 
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
@@ -1008,6 +1043,12 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
     if (APTBaseCharacter* Dead = Cast<APTBaseCharacter>(DeadPawn))
     {
         if (Dead->CurrentHP > 0.f) return; // 생존 시 차단
+    }
+
+    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+    {
+        PS->CurrentHP = PS->MaxHP;
+        PS->BroadcastAllStats(); // 클라이언트 UI 및 스탯 동기화 강제 브로드캐스팅
     }
 
     // 시체 정리

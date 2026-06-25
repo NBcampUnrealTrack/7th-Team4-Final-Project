@@ -1,4 +1,4 @@
-﻿#include "PTAnimNotifyState_SkillProjectile.h"
+#include "PTAnimNotifyState_SkillProjectile.h"
 
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Skill/PTSkillRow.h"
@@ -116,7 +116,11 @@ void UPTAnimNotifyState_SkillProjectile::NotifyTick(USkeletalMeshComponent* Mesh
          Proj.HitActors.Add(TWeakObjectPtr<AActor>(HitActor));
 
          float FinalDamage = Owner->GetTotalAttack() * SkillData->DamageMultiplier;
-         Target->ApplyDamage(FinalDamage, Owner);
+
+         FPTHitInfo HitInfo   = SkillData->MakeHitInfo(Owner);
+         HitInfo.HitDirection = Proj.Direction;
+
+         Target->ApplyDamageWithHit(FinalDamage, Owner, HitInfo);
 
          UE_LOG(LogTemp, Log, TEXT("Projectile %s 명중 / 데미지 %.1f"),
              *Target->GetName(), FinalDamage);

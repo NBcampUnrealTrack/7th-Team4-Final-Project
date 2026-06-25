@@ -391,7 +391,7 @@ void APTPlayerCharacter::Multicast_StopAttack_Implementation()
 }
 
 // 무기 외형 실시간 변경
-void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset)
+void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset, const FItemData& ItemData)
 {
     UE_LOG(LogTemp, Warning, TEXT("[UpdateWeaponVisual] 호출됨, IsNull: %d"), NewMeshAsset.IsNull());
 
@@ -411,6 +411,10 @@ void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& N
         {
             WeaponMeshComp->SetStaticMesh(LoadedMesh);
             UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 변경 완료: %s"), *LoadedMesh->GetName());
+
+            WeaponMeshComp->SetRelativeScale3D(ItemData.WeaponRelativeLocation);
+            WeaponMeshComp->SetRelativeRotation(ItemData.WeaponRelativeRotation);
+            WeaponMeshComp->SetRelativeScale3D(ItemData.WeaponRelativeScale);
         }
     }
 }

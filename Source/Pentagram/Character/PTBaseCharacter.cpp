@@ -87,6 +87,11 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
 
 float APTBaseCharacter::ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo)
 {
+    if (CurrentHP <= 0.f)
+    {
+        return 0.f;
+    }
+
     const float FinalDamage = ApplyDamage(DamageAmount, Attacker);
 
     if (FinalDamage <= 0.f)
@@ -122,16 +127,21 @@ void APTBaseCharacter::PostInitializeComponents()
 void APTBaseCharacter::OnDeath()
 {
     // 이동 불가
-    GetCharacterMovement()->DisableMovement();
+    // GetCharacterMovement()->DisableMovement();
 
     // 콜리전 비활성화 (액터끼리 충돌 안함, 나중에 리스폰 시에 활성화 시켜줘야 할 수 있음.)
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    // GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     // 사망 애니메이션 재생은 각 파생 클래스에서 구현해주세요.
 }
 
 void APTBaseCharacter::OnRep_CurrentHP()
 {
+}
+
+void APTBaseCharacter::RequestHitStop(float Duration)
+{
+    ApplyHitStop(Duration);
 }
 
 void APTBaseCharacter::BeginPlay()
@@ -182,6 +192,11 @@ void APTBaseCharacter::ApplyHit(const FPTHitInfo& HitInfo)
         AttackerChar->ApplyHitStop(HitInfo.HitStopDuration * 0.5f);
     }
 
+    if (HasAuthority())
+    {
+        Multicast_PlayHitReactionMontage(HitInfo.HitReactionType);
+    }
+
     if (HitInfo.KnockbackForce > 0.f)
     {
         ApplyKnockback(HitInfo);
@@ -195,8 +210,11 @@ void APTBaseCharacter::ApplyHit(const FPTHitInfo& HitInfo)
             return;
         }
 
-        CachedWalkSpeed       = Movement->MaxWalkSpeed;
-        bCachedOrientRotation = Movement->bOrientRotationToMovement;
+        if (!bIsStaggered)
+        {
+            CachedWalkSpeed = Movement->MaxWalkSpeed;
+            bCachedOrientRotation = Movement->bOrientRotationToMovement;
+        }
 
         bIsStaggered = true;
         Movement->MaxWalkSpeed = 0.f;
@@ -260,11 +278,27 @@ void APTBaseCharacter::ApplyKnockback(const FPTHitInfo& HitInfo)
     if (HitInfo.HitReactionType == EHitReactionType::Light)
     {
         Movement->AddImpulse(Dir * HitInfo.KnockbackForce, true);
-        PlayAnimMontage(HitReaction_Light);
     }
     else
     {
         LaunchCharacter(Dir * HitInfo.KnockbackForce + FVector::UpVector * HitInfo.KnockbackZForce, true, true);
         PlayAnimMontage(HitReaction_Heavy);
     }
+}
+
+void APTBaseCharacter::Multicast_PlayHitReactionMontage_Implementation(EHitReactionType ReactionType)
+{
+    UE_LOG(LogTemp, Warning, TEXT("Hit Montage Multicast Called"));
+
+    UAnimMontage* Montage = (ReactionType == EHitReactionType::Light)
+        ? HitReaction_Light
+        : HitReaction_Heavy;
+
+    if (!IsValid(Montage))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Hit Montage is null"));
+        return;
+    }
+
+    PlayAnimMontage(Montage);
 }

@@ -17,6 +17,5 @@ public:
     TObjectPtr<class UNiagaraSystem> HitVFX;
 
     UPROPERTY(EditAnywhere, Category = "SFX")
-    TObjectPtr<class USoundBase> HitSFX;
-
+    TArray<class USoundBase*> HitSFXList;
 };
