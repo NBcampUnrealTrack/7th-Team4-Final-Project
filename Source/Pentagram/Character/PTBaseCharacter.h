@@ -31,6 +31,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|Combat")
     virtual void OnDeath();
 
+    UFUNCTION(BlueprintPure, Category = "PT|Combat")
+    bool IsDead() const;
+
+    UFUNCTION(BlueprintPure, Category = "PT|Combat")
+    bool IsAlive() const;
+
     UFUNCTION()
     virtual void OnRep_CurrentHP();
 

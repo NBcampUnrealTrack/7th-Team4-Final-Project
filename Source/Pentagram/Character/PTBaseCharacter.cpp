@@ -132,6 +132,16 @@ void APTBaseCharacter::OnDeath()
     }
 }
 
+bool APTBaseCharacter::IsDead() const
+{
+    return CurrentHP <= 0.f;
+}
+
+bool APTBaseCharacter::IsAlive() const
+{
+    return CurrentHP > 0.f;
+}
+
 void APTBaseCharacter::OnRep_CurrentHP()
 {
 }

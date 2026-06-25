@@ -89,6 +89,19 @@ void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulu
 
     if (Stimulus.WasSuccessfullySensed())
     {
+        APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Actor);
+        if (IsValid(Player) && Player->IsDead())
+        {
+            if (BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor) == Player)
+            {
+                BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
+                BB->ClearValue(PTMonsterBlackboardKeys::TargetActor);
+                BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
+            }
+
+            return;
+        }
+
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
         BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
         BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
