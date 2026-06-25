@@ -51,9 +51,6 @@ protected:
     TObjectPtr<UPTLobbySlotWidget> PlayerSlot_3;
 
     UPROPERTY(meta = (BindWidget))
-    TObjectPtr<UPTLobbySlotWidget> PlayerSlot_4;
-
-    UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> ReadyButton;
 
     UPROPERTY(meta = (BindWidgetOptional))

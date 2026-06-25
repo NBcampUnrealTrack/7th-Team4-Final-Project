@@ -60,6 +60,9 @@ void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemov
 
 void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
 {
+    // 진입 로그
+    UE_LOG(LogTemp, Warning, TEXT("[OpenUILevel] In=[%s]"), *LevelName.ToString());
+
     // 표 조회
     const UPTUISettings* Settings = GetDefault<UPTUISettings>();
     if (!Settings) return;
@@ -96,13 +99,13 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     }
 
     // 매핑된 UI 푸시
-    if (UClass* WidgetClass = Entry->WidgetClass.Get())
+    if (UClass* WidgetClass = Entry->WidgetClass.LoadSynchronous())
     {
         CurrentUIWidget = PushWidget(WidgetClass, Entry->Layer);
     }
-    else if (!Entry->WidgetClass.IsNull())
+    else
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] Widget class for level %s is not loaded yet."), *LevelName.ToString());
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Failed to load widget class for level %s."), *LevelName.ToString());
     }
 }
 
