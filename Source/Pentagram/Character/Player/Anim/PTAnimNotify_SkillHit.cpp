@@ -71,7 +71,12 @@ void UPTAnimNotify_SkillHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSeque
     {
         if (APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor))
         {
-            Target->ApplyDamage(FinalDamage, OwnerPlayer);
+            FVector HitDirection = (Target->GetActorLocation() - OwnerPlayer->GetActorLocation()).GetSafeNormal();
+
+            FPTHitInfo HitInfo   = SkillData->MakeHitInfo(OwnerPlayer);
+            HitInfo.HitDirection = HitDirection;
+
+            Target->ApplyDamageWithHit(FinalDamage, OwnerPlayer, HitInfo);
         }
     }
 }
