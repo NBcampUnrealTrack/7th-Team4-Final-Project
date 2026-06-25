@@ -1,5 +1,4 @@
 ﻿#include "PTLobbySlotWidget.h"
-
 #include "Components/TextBlock.h"
 
 void UPTLobbySlotWidget::SetSlot(const FString& InName, int32 InLevel, bool bInReady)
