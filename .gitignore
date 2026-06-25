@@ -39,3 +39,6 @@ DerivedDataCache/*
 
 # 유료 에셋 폴더 Ignore 처리
 Content/PaidAssets/
+
+# 무료 에셋 폴더 추적
+!/Content/FreeAssets/
