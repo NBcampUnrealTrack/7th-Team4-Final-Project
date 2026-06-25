@@ -1,34 +1,58 @@
 ﻿#include "PTLobbySlotWidget.h"
 #include "Components/TextBlock.h"
+#include "Components/Image.h"
+
+void UPTLobbySlotWidget::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    if (SlotNumberText)
+    {
+        SlotNumberText->SetText(FText::AsNumber(SlotNumber));
+    }
+}
 
 void UPTLobbySlotWidget::SetSlot(const FString& InName, int32 InLevel, bool bInReady)
 {
+    if (Img_Background && FilledBackground)
+    {
+        Img_Background->SetBrushFromTexture(FilledBackground);
+    }
+
     if (PlayerNameText)
     {
         PlayerNameText->SetText(FText::FromString(InName));
+        PlayerNameText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     }
     if (PlayerLevelText)
     {
-        PlayerLevelText->SetText(FText::AsNumber(InLevel));
+        PlayerLevelText->SetText(FText::FromString(FString::Printf(TEXT("LV. %d"), InLevel)));
+        PlayerLevelText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     }
     if (ReadyStateText)
     {
-        ReadyStateText->SetText(FText::FromString(bInReady ? TEXT("준비") : TEXT("대기")));
+        ReadyStateText->SetText(FText::FromString(bInReady ? TEXT("Ready") : TEXT("Waiting")));
+        ReadyStateText->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
     }
 }
 
 void UPTLobbySlotWidget::SetEmpty()
 {
+    if (Img_Background && EmptyBackground)
+    {
+        Img_Background->SetBrushFromTexture(EmptyBackground);
+    }
+
     if (PlayerNameText)
     {
-        PlayerNameText->SetText(FText::FromString(TEXT("빈 슬롯")));
+        PlayerNameText->SetVisibility(ESlateVisibility::Collapsed);
     }
     if (PlayerLevelText)
     {
-        PlayerLevelText->SetText(FText::GetEmpty());
+        PlayerLevelText->SetVisibility(ESlateVisibility::Collapsed);
     }
     if (ReadyStateText)
     {
-        ReadyStateText->SetText(FText::GetEmpty());
+        ReadyStateText->SetVisibility(ESlateVisibility::Collapsed);
     }
 }

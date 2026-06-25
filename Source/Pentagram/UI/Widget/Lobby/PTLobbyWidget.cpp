@@ -97,14 +97,14 @@ void UPTLobbyWidget::RefreshLobby()
         return;
     }
 
-    UPTLobbySlotWidget* Slots[5] =
+    UPTLobbySlotWidget* Slots[4] =
     {
-        PlayerSlot_0, PlayerSlot_1, PlayerSlot_2, PlayerSlot_3, PlayerSlot_4
+        PlayerSlot_0, PlayerSlot_1, PlayerSlot_2, PlayerSlot_3
     };
 
     const int32 PlayerCount = PTGameState->PlayerArray.Num();
 
-    for (int32 Index = 0; Index < 5; ++Index)
+    for (int32 Index = 0; Index < 4; ++Index)
     {
         if (Slots[Index] == nullptr)
         {

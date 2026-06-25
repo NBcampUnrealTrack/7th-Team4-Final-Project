@@ -10,6 +10,7 @@
  *
  */
 class UTextBlock;
+class UImage;
 
 UCLASS()
 class PENTAGRAM_API UPTLobbySlotWidget : public UCommonUserWidget
@@ -23,6 +24,14 @@ public:
 
 protected:
 
+    virtual void NativeConstruct() override;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UImage> Img_Background;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UTextBlock> SlotNumberText;
+
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UTextBlock> PlayerNameText;
 
@@ -31,4 +40,13 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UTextBlock> ReadyStateText;
+
+    UPROPERTY(EditAnywhere, Category = "Slot")
+    int32 SlotNumber = 1;
+
+    UPROPERTY(EditAnywhere, Category = "Slot")
+    TObjectPtr<UTexture2D> EmptyBackground;
+
+    UPROPERTY(EditAnywhere, Category = "Slot")
+    TObjectPtr<UTexture2D> FilledBackground;
 };
