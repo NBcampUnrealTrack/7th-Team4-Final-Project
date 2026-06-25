@@ -174,7 +174,6 @@ void APTGameMode::RespawnPlayer(AController* PlayerController, const FVector& Re
     SavePlayerState(PlayerController);
 
     FVector RespawnLocation = RespawnLoc;
-    RespawnLocation.Z += 150.f;
 
     const FTransform RespawnTransform(FRotator::ZeroRotator, RespawnLocation);
     if (RespawnDelaySeconds <= 0.f)
@@ -410,7 +409,6 @@ void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const 
     if (PlayerState != nullptr && PlayerState->HasRespawnLocation())
     {
         FVector RespawnLocation = PlayerState->GetSavedRespawnLocation();
-        RespawnLocation.Z += 150.f;
         FinalSpawnTransform.SetLocation(RespawnLocation);
     }
 

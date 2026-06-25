@@ -6,7 +6,7 @@
 
 class APTQuestNPCCharacter;
 class APTBasePlayerState;
-class UCommonButtonBase;
+class UButton;
 class UTextBlock;
 class UVerticalBox;
 class UPTQuestListEntryWidget;
@@ -52,7 +52,10 @@ protected:
     void OnQuestEntryClicked(FName QuestID);
     void RefreshQuestText();
     void RefreshQuestActionButtons();
+
+    UFUNCTION()
     void HandleQuestActionButtonClicked();
+
     void BindQuestDelegates();
     void UnbindQuestDelegates();
     void RefreshVisibleQuestList();
@@ -82,7 +85,10 @@ protected:
     TObjectPtr<UVerticalBox> QuestList;
 
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
-    TObjectPtr<UCommonButtonBase> AcceptButton;
+    TObjectPtr<UButton> AcceptButton;
+
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    TObjectPtr<UTextBlock> Txt_AcceptButtonText;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Quest")
     TSubclassOf<UPTQuestListEntryWidget> QuestEntryWidgetClass;

@@ -55,6 +55,11 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayDeathMontage();
 
+    void RespawnAtLocation(const FVector& RespawnLocation);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_ResetAfterRespawn();
+
     UFUNCTION(Server, Reliable)
     void Server_StopAttack();
 
