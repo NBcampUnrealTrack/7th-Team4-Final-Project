@@ -126,13 +126,20 @@ void APTBaseCharacter::PostInitializeComponents()
 
 void APTBaseCharacter::OnDeath()
 {
-    // 이동 불가
-    // GetCharacterMovement()->DisableMovement();
+    if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+    {
+        Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+}
 
-    // 콜리전 비활성화 (액터끼리 충돌 안함, 나중에 리스폰 시에 활성화 시켜줘야 할 수 있음.)
-    // GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+bool APTBaseCharacter::IsDead() const
+{
+    return CurrentHP <= 0.f;
+}
 
-    // 사망 애니메이션 재생은 각 파생 클래스에서 구현해주세요.
+bool APTBaseCharacter::IsAlive() const
+{
+    return CurrentHP > 0.f;
 }
 
 void APTBaseCharacter::OnRep_CurrentHP()

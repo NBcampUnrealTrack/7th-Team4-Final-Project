@@ -1,5 +1,6 @@
 #include "Character/Monsters/Animation/PTAnimNotify_Attack.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/PTBaseCharacter.h"
 
 void UPTAnimNotify_Attack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {

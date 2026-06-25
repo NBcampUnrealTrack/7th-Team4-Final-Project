@@ -6,6 +6,7 @@
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISense_Sight.h"
 #include "Character/Player/PTPlayerCharacter.h"
+#include "Character/PTBaseCharacter.h"
 
 UPTBTService_MonsterSensor::UPTBTService_MonsterSensor()
 {
@@ -41,6 +42,16 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
     BB->SetValueAsBool(PTMonsterBlackboardKeys::ShouldReturnToSpawn, DistFromSpawnSq > ReturnThresholdSq);
 
     AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
+
+    APTBaseCharacter* CurrentTarget = Cast<APTBaseCharacter>(Target);
+    if (IsValid(CurrentTarget) && CurrentTarget->IsDead())
+    {
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
+        BB->ClearValue(PTMonsterBlackboardKeys::TargetActor);
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
+        Target = nullptr;
+    }
+
     if (!IsValid(Target))
     {
         if (UAIPerceptionComponent* PerceptionComp = AIC->GetPerceptionComponent())
@@ -51,11 +62,12 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
 
             for (AActor* Actor : PerceivedActors)
             {
-                if (Cast<APTPlayerCharacter>(Actor))
+                APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Actor);
+                if (IsValid(Player) && Player->IsAlive())
                 {
                     BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
-                    BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
-                    Target = Actor;
+                    BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Player);
+                    Target = Player;
                     break;
                 }
             }
@@ -88,7 +100,7 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
     if (bOutOfChase)
     {
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
-        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
+        BB->ClearValue(PTMonsterBlackboardKeys::TargetActor);
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
         return;
     }
