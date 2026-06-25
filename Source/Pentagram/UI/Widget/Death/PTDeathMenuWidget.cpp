@@ -77,7 +77,11 @@ void UPTDeathMenuWidget::OnRespawnClicked()
     // 부활 요청
     if (APTPlayerController* PC = Cast<APTPlayerController>(GetOwningPlayer()))
     {
+        DeactivateWidget();
+        PC->SetGameplayInputBlockedByUI(false);
+        PC->RestoreGameplayInput();
         PC->Server_RequestRespawn();
+        return;
     }
 
     DeactivateWidget();

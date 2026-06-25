@@ -14,6 +14,9 @@
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Character/NPC/PTShopNPCCharacter.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Core/PTGameMode.h"
 #include "Core/Subsystems/PTEconomySubsystem.h"
 #include "Core/Subsystems/PTItemSubsystem.h"
@@ -141,6 +144,8 @@ void APTPlayerController::AcknowledgePossession(APawn* P)
         UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
     }
 
+    SetGameplayInputBlockedByUI(false);
+    RestoreGameplayInput();
 }
 
 void APTPlayerController::Client_OpenQuestDialogue_Implementation(
@@ -664,9 +669,26 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
     if (!PC) return;
     if (PC->bIsDodging) return;
 
-    if (PC->bIsAttacking)
+    UAnimMontage* PlayingAttackMontage = nullptr;
+    if (USkeletalMeshComponent* MeshComponent = PC->GetMesh())
     {
-        PC->StopAnimMontage();
+        if (UAnimInstance* AnimInstance = MeshComponent->GetAnimInstance())
+        {
+            for (const TObjectPtr<UAnimMontage>& AttackMontage : PC->AttackMontages)
+            {
+                UAnimMontage* Montage = AttackMontage.Get();
+                if (IsValid(Montage) && AnimInstance->Montage_IsPlaying(Montage))
+                {
+                    PlayingAttackMontage = Montage;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (PC->bIsAttacking || IsValid(PlayingAttackMontage))
+    {
+        PC->StopAnimMontage(PlayingAttackMontage);
         PC->Server_StopAttack();
         PC->bIsAttacking = false;
         PC->bCanCombo    = false;
