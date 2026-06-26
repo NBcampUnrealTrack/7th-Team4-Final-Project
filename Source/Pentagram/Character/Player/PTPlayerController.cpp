@@ -712,7 +712,7 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     if (PlayerCharacter->bIsDodging) return;
     if (PlayerCharacter->bIsUsingSkill) return;
 
-    /*  무기 장착 여부 검사
+    /*무기 장착 여부 검사
     if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
     {
         return;
