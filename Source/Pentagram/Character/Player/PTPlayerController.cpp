@@ -4,7 +4,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
-#include "PTBasePlayerState.h"
 #include "PTEquipmentComponent.h"
 #include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
@@ -12,6 +11,7 @@
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/NPC/PTNPCCharacter.h"
 #include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Character/NPC/PTShopNPCCharacter.h"
 #include "Animation/AnimInstance.h"
@@ -23,7 +23,6 @@
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "UI/HUD/PTHUDWidget.h"
 #include "UI/Manage/PTUIManagerSubsystem.h"
 #include "UI/Widget/Inventory/PTInventoryWidget.h"
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
@@ -779,9 +778,71 @@ void APTPlayerController::OnInteractPressed()
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (PlayerCharacter)
     {
+        if (APTNPCCharacter* NearbyNPC = GetBestNearbyNPC())
+        {
+            PlayerCharacter->Server_TryInteract(NearbyNPC);
+            UE_LOG(LogTemp, Log, TEXT("Controller: F input -> interact with nearby NPC %s"), *NearbyNPC->GetName());
+            return;
+        }
+
         PlayerCharacter->TryInteract();
         UE_LOG(LogTemp, Log, TEXT("컨트롤러: F키 입력 감지 -> 캐릭터에게 상호작용 명령 전달"));
     }
+}
+
+void APTPlayerController::RegisterNearbyNPC(APTNPCCharacter* NPC)
+{
+    if (NPC == nullptr)
+    {
+        return;
+    }
+
+    NearbyNPCs.RemoveAll(
+        [](const TObjectPtr<APTNPCCharacter>& NearbyNPC)
+        {
+            return !IsValid(NearbyNPC);
+        });
+
+    NearbyNPCs.AddUnique(NPC);
+}
+
+void APTPlayerController::UnregisterNearbyNPC(APTNPCCharacter* NPC)
+{
+    NearbyNPCs.RemoveAll(
+        [NPC](const TObjectPtr<APTNPCCharacter>& NearbyNPC)
+        {
+            return !IsValid(NearbyNPC) || NearbyNPC == NPC;
+        });
+}
+
+APTNPCCharacter* APTPlayerController::GetBestNearbyNPC() const
+{
+    const APawn* ControlledPawn = GetPawn();
+    if (ControlledPawn == nullptr)
+    {
+        return nullptr;
+    }
+
+    APTNPCCharacter* BestNPC = nullptr;
+    float BestDistanceSquared = TNumericLimits<float>::Max();
+    const FVector PawnLocation = ControlledPawn->GetActorLocation();
+
+    for (const TObjectPtr<APTNPCCharacter>& NearbyNPC : NearbyNPCs)
+    {
+        if (!IsValid(NearbyNPC))
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(PawnLocation, NearbyNPC->GetActorLocation());
+        if (DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            BestNPC = NearbyNPC.Get();
+        }
+    }
+
+    return BestNPC;
 }
 
 void APTPlayerController::OnSkill1(const FInputActionValue& Value)
