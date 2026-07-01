@@ -14,6 +14,7 @@ class UPTPrimaryLayout;
 class UPTNPCDialogueWidget;
 class APTDropItemActorBase;
 class APTMonsterCharacter;
+class APTNPCCharacter;
 class APTQuestNPCCharacter;
 class APTShopNPCCharacter;
 class UPTShopWidget;
@@ -40,6 +41,8 @@ public:
     void OnInventoryPressed();
     void OnShopPressed();
     void OnQuestPressed();
+    void RegisterNearbyNPC(APTNPCCharacter* NPC);
+    void UnregisterNearbyNPC(APTNPCCharacter* NPC);
 
     void RestoreGameplayInput();
     void SetGameplayInputBlockedByUI(bool bBlocked);
@@ -116,6 +119,7 @@ private:
     void OnRightClick(const FInputActionValue& Value);
     void OnLeftClick(const FInputActionValue& Value);
     void OnInteractPressed();
+    APTNPCCharacter* GetBestNearbyNPC() const;
     void AddUIInputMapping();
     void RemoveUIInputMapping();
 
@@ -202,4 +206,7 @@ private:
 
     bool bUIInputMappingAdded = false;
     bool bGameplayInputBlockedByUI = false;
+
+    UPROPERTY()
+    TArray<TObjectPtr<APTNPCCharacter>> NearbyNPCs;
 };

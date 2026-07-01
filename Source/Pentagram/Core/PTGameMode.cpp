@@ -7,6 +7,7 @@
 #include "Subsystems/PTPlayerLevelSubsystem.h"
 #include "Subsystems/PTQuestSubsystem.h"
 #include "Subsystems/PTItemSubsystem.h"
+#include "Subsystems/PTLoadingSubsystem.h"
 #include "Subsystems/PTSaveSubsystem.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -323,6 +324,46 @@ void APTGameMode::TravelToGame()
     }
 
     bIsTraveling = true;
+    SetGamePhase(EGamePhase::Loading);
+
+    UPTLoadingSubsystem* LoadingSubsystem =
+        GetGameInstance() != nullptr ? GetGameInstance()->GetSubsystem<UPTLoadingSubsystem>() : nullptr;
+    if (LoadingSubsystem == nullptr)
+    {
+        HandleTravelPreloadComplete();
+        return;
+    }
+
+    TArray<UDataTable*> PreloadDataTables;
+    if (bPreloadItemDataTableForTravel && ItemDataTable != nullptr)
+    {
+        PreloadDataTables.Add(ItemDataTable);
+    }
+
+    for (UDataTable* PreloadDataTable : TravelPreloadDataTables)
+    {
+        if (PreloadDataTable != nullptr)
+        {
+            PreloadDataTables.AddUnique(PreloadDataTable);
+        }
+    }
+
+    LoadingSubsystem->PreloadForTravel(
+        TravelPreloadAssets,
+        TravelPreloadClasses,
+        PreloadDataTables,
+        FSimpleDelegate::CreateUObject(this, &APTGameMode::HandleTravelPreloadComplete));
+}
+
+void APTGameMode::HandleTravelPreloadComplete()
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr || GameMapPath.IsEmpty())
+    {
+        bIsTraveling = false;
+        return;
+    }
+
     World->ServerTravel(GameMapPath);
 }
 

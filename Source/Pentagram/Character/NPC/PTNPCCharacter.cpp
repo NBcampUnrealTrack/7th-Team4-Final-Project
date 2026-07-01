@@ -3,10 +3,10 @@
 #include "Components/SceneComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SphereComponent.h"
-#include "Components/BoxComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTPlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "UI/Widget/NPC/PTNPCInteractionPromptWidget.h"
@@ -27,14 +27,6 @@ APTNPCCharacter::APTNPCCharacter()
     InteractionRangeSphere->SetSphereRadius(InteractionRadius);
     InteractionRangeSphere->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 
-    InteractionCollision = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractionCollision"));
-    InteractionCollision->SetupAttachment(SceneRootComponent);
-    InteractionCollision->SetBoxExtent(InteractionCollisionExtent);
-    InteractionCollision->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-    InteractionCollision->SetCollisionResponseToAllChannels(ECR_Ignore);
-    InteractionCollision->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
-    InteractionCollision->SetGenerateOverlapEvents(false);
-
     InteractionPromptWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractionPromptWidgetComponent"));
     InteractionPromptWidgetComponent->SetupAttachment(SceneRootComponent);
     InteractionPromptWidgetComponent->SetRelativeLocation(InteractionPromptRelativeLocation);
@@ -50,7 +42,6 @@ void APTNPCCharacter::BeginPlay()
     Super::BeginPlay();
 
     InteractionRangeSphere->SetSphereRadius(InteractionRadius);
-    InteractionCollision->SetBoxExtent(InteractionCollisionExtent);
 
     InteractionPromptWidgetComponent->SetRelativeLocation(InteractionPromptRelativeLocation);
     if (InteractionPromptWidgetClass != nullptr)
@@ -148,6 +139,11 @@ void APTNPCCharacter::OnInteractionRangeBeginOverlap(UPrimitiveComponent* Overla
         return;
     }
 
+    if (APTPlayerController* PTPlayerController = Cast<APTPlayerController>(PC))
+    {
+        PTPlayerController->RegisterNearbyNPC(this);
+    }
+
     ShowInteractionPrompt(PC);
     OnPlayerEnterRange.Broadcast(PC);
 }
@@ -160,6 +156,11 @@ void APTNPCCharacter::OnInteractionRangeEndOverlap(UPrimitiveComponent* Overlapp
     if (PC == nullptr || !PC->IsLocalController())
     {
         return;
+    }
+
+    if (APTPlayerController* PTPlayerController = Cast<APTPlayerController>(PC))
+    {
+        PTPlayerController->UnregisterNearbyNPC(this);
     }
 
     HideInteractionPrompt(PC);

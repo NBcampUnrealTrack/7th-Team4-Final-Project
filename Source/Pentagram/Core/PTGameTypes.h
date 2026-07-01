@@ -7,6 +7,7 @@ UENUM(BlueprintType)
 enum class EGamePhase : uint8
 {
     Waiting,
+    Loading,
     Playing,
     BossFight,
     GameClear,

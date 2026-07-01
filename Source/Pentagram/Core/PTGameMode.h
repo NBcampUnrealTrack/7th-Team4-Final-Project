@@ -47,6 +47,7 @@ private:
     void StartAutoSaveIfAvailable() const;
 
     void TravelToGame();    // 서버 트래블 로비 추가
+    void HandleTravelPreloadComplete();
 
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
@@ -57,6 +58,18 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Item")
     TObjectPtr<UDataTable> ItemDataTable;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Loading")
+    TArray<TSoftObjectPtr<UObject>> TravelPreloadAssets;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Loading")
+    TArray<TSoftClassPtr<UObject>> TravelPreloadClasses;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Loading")
+    TArray<TObjectPtr<UDataTable>> TravelPreloadDataTables;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Loading")
+    bool bPreloadItemDataTableForTravel = true;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Respawn")
     float RespawnDelaySeconds = 3.f;

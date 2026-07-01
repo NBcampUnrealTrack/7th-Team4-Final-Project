@@ -6,6 +6,7 @@
 #include "PTUISettings.generated.h"
 
 class UCommonActivatableWidget;
+class UPTLoadingWidget;
 
 USTRUCT(BlueprintType)
 struct FPTUILevelEntry
@@ -36,4 +37,10 @@ public:
     // 레벨 -> UI 매핑
     UPROPERTY(Config, EditAnywhere, Category = "PT|UI")
     TMap<FName, FPTUILevelEntry> LevelUITable;
+
+    UPROPERTY(Config, EditAnywhere, Category = "PT|Loading")
+    TSoftClassPtr<UPTLoadingWidget> LoadingWidgetClass;
+
+    UPROPERTY(Config, EditAnywhere, Category = "PT|Loading", meta = (ClampMin = "0"))
+    int32 LoadingWidgetZOrder = 10000;
 };
