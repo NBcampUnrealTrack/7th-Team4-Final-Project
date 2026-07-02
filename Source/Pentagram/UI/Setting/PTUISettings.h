@@ -7,6 +7,7 @@
 
 class UCommonActivatableWidget;
 class UPTLoadingWidget;
+class UTexture2D;
 
 USTRUCT(BlueprintType)
 struct FPTUILevelEntry
@@ -40,6 +41,18 @@ public:
 
     UPROPERTY(Config, EditAnywhere, Category = "PT|Loading")
     TSoftClassPtr<UPTLoadingWidget> LoadingWidgetClass;
+
+    UPROPERTY(Config, EditAnywhere, Category = "PT|Loading")
+    TArray<TSoftObjectPtr<UTexture2D>> LoadingBackgroundImages;
+
+    UPROPERTY(Config, EditAnywhere, Category = "PT|Loading")
+    bool bRandomizeLoadingBackground = true;
+
+    UPROPERTY(Config, EditAnywhere, Category = "PT|Loading", meta = (ClampMin = "0.1"))
+    float LoadingBackgroundCycleInterval = 3.f;
+
+    UPROPERTY(Config, EditAnywhere, Category = "PT|Loading")
+    TArray<FString> LoadingTips;
 
     UPROPERTY(Config, EditAnywhere, Category = "PT|Loading", meta = (ClampMin = "0"))
     int32 LoadingWidgetZOrder = 10000;

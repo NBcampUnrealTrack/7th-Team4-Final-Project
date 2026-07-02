@@ -38,6 +38,9 @@ public:
     void NotifyReadyChanged();
     bool AreAllPlayersReady() const;
 
+    UFUNCTION(BlueprintCallable, Category = "PT|Lobby")
+    void RequestTravelToGame();
+
 protected:
     virtual void BeginPlay() override;
 

@@ -36,20 +36,44 @@ void UPTUIManagerSubsystem::Deinitialize()
 
 void UPTUIManagerSubsystem::RegisterPrimaryLayout(UPTPrimaryLayout* InLayout)
 {
-    if (!InLayout) return;
+    if (!InLayout)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] RegisterPrimaryLayout failed. Layout is null."));
+        return;
+    }
+
     PrimaryLayout = InLayout;
+    UE_LOG(LogTemp, Log, TEXT("[UI] Primary layout registered: %s"), *GetNameSafe(InLayout));
 }
 
 UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonActivatableWidget> WidgetClass,
     EPTUILayer Layer)
 {
-    if (!WidgetClass) return nullptr;
-    if (!PrimaryLayout.IsValid()) return nullptr;
+    if (!WidgetClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] PushWidget failed. WidgetClass is null."));
+        return nullptr;
+    }
+
+    if (!PrimaryLayout.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] PushWidget failed for %s. PrimaryLayout is not registered."),
+            *GetNameSafe(WidgetClass.Get()));
+        return nullptr;
+    }
 
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
-    if (!Stack) return nullptr;
+    if (!Stack)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] PushWidget failed for %s. Layer stack is null. Layer=%d"),
+            *GetNameSafe(WidgetClass.Get()), static_cast<int32>(Layer));
+        return nullptr;
+    }
 
-    return Stack->AddWidget(WidgetClass);
+    UCommonActivatableWidget* AddedWidget = Stack->AddWidget(WidgetClass);
+    UE_LOG(LogTemp, Log, TEXT("[UI] PushWidget %s to Layer=%d Result=%s"),
+        *GetNameSafe(WidgetClass.Get()), static_cast<int32>(Layer), *GetNameSafe(AddedWidget));
+    return AddedWidget;
 }
 
 void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemove)
@@ -62,13 +86,28 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
 {
     // 표 조회
     const UPTUISettings* Settings = GetDefault<UPTUISettings>();
-    if (!Settings) return;
+    if (!Settings)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. PTUISettings is null. Level=%s"),
+            *LevelName.ToString());
+        return;
+    }
 
     const FPTUILevelEntry* Entry = Settings->LevelUITable.Find(LevelName);
-    if (!Entry) return;
+    if (!Entry)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. LevelUITable has no entry for %s."),
+            *LevelName.ToString());
+        return;
+    }
 
     UWorld* World = GetLocalPlayer() ? GetLocalPlayer()->GetWorld() : nullptr;
-    if (!World) return;
+    if (!World)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. World is null. Level=%s"),
+            *LevelName.ToString());
+        return;
+    }
 
     // 이전 UI 제거
     if (CurrentUIWidget)
@@ -96,13 +135,25 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     }
 
     // 매핑된 UI 푸시
-    if (UClass* WidgetClass = Entry->WidgetClass.Get())
+    UClass* WidgetClass = Entry->WidgetClass.Get();
+    if (WidgetClass == nullptr && !Entry->WidgetClass.IsNull())
+    {
+        WidgetClass = Entry->WidgetClass.LoadSynchronous();
+    }
+
+    if (WidgetClass)
     {
         CurrentUIWidget = PushWidget(WidgetClass, Entry->Layer);
+        if (CurrentUIWidget == nullptr)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed to push widget. Level=%s Widget=%s Layer=%d"),
+                *LevelName.ToString(), *GetNameSafe(WidgetClass), static_cast<int32>(Entry->Layer));
+        }
     }
-    else if (!Entry->WidgetClass.IsNull())
+    else
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] Widget class for level %s is not loaded yet."), *LevelName.ToString());
+        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. WidgetClass is null. Level=%s Path=%s"),
+            *LevelName.ToString(), *Entry->WidgetClass.ToSoftObjectPath().ToString());
     }
 }
 
