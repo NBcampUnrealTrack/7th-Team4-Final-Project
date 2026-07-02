@@ -59,6 +59,13 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     float BuffDuration = 0.f;
 
+    //기본 공격 몽타주
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|BasicAttack")
+    TArray<TSoftObjectPtr<UAnimMontage>> ComboMontage; // 검
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|BasicAttack")
+    TArray<TSoftObjectPtr<UAnimMontage>> ComboMontage_Wand; // 완드
+
     // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     TSoftObjectPtr<UAnimMontage> SkillMontage;

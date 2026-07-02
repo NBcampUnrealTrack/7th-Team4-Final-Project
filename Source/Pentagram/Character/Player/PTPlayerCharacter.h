@@ -45,13 +45,13 @@ public:
     // 서버에서 스킬 호출
     UFUNCTION(Server, Reliable)
     void Server_UseSkill(FName SkillID);
-
+/*
     UFUNCTION(Server, Reliable)
     void Server_PlayAttackMontage(int32 MontageIndex);
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayAttackMontage(int32 MontageIndex);
-
+*/
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_PlayDeathMontage();
 
@@ -59,13 +59,13 @@ public:
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_ResetAfterRespawn();
-
+/*
     UFUNCTION(Server, Reliable)
     void Server_StopAttack();
 
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_StopAttack();
-
+*/
     // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
     void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset, const FItemData& ItemData = FItemData());
 
@@ -73,12 +73,28 @@ public:
 
     void OnAtkBuffExpired();
 
+    void ApplyWeaponAnimLayer(EWeaponType NewWeaponType);
+
+    void EnterCombat();
+
+    void StartCombatExitTimer();
+
+    void OnCombatExitTimerExpired();
+
+    void PrewarmWeaponAnimLayers();
+
     // 카메라를 가렸을 시 구조물 Alpha 처리
     UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
     void OnStructureHidden(AActor* HidingActor);
 
     UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
     void OnStructureUnHidden(AActor* UnHiddenActor);
+
+    UFUNCTION()
+    void OnRep_CurrentWeaponType();
+
+    UFUNCTION()
+    void Server_EnterCombat();
 
     FORCEINLINE UPTInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
     FORCEINLINE UPTEquipmentComponent* GetEquipmentComponent() const { return EquipmentComponent; }
@@ -98,22 +114,23 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
     TObjectPtr<UPTEquipmentComponent> EquipmentComponent;
-
+/*
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     int32 ComboIndex = 0;       // 현재 콤보 단계 (연속 공격 단계)
+
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     bool bCanCombo = false;     // 콤보 입력 가능 여부
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     bool bIsAttacking = false;  // 공격 중 여부
-
+*/
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Skill")
     bool bIsUsingSkill = false;
 
-    UPROPERTY(EditAnywhere, Category = "Attack")
+    /*UPROPERTY(EditAnywhere, Category = "Attack")
     TArray<TObjectPtr<UAnimMontage>> AttackMontages; // 연속 공격 몽타주 배열
-
+    */
 
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     bool bIsInvincible = false; // 무적 여부 (데미지 판정에서 참조)
@@ -121,11 +138,32 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     bool bIsDodging = false;
 
+    UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat")
+    bool bIsInCombat = false;
+
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     float DodgeLaunchSpeed = 1200.f;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Buff")
     float AtkBuffBonus = 0.f;
+
+    UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType, VisibleAnywhere, Category = "Equip")
+    EWeaponType CurrentWeaponType = EWeaponType::Hands;
+
+    UPROPERTY()
+    TSubclassOf<UAnimInstance> CurrentLinkedAnimLayerClass;
+
+    UPROPERTY(EditAnywhere, Category = "Equip|AnimLayer")
+    TSubclassOf<class UAnimInstance> HandAnimLayerClass;
+
+    UPROPERTY(EditAnywhere, Category = "Equip|AnimLayer")
+    TSubclassOf<UAnimInstance> SwordAnimLayerClass;
+
+    UPROPERTY(EditAnywhere, Category = "Equip|AnimLayer")
+    TSubclassOf<UAnimInstance> WandAnimLayerClass;
+
+    UPROPERTY(EditAnywhere, Category = "Equip|AnimLayer")
+    TSubclassOf<UAnimInstance> BowAnimLayerClass;
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;
@@ -135,6 +173,8 @@ public:
     FTimerHandle MPRegenTimerHandle;
 
     FTimerHandle BuffTimerHandle;
+
+    FTimerHandle CombatExitTimerHandle;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 

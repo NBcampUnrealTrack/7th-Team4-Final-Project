@@ -627,6 +627,7 @@ void APTPlayerController::RefreshInventoryUI()
 {
 }
 
+/*
 void APTPlayerController::PlayAttackMontage()
 {
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
@@ -639,7 +640,7 @@ void APTPlayerController::PlayAttackMontage()
     PlayerCharacter->Server_PlayAttackMontage(PlayerCharacter->ComboIndex);
 
     PlayerCharacter->ComboIndex++;
-}
+}*/
 
 void APTPlayerController::RotateTowardsMouse()
 {
@@ -668,30 +669,10 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
     if (!PC) return;
     if (PC->bIsDodging) return;
 
-    UAnimMontage* PlayingAttackMontage = nullptr;
-    if (USkeletalMeshComponent* MeshComponent = PC->GetMesh())
+    if (PC->SkillComp->bIsAttacking)
     {
-        if (UAnimInstance* AnimInstance = MeshComponent->GetAnimInstance())
-        {
-            for (const TObjectPtr<UAnimMontage>& AttackMontage : PC->AttackMontages)
-            {
-                UAnimMontage* Montage = AttackMontage.Get();
-                if (IsValid(Montage) && AnimInstance->Montage_IsPlaying(Montage))
-                {
-                    PlayingAttackMontage = Montage;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (PC->bIsAttacking || IsValid(PlayingAttackMontage))
-    {
-        PC->StopAnimMontage(PlayingAttackMontage);
-        PC->Server_StopAttack();
-        PC->bIsAttacking = false;
-        PC->bCanCombo    = false;
-        PC->ComboIndex   = 0;
+        PC->StopAnimMontage();
+        PC->SkillComp->Server_StopBasicAttack();
     }
 
     FHitResult HitResult;
@@ -711,17 +692,8 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
     if (PlayerCharacter->bIsDodging) return;
     if (PlayerCharacter->bIsUsingSkill) return;
 
-    /*무기 장착 여부 검사
-    if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
-    {
-        return;
-    }
-    */
-
     bMoveToDestination = false;
     StopMovement();
-
-    if (PlayerCharacter->bIsAttacking && !PlayerCharacter->bCanCombo) return;
 
     FHitResult HitResult;
     bool bGotHit = GetHitResultUnderCursor(ECC_Visibility, false, HitResult);
@@ -740,37 +712,30 @@ void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
             }
         }
 
-        // 마우스 지정 대상이 오브젝트가 드롭 아이템 액터인지 판별
         APTDropItemActorBase* TargetItem = Cast<APTDropItemActorBase>(HitResult.GetActor());
         if (TargetItem)
         {
-            // 캐릭터와 아이템 간의 평면(2D) 거리 확인
             float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
 
-            if (Distance2D <= 250.0f) // 범위 판정
+            if (Distance2D <= 250.0f)
             {
-                // 로컬에서 판단을 내리지 않고, 서버 RPC 전송
                 Server_TryPickupItem(TargetItem);
             }
             else
             {
                 UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있습니다."));
             }
-            return; // 아이템 클릭 시 공격 차단
+            return;
         }
     }
 
-
-    if (PlayerCharacter->bIsAttacking)
+    //무기 장착 여부 검사
+    if (!PlayerCharacter->EquipmentComponent || !PlayerCharacter->EquipmentComponent->IsWeaponEquipped())
     {
-        if (PlayerCharacter->bCanCombo)
-        {
-            PlayerCharacter->bCanCombo = false;
-            PlayAttackMontage();
-        }
         return;
     }
-    PlayAttackMontage();
+
+    PlayerCharacter->SkillComp->TryBasicAttack();
 }
 
 void APTPlayerController::OnInteractPressed()

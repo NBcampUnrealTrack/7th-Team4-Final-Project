@@ -113,6 +113,10 @@ void APTPlayerCharacter::BeginPlay()
             true
             );
     }
+
+    ApplyWeaponAnimLayer(CurrentWeaponType);
+
+    PrewarmWeaponAnimLayers();
 }
 
 void APTPlayerCharacter::Tick(float DeltaTime)
@@ -167,6 +171,8 @@ void APTPlayerCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
 
     DOREPLIFETIME(APTPlayerCharacter, AtkBuffBonus);
     DOREPLIFETIME(APTPlayerCharacter, bIsUsingSkill);
+    DOREPLIFETIME(APTPlayerCharacter, bIsInCombat);
+    DOREPLIFETIME(APTPlayerCharacter, CurrentWeaponType);
 }
 
 void APTPlayerCharacter::OnDeath()
@@ -217,7 +223,7 @@ void APTPlayerCharacter::OnDeath()
 void APTPlayerCharacter::TryInteract()
 {
     // 공격 중일 때는 차단
-    if (bIsAttacking) return;
+    if (SkillComp->bIsAttacking) return;
 
     // PlayerState의 체력 장부를 검사하여 사망 시 차단 처리
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
@@ -294,6 +300,7 @@ void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
     }
 }
 
+/*
 void APTPlayerCharacter::Server_PlayAttackMontage_Implementation(int32 MontageIndex)
 {
     Multicast_PlayAttackMontage(MontageIndex);
@@ -307,8 +314,7 @@ void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 Montag
     {
         PlayAnimMontage(AttackMontages[MontageIndex]);
     }
-}
-
+}*/
 void APTPlayerCharacter::OnDodgeInvincibleStart()
 {
     // 로컬 클라이언트에서 AnimNotify 발동 → 서버로 무적 ON 전달
@@ -422,9 +428,9 @@ void APTPlayerCharacter::Multicast_ResetAfterRespawn_Implementation()
         }
     }
 
-    bIsAttacking = false;
-    bCanCombo = false;
-    ComboIndex = 0;
+    SkillComp->bIsAttacking = false;
+    SkillComp->bCanCombo = false;
+    SkillComp->ComboIndex = 0;
     bIsUsingSkill = false;
     bIsDodging = false;
 
@@ -440,6 +446,7 @@ void APTPlayerCharacter::Multicast_ResetAfterRespawn_Implementation()
     }
 }
 
+/*
 void APTPlayerCharacter::Server_StopAttack_Implementation()
 {
     Multicast_StopAttack();
@@ -452,6 +459,7 @@ void APTPlayerCharacter::Multicast_StopAttack_Implementation()
     bCanCombo    = false;
     ComboIndex   = 0;
 }
+*/
 
 // 무기 외형 실시간 변경
 void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset, const FItemData& ItemData)
@@ -460,11 +468,14 @@ void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& N
 
     if (!WeaponMeshComp) return;
 
+    EWeaponType NewWeaponType = EWeaponType::Hands;
+
     if (NewMeshAsset.IsNull())
     {
         // 빈 에셋이 오면 무기를 장착 해제한 것이므로 메시를 비웁니다.
         WeaponMeshComp->SetStaticMesh(nullptr);
         UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 제거 완료"));
+        NewWeaponType = EWeaponType::Hands;
     }
     else
     {
@@ -475,11 +486,14 @@ void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& N
             WeaponMeshComp->SetStaticMesh(LoadedMesh);
             UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 변경 완료: %s"), *LoadedMesh->GetName());
 
-            WeaponMeshComp->SetRelativeScale3D(ItemData.WeaponRelativeLocation);
+            WeaponMeshComp->SetRelativeLocation(ItemData.WeaponRelativeLocation);
             WeaponMeshComp->SetRelativeRotation(ItemData.WeaponRelativeRotation);
             WeaponMeshComp->SetRelativeScale3D(ItemData.WeaponRelativeScale);
         }
+        NewWeaponType = ItemData.WeaponType;
     }
+
+    ApplyWeaponAnimLayer(NewWeaponType);
 }
 
 void APTPlayerCharacter::ApplyBuff(float BonusMultiplier, float Duration)
@@ -502,4 +516,118 @@ void APTPlayerCharacter::ApplyBuff(float BonusMultiplier, float Duration)
 void APTPlayerCharacter::OnAtkBuffExpired()
 {
     AtkBuffBonus = 0.f;
+}
+
+void APTPlayerCharacter::ApplyWeaponAnimLayer(EWeaponType NewWeaponType)
+{
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp) return;
+
+    UAnimInstance* AnimInst = MeshComp->GetAnimInstance();
+    if (!AnimInst) return;
+
+    TSubclassOf<UAnimInstance> LayerClass = nullptr;
+    switch (NewWeaponType)
+    {
+    case EWeaponType::Sword: LayerClass = SwordAnimLayerClass; break;
+    case EWeaponType::Bow:   LayerClass = BowAnimLayerClass;   break;
+    case EWeaponType::Wand:  LayerClass = WandAnimLayerClass;  break;
+    case EWeaponType::Hands:
+    default:                LayerClass = HandAnimLayerClass;  break;
+    }
+
+    // 이미 같은 레이어가 링크돼 있으면 아무것도 하지 않고 끝
+    if (LayerClass == CurrentLinkedAnimLayerClass)
+    {
+        CurrentWeaponType = NewWeaponType;
+        return;
+    }
+
+    //무기 종류가 바뀌면 이때만 언링크
+    if (CurrentLinkedAnimLayerClass)
+    {
+        AnimInst->UnlinkAnimClassLayers(CurrentLinkedAnimLayerClass);
+    }
+
+    if (LayerClass)
+    {
+        MeshComp->LinkAnimClassLayers(LayerClass);
+        UE_LOG(LogTemp, Warning, TEXT("무기 애님레이어 적용중 : %s"), *LayerClass->GetName());
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("무기 애님레이어 타입 %d가 비었음"), (int32)NewWeaponType);
+    }
+
+    // 새로 링크한 클래스를 반드시 기록해둬야 다음번에 정상적으로 Unlink 가능
+    CurrentLinkedAnimLayerClass = LayerClass;
+    CurrentWeaponType = NewWeaponType;
+}
+
+void APTPlayerCharacter::EnterCombat()
+{
+    if (HasAuthority())
+    {
+        bIsInCombat = true;
+        StartCombatExitTimer();
+    }
+    else
+    {
+        Server_EnterCombat();
+    }
+}
+
+void APTPlayerCharacter::StartCombatExitTimer()
+{
+    if (!HasAuthority()) return;
+
+    GetWorldTimerManager().ClearTimer(CombatExitTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        CombatExitTimerHandle,
+        this,
+        &APTPlayerCharacter::OnCombatExitTimerExpired,
+        8.f,
+        false
+        );
+}
+
+void APTPlayerCharacter::OnCombatExitTimerExpired()
+{
+    if (!HasAuthority()) return;
+
+    bIsInCombat = false;
+}
+
+void APTPlayerCharacter::PrewarmWeaponAnimLayers()
+{
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp) return;
+
+    UAnimInstance* AnimInst = MeshComp->GetAnimInstance();
+    if (!AnimInst) return;
+
+    TArray<TSubclassOf<UAnimInstance>> AllLayers = { SwordAnimLayerClass, BowAnimLayerClass, WandAnimLayerClass };
+
+    for (auto& Layer : AllLayers)
+    {
+        if (Layer)
+        {
+            MeshComp->LinkAnimClassLayers(Layer);
+            MeshComp->UnlinkAnimClassLayers(Layer);
+        }
+    }
+
+    // 원래 무기 레이어로 복구
+    ApplyWeaponAnimLayer(CurrentWeaponType);
+}
+
+void APTPlayerCharacter::OnRep_CurrentWeaponType()
+{
+    ApplyWeaponAnimLayer(CurrentWeaponType);
+}
+
+void APTPlayerCharacter::Server_EnterCombat()
+{
+    bIsInCombat = true;
+    StartCombatExitTimer();
 }

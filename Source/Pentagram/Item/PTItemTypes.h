@@ -29,6 +29,15 @@ enum class EItemType : uint8
     Potion       UMETA(DisplayName = "Potion")
 };
 
+//무기 소분류
+UENUM(BlueprintType)
+enum class EWeaponType : uint8
+{
+    Hands       UMETA(DisplayName = "Hands"),
+    Sword       UMETA(DisplayName = "Sword"),
+    Wand         UMETA(DisplayName = "Wand"),
+    Bow          UMETA(DisplayName = "Bow")
+};
 
 // 아이템 등급
 UENUM(BlueprintType)
@@ -89,6 +98,9 @@ struct FItemData : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EItemGrade Item_Grade;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+    EWeaponType WeaponType = EWeaponType::Hands;
 
     //아이콘 이미지
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")

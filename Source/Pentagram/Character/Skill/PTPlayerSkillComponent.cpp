@@ -101,9 +101,9 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
         APTPlayerCharacter* PlayerChar = Cast<APTPlayerCharacter>(Owner);
         if (PlayerChar)
         {
-            PlayerChar->bIsAttacking = false;
-            PlayerChar->bCanCombo    = false;
-            PlayerChar->ComboIndex   = 0;
+            bIsAttacking = false;
+            bCanCombo    = false;
+            ComboIndex   = 0;
             Owner->StopAnimMontage();
         }
 
@@ -140,6 +140,11 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 몽타주 없음"));
+    }
+
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(Owner))
+    {
+        PC->EnterCombat();
     }
 }
 
@@ -181,6 +186,44 @@ void UPTPlayerSkillComponent::TryDodge()
         );
 
     Client_NotifyCooldownStarted(4, DodgeData->Cooldown);
+}
+
+void UPTPlayerSkillComponent::TryBasicAttack()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+    if (PC->bIsDodging || PC->bIsUsingSkill) return;
+
+    if (bIsAttacking && !bCanCombo) return;
+
+    const FPTSkillRow* SkillData = GetSkillData(BasicAttackSkillID);
+    if (!SkillData || SkillData->ComboMontage.Num() == 0) return;
+
+    if (!SkillData->ComboMontage.IsValidIndex(ComboIndex))
+    {
+        ComboIndex = 0;
+    }
+
+    UAnimMontage* Montage = SkillData->ComboMontage[ComboIndex].LoadSynchronous();
+    if (!Montage) return;
+
+    bIsAttacking = true;
+
+    if (APTPlayerCharacter * PlayerChar = Cast<APTPlayerCharacter>(GetOwner()))
+    {
+        PlayerChar->EnterCombat();
+    }
+
+    bCanCombo = false;
+
+    if (PC->IsLocallyControlled())
+    {
+        PC->PlayAnimMontage(Montage);
+    }
+
+    Server_BasicAttack(ComboIndex);
+
+    ComboIndex++;
 }
 
 void UPTPlayerSkillComponent::Server_Dodge_Implementation()
@@ -276,6 +319,49 @@ void UPTPlayerSkillComponent::OnSkillMontageEnded(UAnimMontage* Montage, bool bI
     PC->bIsUsingSkill = false;
 
     Multicast_SetPenetration(false);
+}
+
+void UPTPlayerSkillComponent::Server_BasicAttack_Implementation(int32 InComboIndex)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (PC)
+    {
+        PC->EnterCombat();
+    }
+
+    Multicast_PlayBasicAttackMontage(InComboIndex);
+}
+
+void UPTPlayerSkillComponent::Multicast_PlayBasicAttackMontage_Implementation(int32 InComboIndex)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    if (PC->IsLocallyControlled()) return;
+
+    const FPTSkillRow* SkillData = GetSkillData(BasicAttackSkillID);
+    if (!SkillData || !SkillData->ComboMontage.IsValidIndex(InComboIndex)) return;
+
+    if (UAnimMontage* Montage = SkillData->ComboMontage[InComboIndex].LoadSynchronous())
+    {
+        PC->PlayAnimMontage(Montage);
+    }
+}
+
+void UPTPlayerSkillComponent::Server_StopBasicAttack_Implementation()
+{
+    Multicast_StopBasicAttack();
+}
+
+void UPTPlayerSkillComponent::Multicast_StopBasicAttack_Implementation()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    PC->StopAnimMontage();
+    bIsAttacking = false;
+    bCanCombo = false;
+    ComboIndex = 0;
 }
 
 void UPTPlayerSkillComponent::Multicast_SetPenetration_Implementation(bool bEnable)
