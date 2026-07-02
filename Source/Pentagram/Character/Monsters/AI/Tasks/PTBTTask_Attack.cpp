@@ -64,6 +64,14 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
 
     const float AttackDuration = Monster->StartAttack();
 
+    if (AttackDuration <= 0.f)
+    {
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+        RestoreMovementRotation(OwnerComp);
+        Monster->SetMonsterState(EMonsterState::Idle);
+        return EBTNodeResult::Failed;
+    }
+
     TWeakObjectPtr<UPTBTTask_Attack> WeakThis(this);
     TWeakObjectPtr<UBehaviorTreeComponent> WeakOwnerComp(&OwnerComp);
     TWeakObjectPtr<UBlackboardComponent> WeakBlackboard(BB);
@@ -111,6 +119,7 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
         if (APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn()))
         {
             Monster->StopAttack();
+            Monster->SetMonsterState(EMonsterState::Idle);
         }
     }
 

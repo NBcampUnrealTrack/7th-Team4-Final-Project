@@ -11,6 +11,9 @@
 UPTBTService_MonsterSensor::UPTBTService_MonsterSensor()
 {
     NodeName = TEXT("Monster Sensor");
+
+    Interval        = 0.1f;
+    RandomDeviation = 0.02f;
 }
 
 void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
@@ -63,7 +66,7 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
             for (AActor* Actor : PerceivedActors)
             {
                 APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Actor);
-                if (IsValid(Player) && Player->IsAlive())
+                if (IsValid(Player) && !Player->IsDead())
                 {
                     BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
                     BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Player);

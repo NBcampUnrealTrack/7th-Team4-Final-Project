@@ -24,11 +24,6 @@ UPTBossPatternComponent::UPTBossPatternComponent()
 void UPTBossPatternComponent::BeginPlay()
 {
     Super::BeginPlay();
-
-    if (APTMonsterCharacter* Owner = Cast<APTMonsterCharacter>(GetOwner()))
-    {
-        SkillComponent = Owner->SkillComponent;
-    }
 }
 
 void UPTBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -49,6 +44,8 @@ void UPTBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
         AreaAttackTimers.Empty();
     }
 
+    bAreaAttackInProgress = false;
+
     Super::EndPlay(EndPlayReason);
 }
 
@@ -56,7 +53,9 @@ void UPTBossPatternComponent::PreloadAllSkills()
 {
     if (!IsValid(BossSkillDataTable))
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossPattern] BossSkillDataTable 미설정"));
+#endif
         bSkillAssetsLoaded = false;
         return;
     }
@@ -64,7 +63,9 @@ void UPTBossPatternComponent::PreloadAllSkills()
     const int32 TotalRows = Phase0SkillRowNames.Num() + Phase1SkillRowNames.Num() + Phase2SkillRowNames.Num();
     if (TotalRows <= 0)
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossPattern] Preload 실패 — Phase RowName 목록이 비어 있음"));
+#endif
         bSkillAssetsLoaded = false;
         return;
     }
@@ -75,7 +76,9 @@ void UPTBossPatternComponent::PreloadAllSkills()
     {
         if (!Row)
         {
+#if !UE_BUILD_SHIPPING
             UE_LOG(LogTemp, Warning, TEXT("[BossPattern] Preload 실패 — [%s] RowName 또는 RowStruct 확인"), *RowName.ToString());
+#endif
             ++FailCount;
             return;
         }
@@ -108,8 +111,10 @@ void UPTBossPatternComponent::PreloadAllSkills()
 
     if (FailCount > 0)
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossPattern] %d / %d Row 로드 실패 — 일부 스킬이 동작하지 않을 수 있음"),
             FailCount, TotalRows);
+#endif
     }
 
     bSkillAssetsLoaded = (FailCount < TotalRows);
@@ -119,7 +124,9 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 {
     if (!bSkillAssetsLoaded)
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossPattern] 스킬 에셋 미로드 — PreloadAllSkills 호출 확인"));
+#endif
         return 0.f;
     }
 
@@ -141,7 +148,9 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
         return 0.f;
     }
 
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Log, TEXT("[BossPattern] 선택 성공 — %s"), *RowName.ToString());
+#endif
 
     FPTSkillActivationRequest Request;
     Request.SkillRowName    = RowName;
@@ -156,12 +165,9 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 
     PendingSkillSnapshot = *Row;
     bHasPendingSkill     = true;
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Log, TEXT("[BossPattern] Pending Skill Set: %s"), *RowName.ToString());
-
-    if (Row->SkillType == EBossSkillType::Area && Row->bHoldMontageUntilDelay)
-    {
-        bAreaAttackInProgress = true;
-    }
+#endif
 
     if (Row->PatternCooldown > 0.f)
     {
@@ -171,14 +177,18 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
             PatternCooldownFlags.Add(RowName, true);
             FTimerHandle& Timer = PatternCooldownTimers.FindOrAdd(RowName);
 
+#if !UE_BUILD_SHIPPING
             UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 시작 — %s (%.1f초)"),
                 *RowName.ToString(), Row->PatternCooldown);
-
+#endif
+            World->GetTimerManager().ClearTimer(Timer);
             World->GetTimerManager().SetTimer(Timer,
                 [this, RowName]()
                 {
                     PatternCooldownFlags.Add(RowName, false);
+#if !UE_BUILD_SHIPPING
                     UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 종료 — %s"), *RowName.ToString());
+#endif
                 },
                 Row->PatternCooldown, false);
         }
@@ -209,7 +219,9 @@ void UPTBossPatternComponent::ExecutePendingSkill()
 {
     if (!bHasPendingSkill)
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossPattern] ExecutePendingSkill 호출됐지만 대기 중인 스킬 없음 — 몽타주 노티파이 확인"));
+#endif
         return;
     }
 
@@ -230,9 +242,16 @@ void UPTBossPatternComponent::ExecutePendingSkill()
     }
 }
 
+void UPTBossPatternComponent::SetSkillComponent(UPTMonsterSkillComponent* InSkillComponent)
+{
+    SkillComponent = InSkillComponent;
+}
+
 void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius)
 {
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Warning, TEXT("[MulticastSpawnAreaWarning] HasAuth: %d"), GetOwner()->HasAuthority());
+#endif
 
     UWorld* World = GetWorld();
     if (!IsValid(World) || !WarningClass)
@@ -248,7 +267,9 @@ void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(cons
         APTAreaWarning* Area = World->SpawnActor<APTAreaWarning>(WarningClass, DropLocations[i], FRotator::ZeroRotator, Params);
         if (IsValid(Area))
         {
+#if !UE_BUILD_SHIPPING
             UE_LOG(LogTemp, Warning, TEXT("[Multicast] MaxRadius 전달: %.1f"), MaxRadius);
+#endif
             Area->Launch(
                 DropLocations[i],
                 BaseDelay + Interval * i,
@@ -274,12 +295,14 @@ void UPTBossPatternComponent::MulticastSpawnAreaFX_Implementation(FVector CastLo
 
     if (bHasSafeZone && SafeZoneFX)
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[SafeZone] SafeZoneRadius: %.1f"), SafeZoneRadius);
+#endif
 
         UNiagaraComponent* SafeZoneComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, SafeZoneFX, SafeZoneCenter, FRotator::ZeroRotator, FVector::OneVector, false);
         if (IsValid(SafeZoneComp))
         {
-            FTimerHandle SafeZoneTimer;
+            FTimerHandle& SafeZoneTimer = AreaAttackTimers.AddDefaulted_GetRef();
             World->GetTimerManager().SetTimer(
                 SafeZoneTimer, FTimerDelegate::CreateWeakLambda(this, [SafeZoneComp]()
                 {
@@ -329,13 +352,17 @@ TPair<FName, FPTBossSkillRow*> UPTBossPatternComponent::PickNextSkill(int32 Phas
 
         if (!Row)
         {
+#if !UE_BUILD_SHIPPING
             UE_LOG(LogTemp, Warning, TEXT("[BossPattern] [%s] Row 조회 실패 — 후보에서 제외"), *RowName.ToString());
+#endif
             continue;
         }
 
         if (Row->Weight <= 0.f)
         {
+#if !UE_BUILD_SHIPPING
             UE_LOG(LogTemp, Warning, TEXT("[BossPattern] [%s] Weight <= 0 — 후보에서 제외"), *RowName.ToString());
+#endif
             continue;
         }
 
@@ -376,6 +403,11 @@ TPair<FName, FPTBossSkillRow*> UPTBossPatternComponent::PickNextSkill(int32 Phas
         {
             return { RowName, Row };
         }
+    }
+
+    if (Candidates.Num() > 0)
+    {
+        return Candidates.Last();
     }
 
     return { NAME_None, nullptr };
@@ -461,15 +493,15 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
     }
     AreaAttackTimers.Empty();
 
-    if (!RowSnapshot.bHoldMontageUntilDelay)
+    if (RowSnapshot.bHoldMontageUntilDelay)
     {
-        bAreaAttackInProgress = false;
-    }
-    else
-    {
-        if (UAnimInstance* AnimInstance = Boss->GetMesh()->GetAnimInstance())
+        USkeletalMeshComponent* BossMesh = Boss->GetMesh();
+        if (IsValid(BossMesh))
         {
-            AnimInstance->Montage_Pause(nullptr);
+            if (UAnimInstance* AnimInstance = BossMesh->GetAnimInstance())
+            {
+                AnimInstance->Montage_Pause(nullptr);
+            }
         }
     }
 
@@ -513,20 +545,27 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
 
         SafeZoneCenter = BossLocation + SafeDirection * RowSnapshot.SafeZoneDistance;
 
+        // 안전지대 디버그 시각화 — 개발 확인용, Shipping 제외
+#if !UE_BUILD_SHIPPING
         DrawDebugSphere(World, SafeZoneCenter, RowSnapshot.SafeZoneRadius,
             16, FColor::Green, false, RowSnapshot.AreaAttackDelay + 1.f);
+#endif
     }
 
     for (const FVector& DropPos : DropLocations)
     {
+        // 낙하 반경 디버그 로그 + 시각화 — 루프 내 호출이라 Shipping 제외 시 성능 영향 큼
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[Impact] AreaAttackRadius: %.1f"), RowSnapshot.AreaAttackRadius);
         DrawDebugSphere(World, DropPos, RowSnapshot.AreaAttackRadius,
             16, FColor::Red, false, RowSnapshot.AreaAttackDelay + 1.f);
+#endif
     }
 
     {
-        FVector CastLoc = Boss->GetMesh()->DoesSocketExist(ProjectileSpawnSocket)
-            ? Boss->GetMesh()->GetSocketLocation(ProjectileSpawnSocket)
+        USkeletalMeshComponent* BossMesh = Boss->GetMesh();
+        FVector CastLoc = (IsValid(BossMesh) && BossMesh->DoesSocketExist(ProjectileSpawnSocket))
+            ? BossMesh->GetSocketLocation(ProjectileSpawnSocket)
             : Boss->GetActorLocation();
 
         MulticastSpawnAreaFX(
@@ -541,7 +580,10 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
     const FPTBossSkillRow Snapshot = RowSnapshot;
     AreaAttackTimers.SetNum(Count);
 
+    // 장판 생성 확인용 디버그 로그 — 개발 확인용, Shipping 제외
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Warning, TEXT("[SpawnArea] AreaAttackRadius: %.1f"), Snapshot.AreaAttackRadius);
+#endif
 
     MulticastSpawnAreaWarningBatch(
         DropLocations,
@@ -572,16 +614,9 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
                         if (bIsLast)
                         {
                             bAreaAttackInProgress = false;
-                            return;
                         }
 
-                        if (bIsFirst && Snapshot.bHoldMontageUntilDelay)
-                        {
-                            if (UAnimInstance* AnimInstance = Boss->GetMesh()->GetAnimInstance())
-                            {
-                                AnimInstance->Montage_Stop(0.25f, nullptr);
-                            }
-                        }
+                        return;
                     }
 
                     TArray<FHitResult>    HitResults;

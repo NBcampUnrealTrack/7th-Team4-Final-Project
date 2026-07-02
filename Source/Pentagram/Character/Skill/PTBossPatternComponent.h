@@ -34,6 +34,9 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void MulticastSpawnAreaFX(FVector CastLocation, bool bHasSafeZone, FVector SafeZoneCenter, UNiagaraSystem* CastFX, UNiagaraSystem* SafeZoneFX, float SafeZoneRadius, float AreaAttackDelay);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|Boss|Pattern")
+    void SetSkillComponent(UPTMonsterSkillComponent* InSkillComponent);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Boss|Pattern")
 	TObjectPtr<UDataTable> BossSkillDataTable;
 
@@ -58,7 +61,7 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Pattern")
     float ProjectileSpawnHeightOffset = 100.f;
 
-	UPROPERTY()
+    UPROPERTY(BlueprintReadOnly, Category = "PT|Boss|Pattern")
 	TObjectPtr<UPTMonsterSkillComponent> SkillComponent;
 
 protected:

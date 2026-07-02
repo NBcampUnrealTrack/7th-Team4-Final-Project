@@ -1,115 +1,51 @@
 #include "Character/Monsters/AI/PTMonsterAIController.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
-#include "Perception/AIPerceptionComponent.h"
-#include "Perception/AISenseConfig_Sight.h"
-#include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
-#include "Character/Player/PTPlayerCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 APTMonsterAIController::APTMonsterAIController()
 {
-    UAIPerceptionComponent* Perception = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("PerceptionComponent"));
-    SetPerceptionComponent(*Perception);
 
-    SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
-    SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-    SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
-    SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
-
-    Perception->ConfigureSense(*SightConfig);
-    Perception->SetDominantSense(SightConfig->GetSenseImplementation());
-    Perception->OnTargetPerceptionUpdated.AddDynamic(this, &APTMonsterAIController::OnTargetPerceptionUpdated);
 }
 
-void APTMonsterAIController::UpdateSightConfig(float InSightRange, float InLoseSightRange, float InSightAngle)
+void APTMonsterAIController::InitializeBlackboard(APawn* InPawn)
 {
-    if (!IsValid(SightConfig))
+    if (APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(InPawn))
     {
-        return;
-    }
-
-    SightConfig->SightRadius = FMath::Max(0.f, InSightRange);
-    SightConfig->LoseSightRadius = FMath::Max(0.f, InLoseSightRange);
-    SightConfig->PeripheralVisionAngleDegrees = FMath::Clamp(InSightAngle / 2.f, 0.f, 180.f);
-
-    if (UAIPerceptionComponent* PerceptionComp = GetPerceptionComponent())
-    {
-        PerceptionComp->ConfigureSense(*SightConfig);
-        PerceptionComp->RequestStimuliListenerUpdate();
+        UpdateMonsterBlackboard(Monster);
     }
 }
 
-void APTMonsterAIController::UpdateMonsterBlackboard(APTMonsterCharacter* Monster)
+void APTMonsterAIController::PostPossessSetup(APawn* InPawn)
 {
-    if (!IsValid(Monster))
-    {
-        return;
-    }
-
-    UBlackboardComponent* BB = GetBlackboardComponent();
-    if (!IsValid(BB))
-    {
-        return;
-    }
-
-    BB->SetValueAsVector(PTMonsterBlackboardKeys::SpawnLocation, Monster->GetSpawnLocation());
-    BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
-}
-
-void APTMonsterAIController::OnPossess(APawn* InPawn)
-{
-    Super::OnPossess(InPawn);
-
     APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(InPawn);
     if (!IsValid(Monster))
     {
         return;
     }
 
-    if (BehaviorTree)
+    if (UCharacterMovementComponent* MoveComp = Monster->GetCharacterMovement())
     {
-        RunBehaviorTree(BehaviorTree);
-        UpdateMonsterBlackboard(Monster);
+        MoveComp->bUseRVOAvoidance = true;
+        MoveComp->AvoidanceWeight = 0.5f;
+        MoveComp->AvoidanceConsiderationRadius = 500.f;
+        MoveComp->bUseControllerDesiredRotation = false;
+        MoveComp->bOrientRotationToMovement = true;
+        MoveComp->RotationRate = FRotator(0.f, 300.f, 0.f);
     }
 }
 
-void APTMonsterAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
+void APTMonsterAIController::UpdateMonsterBlackboard(APTMonsterCharacter* Monster)
 {
     UBlackboardComponent* BB = GetBlackboardComponent();
-    if (!IsValid(BB))
+    if (!IsValid(Monster) || !IsValid(BB))
     {
         return;
     }
 
-    if (!Cast<APTPlayerCharacter>(Actor))
-    {
-        return;
-    }
-
-    if (Stimulus.WasSuccessfullySensed())
-    {
-        APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(Actor);
-        if (IsValid(Player) && Player->IsDead())
-        {
-            if (BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor) == Player)
-            {
-                BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
-                BB->ClearValue(PTMonsterBlackboardKeys::TargetActor);
-                BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
-            }
-
-            return;
-        }
-
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
-        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
-        BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
-    }
-    else
-    {
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
-        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
-        BB->SetValueAsVector(PTMonsterBlackboardKeys::LastKnownLocation, Actor->GetActorLocation());
-    }
+    BB->SetValueAsVector(PTMonsterBlackboardKeys::SpawnLocation, Monster->GetSpawnLocation());
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsRanged, Monster->IsRangedMonster());
+    BB->SetValueAsFloat(PTMonsterBlackboardKeys::OptimalRange, Monster->GetOptimalRange());
 }

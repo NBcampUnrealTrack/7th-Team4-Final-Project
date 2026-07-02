@@ -9,6 +9,9 @@ APTBossMonsterCharacter::APTBossMonsterCharacter()
     CharacterType = ECharacterType::BossMonster;
 
     BossPatternComponent = CreateDefaultSubobject<UPTBossPatternComponent>(TEXT("BossPatternComponent"));
+
+    bIsRanged = true;
+    OptimalRangeValue = 800.f;
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
@@ -65,20 +68,29 @@ UAnimMontage* APTBossMonsterCharacter::GetAttackMontageForPhase(int32 Phase) con
 
     if (!IsValid(AttackMontage))
     {
+        // BP에서 AttackMontage 미설정 감지용 — 개발 중 잡을 문제, Shipping 제외
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossMonster] AttackMontage가 설정되지 않았습니다."));
+#endif
     }
 
     return AttackMontage;
 }
 
+void APTBossMonsterCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    if (IsValid(BossPatternComponent) && IsValid(SkillComponent))
+    {
+        BossPatternComponent->SetSkillComponent(SkillComponent);
+        BossPatternComponent->PreloadAllSkills();
+    }
+}
+
 void APTBossMonsterCharacter::BeginPlay()
 {
     Super::BeginPlay();
-
-    if (IsValid(BossPatternComponent))
-    {
-        BossPatternComponent->PreloadAllSkills();
-    }
 }
 
 void APTBossMonsterCharacter::PerformAttack()

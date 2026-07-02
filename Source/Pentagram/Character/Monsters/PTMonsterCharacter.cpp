@@ -276,7 +276,10 @@ void APTMonsterCharacter::Multicast_PlayAttackMontage_Implementation(UAnimMontag
 
     AnimInstance->Montage_Play(MontageToPlay);
 
+    // 몽타주 재생 확인용 로그 — 개발 확인용, Shipping 제외
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Log, TEXT("[Monster] Multicast Play Montage: %s"), *GetNameSafe(MontageToPlay));
+#endif
 }
 
 FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
@@ -302,8 +305,16 @@ void APTMonsterCharacter::OnRep_CurrentState()
 {
     if (CurrentState == EMonsterState::Dead)
     {
-        GetCharacterMovement()->DisableMovement();
-        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+        {
+            Movement->DisableMovement();
+        }
+
+        if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+        {
+            GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        }
+
         PlayDeathMontage();
     }
 }
@@ -319,6 +330,17 @@ void APTMonsterCharacter::BeginPlay()
     if (SkillComponent)
     {
         SkillComponent->AssignSkillToSlot(SkillComponent->BasicAttackRowName, 0);
+    }
+
+    if (SkillComponent && SkillComponent->SkillDataTable)
+    {
+        FPTSkillRow* Row = SkillComponent->SkillDataTable->FindRow<FPTSkillRow>(SkillComponent->BasicAttackRowName, TEXT(""));
+        if (Row)
+        {
+            Row->SkillMontage.LoadSynchronous();
+            Row->SkillEffect.LoadSynchronous();
+            Row->SkillSound.LoadSynchronous();
+        }
     }
 }
 
@@ -451,8 +473,13 @@ void APTMonsterCharacter::OnStaggerEnd()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("After Stagger MaxWalkSpeed: %f"),
-        GetCharacterMovement()->MaxWalkSpeed);
+#if !UE_BUILD_SHIPPING
+    if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("After Stagger MaxWalkSpeed: %f"),
+            Movement->MaxWalkSpeed);
+    }
+#endif
 
     AAIController* AIC = Cast<AAIController>(GetController());
     if (!IsValid(AIC) || !IsValid(AIC->BrainComponent))

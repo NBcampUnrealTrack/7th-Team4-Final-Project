@@ -42,6 +42,12 @@ public:
     bool    IsDead()                const { return CurrentState == EMonsterState::Dead; }
     const TSet<TWeakObjectPtr<APTBasePlayerState>>& GetExpContributors() const { return ExpContributors; }
 
+    UFUNCTION(BlueprintPure, Category = "PT|Monster|Combat")
+    bool IsRangedMonster() const { return bIsRanged; }
+
+    UFUNCTION(BlueprintPure, Category = "PT|Monster|Combat")
+    float GetOptimalRange() const { return OptimalRangeValue; }
+
     virtual void PerformAttack();
     virtual float StartAttack();
     virtual void StopAttack();
@@ -105,6 +111,12 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
     float AttackRadius = 150.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    bool bIsRanged = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    float OptimalRangeValue = 600.f;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
