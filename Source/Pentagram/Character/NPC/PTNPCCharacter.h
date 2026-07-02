@@ -6,7 +6,6 @@
 #include "PTNPCCharacter.generated.h"
 
 class USphereComponent;
-class UBoxComponent;
 class USkeletalMeshComponent;
 class USceneComponent;
 class UUserWidget;
@@ -47,9 +46,6 @@ protected:
     TObjectPtr<USphereComponent> InteractionRangeSphere;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
-    TObjectPtr<UBoxComponent> InteractionCollision;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
     TObjectPtr<UWidgetComponent> InteractionPromptWidgetComponent;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC")
@@ -57,9 +53,6 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
     float InteractionRadius = 200.f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
-    FVector InteractionCollisionExtent = FVector(50.f, 50.f, 100.f);
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|NPC|Interaction")
     TSubclassOf<UUserWidget> InteractionPromptWidgetClass;

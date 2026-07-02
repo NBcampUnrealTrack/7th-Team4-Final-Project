@@ -7,6 +7,7 @@
 #include "Subsystems/PTPlayerLevelSubsystem.h"
 #include "Subsystems/PTQuestSubsystem.h"
 #include "Subsystems/PTItemSubsystem.h"
+#include "Subsystems/PTLoadingSubsystem.h"
 #include "Subsystems/PTSaveSubsystem.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -298,6 +299,11 @@ bool APTGameMode::AreAllPlayersReady() const
     return ValidCount >= MinPlayersToStart;   // 전원준비+인원
 }
 
+void APTGameMode::RequestTravelToGame()
+{
+    TravelToGame();
+}
+
 void APTGameMode::TravelToGame()
 {
     if (bIsTraveling)    // 중복 차단
@@ -323,6 +329,56 @@ void APTGameMode::TravelToGame()
     }
 
     bIsTraveling = true;
+    SetGamePhase(EGamePhase::Loading);
+
+    UE_LOG(LogTemp, Log, TEXT("[Loading] TravelToGame started. TargetMap=%s"), *GameMapPath);
+
+    UPTLoadingSubsystem* LoadingSubsystem =
+        GetGameInstance() != nullptr ? GetGameInstance()->GetSubsystem<UPTLoadingSubsystem>() : nullptr;
+    if (LoadingSubsystem == nullptr)
+    {
+        HandleTravelPreloadComplete();
+        return;
+    }
+
+    TArray<UDataTable*> PreloadDataTables;
+    if (bPreloadItemDataTableForTravel && ItemDataTable != nullptr)
+    {
+        PreloadDataTables.Add(ItemDataTable);
+    }
+
+    for (UDataTable* PreloadDataTable : TravelPreloadDataTables)
+    {
+        if (PreloadDataTable != nullptr)
+        {
+            PreloadDataTables.AddUnique(PreloadDataTable);
+        }
+    }
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Loading] Preload request. Assets=%d Classes=%d DataTables=%d"),
+        TravelPreloadAssets.Num(),
+        TravelPreloadClasses.Num(),
+        PreloadDataTables.Num());
+
+    LoadingSubsystem->PreloadForTravel(
+        TravelPreloadAssets,
+        TravelPreloadClasses,
+        PreloadDataTables,
+        FSimpleDelegate::CreateUObject(this, &APTGameMode::HandleTravelPreloadComplete));
+}
+
+void APTGameMode::HandleTravelPreloadComplete()
+{
+    UWorld* World = GetWorld();
+    if (World == nullptr || GameMapPath.IsEmpty())
+    {
+        bIsTraveling = false;
+        return;
+    }
+
     World->ServerTravel(GameMapPath);
 }
 
@@ -387,6 +443,15 @@ void APTGameMode::StartAutoSaveIfAvailable() const
 void APTGameMode::PostSeamlessTravel()
 {
     Super::PostSeamlessTravel();
+
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTLoadingSubsystem* LoadingSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTLoadingSubsystem>() : nullptr;
+    if (LoadingSubsystem != nullptr)
+    {
+        LoadingSubsystem->FinishLoading();
+    }
+
     StartAutoSaveIfAvailable();
 }
 
