@@ -1,4 +1,4 @@
-﻿#include "UI/Manage/PTUIManagerSubsystem.h"
+#include "UI/Manage/PTUIManagerSubsystem.h"
 #include "CommonActivatableWidget.h"
 #include "GameFramework/PlayerController.h"
 #include "UI/HUD/PTHUDWidget.h"
@@ -9,6 +9,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/LocalPlayer.h"
 #include "UI/Setting/PTUISettings.h"
+#include "UI/Widget/Notify/PTNotifyManagerWidget.h" // 실제 경로에 맞게 수정
+#include "UI/Widget/Notify/PTNotifyTypes.h"                   // 실제 경로에 맞게 수정
 
 UPTUIManagerSubsystem::UPTUIManagerSubsystem()
 {
@@ -30,6 +32,13 @@ void UPTUIManagerSubsystem::Deinitialize()
     QuestInstance = nullptr;
     RemoveWidget(CurrentUIWidget);
     CurrentUIWidget = nullptr;
+
+    if (CurrentNotifyWidget)
+    {
+        CurrentNotifyWidget->RemoveFromParent();
+        CurrentNotifyWidget = nullptr;
+    }
+
     PrimaryLayout.Reset();
     Super::Deinitialize();
 }
@@ -107,6 +116,69 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     {
         UE_LOG(LogTemp, Warning, TEXT("[UI] Failed to load widget class for level %s."), *LevelName.ToString());
     }
+
+    // 레벨별 알림 위젯 갱신 (None이면 내부에서 스킵)
+    SetupNotifyWidgetForLevel(*Entry);
+
+    // 지역명이 설정돼 있으면 레벨 진입과 동시에 자동 표시
+    if (!Entry->ZoneDisplayName.IsEmpty())
+    {
+        FPTNotifyData ZoneData;
+        ZoneData.Type = EPTNotifyType::ZoneEnter;
+        ZoneData.Message = Entry->ZoneDisplayName;
+
+        ShowNotify(ZoneData);
+    }
+}
+
+void UPTUIManagerSubsystem::SetupNotifyWidgetForLevel(const FPTUILevelEntry& InEntry)
+{
+    // 레벨이 바뀌면 기존 알림 위젯은 항상 정리
+    if (CurrentNotifyWidget)
+    {
+        CurrentNotifyWidget->RemoveFromParent();
+        CurrentNotifyWidget = nullptr;
+    }
+
+    // 이 레벨은 알림 기능 없음 (인트로, 메인메뉴 등)
+    if (InEntry.NotifyWidgetClass.IsNull())
+    {
+        return;
+    }
+
+    UClass* NotifyClass = InEntry.NotifyWidgetClass.LoadSynchronous();
+    if (!NotifyClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[UI] Failed to load notify widget class."));
+        return;
+    }
+
+    ULocalPlayer* LocalPlayer = GetLocalPlayer();
+    UWorld* World = GetWorld();
+    APlayerController* PlayerController =
+        LocalPlayer != nullptr && World != nullptr ? LocalPlayer->GetPlayerController(World) : nullptr;
+    if (!PlayerController)
+    {
+        return;
+    }
+
+    CurrentNotifyWidget = CreateWidget<UPTNotifyManagerWidget>(PlayerController, NotifyClass);
+    if (CurrentNotifyWidget)
+    {
+        // 다른 UI(샵 등 ZOrder 20)보다 위에 뜨도록 높게 설정
+        CurrentNotifyWidget->AddToPlayerScreen(100);
+    }
+}
+
+void UPTUIManagerSubsystem::ShowNotify(const FPTNotifyData& InData)
+{
+    if (!CurrentNotifyWidget)
+    {
+        // 현재 레벨에 알림 위젯이 설정 안 돼있음 (None) - 조용히 무시
+        return;
+    }
+
+    CurrentNotifyWidget->Enqueue(InData);
 }
 
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
