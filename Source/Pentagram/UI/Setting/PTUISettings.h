@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
@@ -6,6 +6,7 @@
 #include "PTUISettings.generated.h"
 
 class UCommonActivatableWidget;
+class UPTNotifyManagerWidget;
 
 USTRUCT(BlueprintType)
 struct FPTUILevelEntry
@@ -23,6 +24,16 @@ struct FPTUILevelEntry
     // 스트림 여부
     UPROPERTY(EditAnywhere, Category = "PT|UI")
     bool bIsStreamingLevel = true;
+
+    // 이 레벨에서 쓸 알림 위젯. 비워두면(None) 알림 기능 자체가 없는 레벨
+    // (예: L_Intro, L_MainMenu)
+    UPROPERTY(EditAnywhere, Category = "PT|UI|Notify")
+    TSoftClassPtr<UPTNotifyManagerWidget> NotifyWidgetClass;
+
+    // 레벨 진입 시 자동으로 띄울 지역명. 비워두면 지역 알림 표시 안 함
+    // (레벨업 알림은 이 필드와 무관하게 게임플레이 코드에서 직접 호출)
+    UPROPERTY(EditAnywhere, Category = "PT|UI|Notify")
+    FText ZoneDisplayName;
 };
 
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "PT UI Settings"))

@@ -11,7 +11,9 @@ enum class EPTUILayer : uint8
     GameMenu    UMETA(DisplayName = "Game Menu"),
     Modal       UMETA(DisplayName = "Modal"),
 };
-
+struct FPTUILevelEntry;
+struct FPTNotifyData;
+class UPTNotifyManagerWidget;
 class UPTPrimaryLayout;
 class UPTHUDWidget;
 class UCommonActivatableWidget;
@@ -59,6 +61,9 @@ public:
     // 레이아웃 조회
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
 
+    UFUNCTION(BlueprintCallable, Category = "PT|UI|Notify")
+    void ShowNotify(const FPTNotifyData& InData);
+
 protected:
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> InventoryInstance;
@@ -76,9 +81,14 @@ protected:
     TObjectPtr<UCommonActivatableWidget> CurrentUIWidget;
 
 private:
+    void SetupNotifyWidgetForLevel(const FPTUILevelEntry& InEntry);
+
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
 
     // 현재 스트림 레벨
     FName CurrentStreamLevelName;
+
+    UPROPERTY()
+    TObjectPtr<UPTNotifyManagerWidget> CurrentNotifyWidget;
 };

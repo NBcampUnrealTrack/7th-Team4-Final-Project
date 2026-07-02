@@ -33,6 +33,9 @@ protected:
     // 레벨 텍스트 갱신
     void UpdateLevelText(int32 NewLevel);
 
+    // 레벨업 시 상단 알림 위젯 표시
+    void ShowLevelUpNotify(int32 NewLevel);
+
     // 레벨업 연출
     UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|StatBar")
     void OnLevelUpVisual(int32 NewLevel);
@@ -41,4 +44,8 @@ protected:
     // 위젯
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
     TObjectPtr<UTextBlock> Txt_Level;
+
+private:
+    // 마지막으로 확인한 레벨. -1이면 "아직 한 번도 동기화 안 됨" = 최초 동기화 신호
+    int32 LastKnownLevel = -1;
 };

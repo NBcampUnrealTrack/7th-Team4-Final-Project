@@ -36,3 +36,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnLobbyUpdated);
 
 //장비
 // DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEquipPanelRequested, int32, FromIndex, EItemType, EquipType);
+
+//알림
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnNotifyFinished);
