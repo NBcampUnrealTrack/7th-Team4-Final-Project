@@ -147,7 +147,6 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     }
 
     // 매핑된 UI 푸시
-    if (UClass* WidgetClass = Entry->WidgetClass.LoadSynchronous())
     UClass* WidgetClass = Entry->WidgetClass.Get();
     if (WidgetClass == nullptr && !Entry->WidgetClass.IsNull())
     {
