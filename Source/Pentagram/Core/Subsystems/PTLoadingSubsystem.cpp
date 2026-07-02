@@ -2,11 +2,20 @@
 
 #include "Engine/AssetManager.h"
 #include "Engine/DataTable.h"
+#include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
 #include "UI/Setting/PTUISettings.h"
 #include "UI/Widget/Loading/PTLoadingWidget.h"
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/UnrealType.h"
+
+namespace
+{
+constexpr float PreloadHandleRetentionSeconds = 30.f;
+const FName StartupLoadingContext(TEXT("Startup"));
+}
 
 void UPTLoadingSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -27,6 +36,13 @@ void UPTLoadingSubsystem::Deinitialize()
         ActivePreloadHandle->CancelHandle();
         ActivePreloadHandle.Reset();
     }
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(ReleasePreloadHandleTimerHandle);
+        World->GetTimerManager().ClearTimer(StartupTravelTimerHandle);
+    }
+    RetainedPreloadHandle.Reset();
 
     PendingPreloadComplete.Unbind();
     HideLoadingWidget();
@@ -56,9 +72,22 @@ void UPTLoadingSubsystem::PreloadForTravel(
 
     if (ActivePreloadHandle.IsValid())
     {
+        UE_LOG(LogTemp, Warning, TEXT("[Loading] Replacing an active preload request."));
         ActivePreloadHandle->CancelHandle();
         ActivePreloadHandle.Reset();
     }
+
+    if (PendingPreloadComplete.IsBound())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Loading] Replacing a pending preload completion delegate."));
+        PendingPreloadComplete.Unbind();
+    }
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(ReleasePreloadHandleTimerHandle);
+    }
+    RetainedPreloadHandle.Reset();
 
     PendingPreloadComplete = OnComplete;
 
@@ -78,6 +107,8 @@ void UPTLoadingSubsystem::PreloadForTravel(
         CollectDataTableSoftPaths(DataTable, UniquePaths);
     }
 
+    UE_LOG(LogTemp, Log, TEXT("[Loading] Collected preload paths: %d"), UniquePaths.Num());
+
     if (UniquePaths.IsEmpty())
     {
         HandlePreloadComplete();
@@ -94,6 +125,65 @@ void UPTLoadingSubsystem::PreloadForTravel(
         TEXT("PTTravelPreload"));
 }
 
+void UPTLoadingSubsystem::PreloadForStartup(
+    FName TargetLevelName,
+    float MinDisplaySeconds,
+    const TArray<TSoftObjectPtr<UObject>>& AdditionalAssetRefs,
+    const TArray<TSoftClassPtr<UObject>>& AdditionalClassRefs)
+{
+    if (TargetLevelName.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Startup] TargetLevelName is None."));
+        return;
+    }
+
+    BeginLoading(StartupLoadingContext, false);
+
+    if (ActivePreloadHandle.IsValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Startup] Replacing an active preload request."));
+        ActivePreloadHandle->CancelHandle();
+        ActivePreloadHandle.Reset();
+    }
+
+    if (PendingPreloadComplete.IsBound())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Startup] Clearing a pending preload completion delegate."));
+        PendingPreloadComplete.Unbind();
+    }
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(StartupTravelTimerHandle);
+        World->GetTimerManager().ClearTimer(ReleasePreloadHandleTimerHandle);
+    }
+    RetainedPreloadHandle.Reset();
+
+    StartupTargetLevelName = TargetLevelName;
+    StartupBeginTime = FPlatformTime::Seconds();
+    StartupMinDisplaySeconds = FMath::Max(MinDisplaySeconds, 0.f);
+
+    TSet<FSoftObjectPath> UniquePaths;
+    CollectStartupPreloadPaths(AdditionalAssetRefs, AdditionalClassRefs, UniquePaths);
+
+    UE_LOG(LogTemp, Log, TEXT("[Startup] Preload paths: %d"), UniquePaths.Num());
+
+    if (UniquePaths.IsEmpty())
+    {
+        HandleStartupPreloadComplete();
+        return;
+    }
+
+    TArray<FSoftObjectPath> PathsToLoad = UniquePaths.Array();
+    ActivePreloadHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad(
+        PathsToLoad,
+        FStreamableDelegate::CreateUObject(this, &UPTLoadingSubsystem::HandleStartupPreloadComplete),
+        FStreamableManager::AsyncLoadHighPriority,
+        false,
+        false,
+        TEXT("PTStartupPreload"));
+}
+
 float UPTLoadingSubsystem::GetLoadingProgress() const
 {
     if (ActivePreloadHandle.IsValid())
@@ -104,7 +194,7 @@ float UPTLoadingSubsystem::GetLoadingProgress() const
     return bIsLoading ? 0.f : 1.f;
 }
 
-void UPTLoadingSubsystem::BeginLoading(FName InLoadingContext)
+void UPTLoadingSubsystem::BeginLoading(FName InLoadingContext, bool bShowLoadingWidget)
 {
     LoadingContext = InLoadingContext;
     if (bIsLoading)
@@ -113,11 +203,18 @@ void UPTLoadingSubsystem::BeginLoading(FName InLoadingContext)
         {
             LoadingWidgetInstance->SetLoadingContext(LoadingContext);
         }
+        else if (bShowLoadingWidget)
+        {
+            ShowLoadingWidget();
+        }
         return;
     }
 
     bIsLoading = true;
-    ShowLoadingWidget();
+    if (bShowLoadingWidget)
+    {
+        ShowLoadingWidget();
+    }
     OnLoadingStarted.Broadcast(LoadingContext);
 }
 
@@ -128,6 +225,19 @@ void UPTLoadingSubsystem::FinishLoading()
         return;
     }
 
+    if (ActivePreloadHandle.IsValid())
+    {
+        RetainedPreloadHandle = ActivePreloadHandle;
+        if (UWorld* World = GetWorld())
+        {
+            World->GetTimerManager().SetTimer(
+                ReleasePreloadHandleTimerHandle,
+                this,
+                &UPTLoadingSubsystem::ReleaseRetainedPreloadHandle,
+                PreloadHandleRetentionSeconds,
+                false);
+        }
+    }
     ActivePreloadHandle.Reset();
 
     const FName FinishedContext = LoadingContext;
@@ -139,6 +249,11 @@ void UPTLoadingSubsystem::FinishLoading()
 
 void UPTLoadingSubsystem::HandlePreLoadMap(const FString& MapName)
 {
+    if (LoadingContext == StartupLoadingContext)
+    {
+        return;
+    }
+
     BeginLoading(TEXT("MapTravel"));
 }
 
@@ -156,6 +271,46 @@ void UPTLoadingSubsystem::HandlePreloadComplete()
     {
         CompletionDelegate.Execute();
     }
+}
+
+void UPTLoadingSubsystem::HandleStartupPreloadComplete()
+{
+    const double ElapsedSeconds = FPlatformTime::Seconds() - StartupBeginTime;
+    const float RemainingSeconds = FMath::Max(StartupMinDisplaySeconds - static_cast<float>(ElapsedSeconds), 0.f);
+
+    if (RemainingSeconds <= 0.f)
+    {
+        OpenStartupTargetLevel();
+        return;
+    }
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            StartupTravelTimerHandle,
+            this,
+            &UPTLoadingSubsystem::OpenStartupTargetLevel,
+            RemainingSeconds,
+            false);
+    }
+}
+
+void UPTLoadingSubsystem::OpenStartupTargetLevel()
+{
+    if (StartupTargetLevelName.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Startup] StartupTargetLevelName is None."));
+        FinishLoading();
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[Startup] Opening target level: %s"), *StartupTargetLevelName.ToString());
+    UGameplayStatics::OpenLevel(GetWorld(), StartupTargetLevelName);
+}
+
+void UPTLoadingSubsystem::ReleaseRetainedPreloadHandle()
+{
+    RetainedPreloadHandle.Reset();
 }
 
 void UPTLoadingSubsystem::ShowLoadingWidget()
@@ -211,6 +366,38 @@ void UPTLoadingSubsystem::HideLoadingWidget()
 
     LoadingWidgetInstance->RemoveFromParent();
     LoadingWidgetInstance = nullptr;
+}
+
+void UPTLoadingSubsystem::CollectStartupPreloadPaths(
+    const TArray<TSoftObjectPtr<UObject>>& AdditionalAssetRefs,
+    const TArray<TSoftClassPtr<UObject>>& AdditionalClassRefs,
+    TSet<FSoftObjectPath>& OutPaths) const
+{
+    const UPTUISettings* UISettings = GetDefault<UPTUISettings>();
+    if (UISettings != nullptr)
+    {
+        for (const TPair<FName, FPTUILevelEntry>& LevelUIEntry : UISettings->LevelUITable)
+        {
+            AddSoftPath(LevelUIEntry.Value.WidgetClass.ToSoftObjectPath(), OutPaths);
+        }
+
+        AddSoftPath(UISettings->LoadingWidgetClass.ToSoftObjectPath(), OutPaths);
+
+        for (const TSoftObjectPtr<UTexture2D>& BackgroundImage : UISettings->LoadingBackgroundImages)
+        {
+            AddSoftPath(BackgroundImage.ToSoftObjectPath(), OutPaths);
+        }
+    }
+
+    for (const TSoftObjectPtr<UObject>& AssetRef : AdditionalAssetRefs)
+    {
+        AddSoftPath(AssetRef.ToSoftObjectPath(), OutPaths);
+    }
+
+    for (const TSoftClassPtr<UObject>& ClassRef : AdditionalClassRefs)
+    {
+        AddSoftPath(ClassRef.ToSoftObjectPath(), OutPaths);
+    }
 }
 
 void UPTLoadingSubsystem::CollectDataTableSoftPaths(UDataTable* DataTable, TSet<FSoftObjectPath>& OutPaths) const
@@ -276,6 +463,37 @@ void UPTLoadingSubsystem::CollectPropertySoftPaths(
         for (int32 Index = 0; Index < ArrayHelper.Num(); ++Index)
         {
             CollectPropertySoftPaths(ArrayProperty->Inner, ArrayHelper.GetRawPtr(Index), OutPaths);
+        }
+        return;
+    }
+
+    if (const FMapProperty* MapProperty = CastField<FMapProperty>(Property))
+    {
+        FScriptMapHelper MapHelper(MapProperty, ValuePtr);
+        for (int32 Index = 0; Index < MapHelper.GetMaxIndex(); ++Index)
+        {
+            if (!MapHelper.IsValidIndex(Index))
+            {
+                continue;
+            }
+
+            CollectPropertySoftPaths(MapProperty->KeyProp, MapHelper.GetKeyPtr(Index), OutPaths);
+            CollectPropertySoftPaths(MapProperty->ValueProp, MapHelper.GetValuePtr(Index), OutPaths);
+        }
+        return;
+    }
+
+    if (const FSetProperty* SetProperty = CastField<FSetProperty>(Property))
+    {
+        FScriptSetHelper SetHelper(SetProperty, ValuePtr);
+        for (int32 Index = 0; Index < SetHelper.GetMaxIndex(); ++Index)
+        {
+            if (!SetHelper.IsValidIndex(Index))
+            {
+                continue;
+            }
+
+            CollectPropertySoftPaths(SetProperty->ElementProp, SetHelper.GetElementPtr(Index), OutPaths);
         }
     }
 }
