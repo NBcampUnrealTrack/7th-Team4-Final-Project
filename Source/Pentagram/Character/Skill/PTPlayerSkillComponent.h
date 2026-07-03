@@ -17,6 +17,8 @@ public:
     // 닷지 발동 시도 (로컬 클라이언트에서 호출)
     void TryDodge();
 
+    void TryBasicAttack();
+
     // 쿨다운 시작을 소유 클라이언트에게 통지
     UFUNCTION(Client, Reliable)
     void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
@@ -53,6 +55,18 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_StopMovementForSkill();
 
+    UFUNCTION(Server, Reliable)
+    void Server_BasicAttack(int32 InComboIndex);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlayBasicAttackMontage(int32 InComboIndex);
+
+    UFUNCTION(Server, Reliable)
+    void Server_StopBasicAttack();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_StopBasicAttack();
+
 protected:
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex) override;
@@ -62,6 +76,8 @@ public:
     UPROPERTY(EditAnywhere, Category = "Dodge")
     FName DodgeSkillID = FName("Dodge");
 
+    UPROPERTY(EditAnywhere, Category = "BasicAttack")
+    FName BasicAttackSkillID = FName("BasicAttack");
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);
 
@@ -70,4 +86,13 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillCooldownStart OnSkillCooldownStart;
+
+    UPROPERTY(VisibleAnywhere, Category = "Attack")
+    int32 ComboIndex = 0;       // 현재 콤보 단계 (연속 공격 단계)
+
+    UPROPERTY(VisibleAnywhere, Category = "Attack")
+    bool bCanCombo = false;     // 콤보 입력 가능 여부
+
+    UPROPERTY(VisibleAnywhere, Category = "Attack")
+    bool bIsAttacking = false;  // 공격 중 여부
 };
