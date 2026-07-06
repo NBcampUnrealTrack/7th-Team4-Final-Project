@@ -414,3 +414,7 @@ void UPTPlayerSkillComponent::Client_NotifyCooldownStarted_Implementation(int32 
 {
     OnSkillCooldownStart.Broadcast(SlotIndex, Duration);
 }
+void UPTPlayerSkillComponent::Client_NotifySkillSlotAssigned_Implementation(int32 SlotIndex, FName SkillID)
+{
+    OnSkillSlotAssigned.Broadcast(SlotIndex, SkillID);
+}

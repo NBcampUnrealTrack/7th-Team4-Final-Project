@@ -7,12 +7,19 @@
 class UPTSkillSlotEntryWidget;
 class UPTPlayerSkillComponent;
 
+// 슬롯 배정 요청 (인덱스 + 스킬ID)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnSkillSlotAssignRequested, int32, SlotIndex, FName, SkillID);
+
 UCLASS()
 class PENTAGRAM_API UPTSkillSlotWidget : public UCommonUserWidget
 {
     GENERATED_BODY()
 
 public:
+    // ── 델리게이트 ──
+    UPROPERTY(BlueprintAssignable, Category = "PT|UI|Skill")
+    FPTOnSkillSlotAssignRequested OnSkillAssignRequested;
+
     // 아이콘 변경
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void SetSlotIcon(int32 SlotIndex, UTexture2D* Icon);
@@ -41,6 +48,20 @@ protected:
     // 쿨다운 종료
     UFUNCTION()
     void HandleCooldownEnd(int32 SlotIndex);
+
+    // 슬롯 배정됨 (신규)
+    UFUNCTION()
+    void HandleSlotAssigned(int32 SlotIndex, FName SkillID);
+
+    // 슬롯별 드롭 핸들러 (동적 델리게이트는 인자로 슬롯 구분 불가해 개별 바인딩)
+    UFUNCTION()
+    void HandleSlotQDropped(FName SkillID);
+    UFUNCTION()
+    void HandleSlotWDropped(FName SkillID);
+    UFUNCTION()
+    void HandleSlotEDropped(FName SkillID);
+    UFUNCTION()
+    void HandleSlotRDropped(FName SkillID);
 
 private:
     // 슬롯 찾기

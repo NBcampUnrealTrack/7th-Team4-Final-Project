@@ -23,6 +23,9 @@ public:
     UFUNCTION(Client, Reliable)
     void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
 
+    UFUNCTION(Client, Reliable)
+    void Client_NotifySkillSlotAssigned(int32 SlotIndex, FName SkillID);
+
     // 서버에서 닷지 처리
     UFUNCTION(Server, Reliable)
     void Server_Dodge();
@@ -95,4 +98,8 @@ public:
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     bool bIsAttacking = false;  // 공격 중 여부
+    
+    UPROPERTY(BlueprintAssignable)
+    FPTOnSkillSlotAssigned OnSkillSlotAssigned;
+
 };

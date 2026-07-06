@@ -43,6 +43,7 @@ public:
     void OnQuestPressed();
     void RegisterNearbyNPC(APTNPCCharacter* NPC);
     void UnregisterNearbyNPC(APTNPCCharacter* NPC);
+    void OnSkillWindowPressed();
 
     void RestoreGameplayInput();
     void SetGameplayInputBlockedByUI(bool bBlocked);
@@ -75,6 +76,9 @@ public:
     // 아이템 획득을 서버에 요청 Server RPC
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_TryPickupItem(APTDropItemActorBase* TargetItem);
+
+    UFUNCTION(Server, Reliable)
+    void Server_RequestAssignSkillToSlot(FName SkillID, int32 SlotIndex);
 
     UFUNCTION(Client, Reliable)
     void Client_ShowMonsterHealth(APTMonsterCharacter* Monster);
@@ -166,6 +170,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill4;
 
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_SkillWindow;
+
     // [디버그] 즉사 키
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_DebugKill;
@@ -175,6 +182,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> SkillWindowClass;
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UPTPrimaryLayout> PrimaryLayoutClass;

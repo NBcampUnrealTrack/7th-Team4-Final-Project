@@ -107,7 +107,7 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Skill2)    EnhancedInput->BindAction(IA_Skill2,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
         if (IA_Skill3)    EnhancedInput->BindAction(IA_Skill3,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill3);
         if (IA_Skill4)    EnhancedInput->BindAction(IA_Skill4,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill4);
-
+        if (IA_SkillWindow)  EnhancedInput->BindAction(IA_SkillWindow,  ETriggerEvent::Started,   this, &APTPlayerController::OnSkillWindowPressed);
         // [디버그] 즉사
         if (IA_DebugKill) EnhancedInput->BindAction(IA_DebugKill, ETriggerEvent::Started,   this, &APTPlayerController::OnDebugKillPressed);
 
@@ -124,25 +124,14 @@ void APTPlayerController::SetupInputComponent()
 void APTPlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
-    UE_LOG(LogTemp, Warning, TEXT("AcknowledgePossession Called"));
 
     if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
     {
         if (IMC_Default)
         {
             Subsystem->AddMappingContext(IMC_Default, 0);
-            UE_LOG(LogTemp, Warning, TEXT("IMC Added"));
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("IMC_Default is null"));
         }
     }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Subsystem is null"));
-    }
-
     SetGameplayInputBlockedByUI(false);
     RestoreGameplayInput();
 }
@@ -1124,5 +1113,44 @@ void APTPlayerController::Server_SetReady_Implementation(bool bReady)
     if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
     {
         PS->SetReady(bReady);
+    }
+}
+
+//skill 창
+void APTPlayerController::OnSkillWindowPressed()
+{
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 1. OnSkillWindowPressed 호출됨"));
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[SkillWindow] 2. GetLocalPlayer() 실패 - NULL"));
+        return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 2. LocalPlayer 확인됨"));
+
+    UPTUIManagerSubsystem* UIManager = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UIManager)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[SkillWindow] 3. UIManagerSubsystem 실패 - NULL"));
+        return;
+    }
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 3. UIManagerSubsystem 확인됨"));
+
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 4. SkillWindowClass=%s"),
+        SkillWindowClass ? *SkillWindowClass->GetName() : TEXT("NULL!!"));
+
+    UIManager->ToggleSkillWindow(SkillWindowClass);
+}
+
+void APTPlayerController::Server_RequestAssignSkillToSlot_Implementation(FName SkillID, int32 SlotIndex)
+{
+    APawn* MyPawn = GetPawn();
+    if (!MyPawn) return;
+
+    if (UPTPlayerSkillComponent* SkillComp = MyPawn->FindComponentByClass<UPTPlayerSkillComponent>())
+    {
+        SkillComp->AssignSkillToSlot(SkillID, SlotIndex);
+        SkillComp->Client_NotifySkillSlotAssigned(SlotIndex, SkillID);
     }
 }
