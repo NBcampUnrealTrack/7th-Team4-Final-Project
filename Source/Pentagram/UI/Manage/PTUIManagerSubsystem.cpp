@@ -32,6 +32,8 @@ void UPTUIManagerSubsystem::Deinitialize()
     QuestInstance = nullptr;
     RemoveWidget(CurrentUIWidget);
     CurrentUIWidget = nullptr;
+    RemoveWidget(SkillWindowInstance);
+    SkillWindowInstance = nullptr;
 
     if (CurrentNotifyWidget)
     {
@@ -60,29 +62,20 @@ UCommonActivatableWidget* UPTUIManagerSubsystem::PushWidget(TSubclassOf<UCommonA
 {
     if (!WidgetClass)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] PushWidget failed. WidgetClass is null."));
         return nullptr;
     }
 
     if (!PrimaryLayout.IsValid())
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] PushWidget failed for %s. PrimaryLayout is not registered."),
-            *GetNameSafe(WidgetClass.Get()));
         return nullptr;
     }
 
     UCommonActivatableWidgetStack* Stack = PrimaryLayout->GetLayerStack(Layer);
     if (!Stack)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] PushWidget failed for %s. Layer stack is null. Layer=%d"),
-            *GetNameSafe(WidgetClass.Get()), static_cast<int32>(Layer));
         return nullptr;
     }
-
-    UCommonActivatableWidget* AddedWidget = Stack->AddWidget(WidgetClass);
-    UE_LOG(LogTemp, Log, TEXT("[UI] PushWidget %s to Layer=%d Result=%s"),
-        *GetNameSafe(WidgetClass.Get()), static_cast<int32>(Layer), *GetNameSafe(AddedWidget));
-    return AddedWidget;
+    return Stack->AddWidget(WidgetClass);
 }
 
 void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemove)
@@ -357,4 +350,44 @@ void UPTUIManagerSubsystem::ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestC
     {
         QuestInstance->SetupQuestJournal();
     }
+}
+
+void UPTUIManagerSubsystem::ToggleSkillWindow(TSubclassOf<UCommonActivatableWidget> SkillWindowClass)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 5. ToggleSkillWindow 진입"));
+
+    if (!SkillWindowClass)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[SkillWindow] 6. SkillWindowClass가 NULL이라 리턴"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 6. PrimaryLayout Valid=%d"), PrimaryLayout.IsValid());
+
+    bool bIsOpen = false;
+    if (SkillWindowInstance)
+    {
+        if (SkillWindowInstance->IsActivated() || SkillWindowInstance->IsInViewport())
+        {
+            bIsOpen = true;
+        }
+    }
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 7. bIsOpen=%d (SkillWindowInstance=%d)"),
+        bIsOpen, SkillWindowInstance != nullptr);
+
+    if (bIsOpen)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 8. 이미 열려있어서 닫음"));
+        RemoveWidget(SkillWindowInstance);
+        SkillWindowInstance = nullptr;
+        return;
+    }
+
+    // 인벤토리/샵과 겹치지 않게 정리
+    if (InventoryInstance) { RemoveWidget(InventoryInstance); InventoryInstance = nullptr; }
+    if (ShopInstance) { RemoveWidget(ShopInstance); ShopInstance = nullptr; CloseShopInventory(); }
+
+    SkillWindowInstance = PushWidget(SkillWindowClass, EPTUILayer::GameMenu);
+
+    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 9. PushWidget 결과=%d"), SkillWindowInstance != nullptr);
 }

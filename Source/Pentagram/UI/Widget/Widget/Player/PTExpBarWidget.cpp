@@ -77,18 +77,14 @@ void UPTExpBarWidget::ShowLevelUpNotify(int32 NewLevel)
     ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
     if (!LocalPlayer)
     {
-        UE_LOG(LogTemp, Error, TEXT("[Notify][2] FAILED - GetOwningLocalPlayer() returned null"));
         return;
     }
 
     UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>();
     if (!UIManager)
     {
-        UE_LOG(LogTemp, Error, TEXT("[Notify][2] FAILED - GetSubsystem<UPTUIManagerSubsystem>() returned null"));
         return;
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("[Notify][2] UIManager OK, calling ShowNotify"));
 
     FPTNotifyData Data;
     Data.Type = EPTNotifyType::LevelUp;

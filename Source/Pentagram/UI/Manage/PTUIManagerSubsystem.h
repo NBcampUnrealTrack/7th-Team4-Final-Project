@@ -64,6 +64,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Notify")
     void ShowNotify(const FPTNotifyData& InData);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void ToggleSkillWindow(TSubclassOf<UCommonActivatableWidget> SkillWindowClass);
+
 protected:
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> InventoryInstance;
@@ -80,6 +83,8 @@ protected:
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> CurrentUIWidget;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UCommonActivatableWidget> SkillWindowInstance;
 private:
     void SetupNotifyWidgetForLevel(const FPTUILevelEntry& InEntry);
 

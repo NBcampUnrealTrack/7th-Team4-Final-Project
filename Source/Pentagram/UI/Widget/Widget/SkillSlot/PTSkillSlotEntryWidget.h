@@ -6,6 +6,10 @@
 class UImage;
 class UProgressBar;
 class UTextBlock;
+class UDragDropOperation;
+
+// 스킬 드롭됨
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillEntryDropped, FName, SkillID);
 
 UCLASS()
 class PENTAGRAM_API UPTSkillSlotEntryWidget : public UCommonUserWidget
@@ -13,6 +17,10 @@ class PENTAGRAM_API UPTSkillSlotEntryWidget : public UCommonUserWidget
     GENERATED_BODY()
 
 public:
+    // ── 델리게이트 ──
+    UPROPERTY(BlueprintAssignable, Category = "PT|UI|Skill")
+    FPTOnSkillEntryDropped OnSkillDropped;
+
     // 아이콘 설정
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void SetIcon(UTexture2D* Icon);
@@ -33,11 +41,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void SetKeyLabel(const FText& Key);
 
+    // 슬롯 인덱스
+    void SetSlotIndex(int32 InIndex) { SlotIndex = InIndex; }
+    int32 GetSlotIndex() const { return SlotIndex; }
+
 protected:
     // 오버라이드
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+    virtual bool NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+    virtual void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+    virtual void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+    virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
     // BP 이벤트
     UFUNCTION(BlueprintImplementableEvent, Category = "PT|UI|Skill")
@@ -50,6 +66,7 @@ protected:
 private:
     // UI 갱신
     void ApplyCooldown(float Remaining);
+    void UpdateHighlight(bool bIsOver);
 
 public:
     // 기본 아이콘
@@ -63,6 +80,10 @@ public:
     // 아이콘 색상
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "PT|UI|Skill")
     FLinearColor IconTint = FLinearColor::White;
+
+    // 드롭 허용 색
+    UPROPERTY(EditAnywhere, Category = "PT|UI|Skill")
+    FLinearColor DropHighlightColor = FLinearColor(1.f, 0.85f, 0.2f, 0.5f);
 
 protected:
     // UI 이미지
@@ -81,8 +102,13 @@ protected:
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     TObjectPtr<UTextBlock> Txt_Key;
 
+    // 드롭 하이라이트 (원형 테두리 이미지)
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    TObjectPtr<UImage> Img_DropHighlight;
+
 private:
     float CooldownDuration = 0.f;
     float CooldownEndTime  = 0.f;
     bool  bOnCooldown      = false;
+    int32 SlotIndex        = INDEX_NONE;
 };

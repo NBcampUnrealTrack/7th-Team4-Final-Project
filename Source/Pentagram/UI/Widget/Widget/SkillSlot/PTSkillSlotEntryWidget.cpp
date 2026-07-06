@@ -1,4 +1,6 @@
-﻿#include "PTSkillSlotEntryWidget.h"
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+#include "PTSkillSlotEntryWidget.h"
+#include "Pentagram/UI/Widget/SkillWidget/PTSkillDragDropOperation.h"
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
@@ -69,6 +71,7 @@ void UPTSkillSlotEntryWidget::NativePreConstruct()
 
     // 쿨다운 숨김
     ApplyCooldown(0.f);
+    UpdateHighlight(false);
 }
 
 void UPTSkillSlotEntryWidget::NativeConstruct()
@@ -77,6 +80,7 @@ void UPTSkillSlotEntryWidget::NativeConstruct()
 
     // 준비 완료
     ApplyCooldown(0.f);
+    UpdateHighlight(false);
 }
 
 void UPTSkillSlotEntryWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -99,6 +103,45 @@ void UPTSkillSlotEntryWidget::NativeTick(const FGeometry& MyGeometry, float InDe
 
     // UI 갱신
     ApplyCooldown(Remaining);
+}
+
+bool UPTSkillSlotEntryWidget::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    Super::NativeOnDragOver(InGeometry, InDragDropEvent, InOperation);
+
+    // 드롭 대상 인식
+    return true;
+}
+
+void UPTSkillSlotEntryWidget::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    Super::NativeOnDragEnter(InGeometry, InDragDropEvent, InOperation);
+
+    // 스킬 드래그만 하이라이트
+    const bool bIsSkillDrag = InOperation && InOperation->IsA<UPTSkillDragDropOperation>();
+    UpdateHighlight(bIsSkillDrag);
+}
+
+void UPTSkillSlotEntryWidget::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    Super::NativeOnDragLeave(InDragDropEvent, InOperation);
+
+    UpdateHighlight(false);
+}
+
+bool UPTSkillSlotEntryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+    UpdateHighlight(false);
+
+    UPTSkillDragDropOperation* SkillOp = InOperation ? Cast<UPTSkillDragDropOperation>(InOperation) : nullptr;
+    if (!SkillOp || SkillOp->SkillID == NAME_None) return false;
+
+    // 아이콘 즉시 반영 (로컬 프리뷰)
+    SetIcon(SkillOp->SkillIcon.LoadSynchronous());
+
+    // 상위로 통지
+    OnSkillDropped.Broadcast(SkillOp->SkillID);
+    return true;
 }
 
 void UPTSkillSlotEntryWidget::ApplyCooldown(float Remaining)
@@ -130,4 +173,18 @@ void UPTSkillSlotEntryWidget::ApplyCooldown(float Remaining)
 
     // BP로 값 전달
     OnCooldownUpdated(Percent, Remaining);
+}
+
+void UPTSkillSlotEntryWidget::UpdateHighlight(bool bIsOver)
+{
+    if (!Img_DropHighlight) return;
+
+    if (!bIsOver)
+    {
+        Img_DropHighlight->SetVisibility(ESlateVisibility::Collapsed);
+        return;
+    }
+
+    Img_DropHighlight->SetColorAndOpacity(DropHighlightColor);
+    Img_DropHighlight->SetVisibility(ESlateVisibility::HitTestInvisible);
 }

@@ -21,7 +21,15 @@ struct FPTSkillRow : public FTableRowBase
     // 스킬 식별자
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     FName SkillID;
-
+    //스킬 이름
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    FText SkillName;
+    //스킬 아이콘
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    TSoftObjectPtr<UTexture2D> SkillIcon;
+    //스킬 타입
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    FText SkillTypeName;
     // MP 소모량
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     float MPCost = 0.f;
