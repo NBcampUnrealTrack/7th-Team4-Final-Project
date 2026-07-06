@@ -4,6 +4,7 @@
 #include "Engine/DataTable.h"
 #include "NiagaraSystem.h"
 #include "Character/PTCombatTypes.h"
+#include "Item/PTItemTypes.h"
 #include "PTSkillRow.generated.h"
 
 UENUM(BlueprintType)
@@ -73,6 +74,25 @@ struct FPTSkillRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|BasicAttack")
     TArray<TSoftObjectPtr<UAnimMontage>> ComboMontage_Wand; // 완드
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|BasicAttack")
+    TArray<TSoftObjectPtr<UAnimMontage>> ComboMontage_Bow;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|BasicAttack")
+    TArray<TSoftObjectPtr<UAnimMontage>> ComboMontage_Hand;
+
+    //무기 타입별 기본 공격 콤보 배열
+    const TArray<TSoftObjectPtr<UAnimMontage>>& GetComboMontageForWeapon(EWeaponType WeaponType) const
+    {
+        switch (WeaponType)
+        {
+        case EWeaponType::Wand:  return ComboMontage_Wand;
+        case EWeaponType::Bow:   return ComboMontage_Bow;
+        case EWeaponType::Sword: return ComboMontage;
+        case EWeaponType::Hands:
+        default:                 return ComboMontage_Hand;
+        }
+    }
 
     // 스킬 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")

@@ -59,6 +59,19 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
         return;
     }
 
+    // 전투 진입 전환
+    if (APTPlayerCharacter* GatePC = Cast<APTPlayerCharacter>(Owner))
+    {
+        if (!GatePC->bIsInCombat || GatePC->bIsTransitioningToCombat)
+        {
+            GatePC->EnterCombat();
+            bPendingSkill = true;
+            PendingSkillRequest = Request;
+            UE_LOG(LogTemp, Warning, TEXT("Skill 전투 전환 대기 - %s"), *Request.SkillRowName.ToString());
+            return;
+        }
+    }
+
     if (Owner->CurrentMP < SkillData->MPCost)
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill MP 부족 - 현재: %.1f, 필요: %.1f"), Owner->CurrentMP, SkillData->MPCost);
@@ -196,24 +209,53 @@ void UPTPlayerSkillComponent::TryBasicAttack()
 
     if (bIsAttacking && !bCanCombo) return;
 
-    const FPTSkillRow* SkillData = GetSkillData(BasicAttackSkillID);
-    if (!SkillData || SkillData->ComboMontage.Num() == 0) return;
+    if (!PC->bIsInCombat || PC->bIsTransitioningToCombat)
+    {
+        PC->EnterCombat();
+        bPendingBasicAttack = true;
+        return;
+    }
 
-    if (!SkillData->ComboMontage.IsValidIndex(ComboIndex))
+    ExecuteBasicAttack();
+}
+
+void UPTPlayerSkillComponent::PlayPendingAction()
+{
+    if (bPendingBasicAttack)
+    {
+        bPendingBasicAttack = false;
+        ExecuteBasicAttack();
+        return;
+    }
+
+    if (bPendingSkill)
+    {
+        bPendingSkill = false;
+        FPTSkillActivationRequest Request = PendingSkillRequest;
+        TryActivateSkill(Request);
+    }
+}
+
+void UPTPlayerSkillComponent::ExecuteBasicAttack()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    const FPTSkillRow* SkillData = GetSkillData(BasicAttackSkillID);
+    if (!SkillData) return;
+
+    const TArray<TSoftObjectPtr<UAnimMontage>>& ComboArray = SkillData->GetComboMontageForWeapon(PC->CurrentWeaponType);
+    if (ComboArray.Num() == 0) return;
+
+    if (!ComboArray.IsValidIndex(ComboIndex))
     {
         ComboIndex = 0;
     }
 
-    UAnimMontage* Montage = SkillData->ComboMontage[ComboIndex].LoadSynchronous();
+    UAnimMontage* Montage = ComboArray[ComboIndex].LoadSynchronous();
     if (!Montage) return;
 
     bIsAttacking = true;
-
-    if (APTPlayerCharacter * PlayerChar = Cast<APTPlayerCharacter>(GetOwner()))
-    {
-        PlayerChar->EnterCombat();
-    }
-
     bCanCombo = false;
 
     if (PC->IsLocallyControlled())
@@ -222,7 +264,6 @@ void UPTPlayerSkillComponent::TryBasicAttack()
     }
 
     Server_BasicAttack(ComboIndex);
-
     ComboIndex++;
 }
 
@@ -340,9 +381,13 @@ void UPTPlayerSkillComponent::Multicast_PlayBasicAttackMontage_Implementation(in
     if (PC->IsLocallyControlled()) return;
 
     const FPTSkillRow* SkillData = GetSkillData(BasicAttackSkillID);
-    if (!SkillData || !SkillData->ComboMontage.IsValidIndex(InComboIndex)) return;
+    if (!SkillData) return;
 
-    if (UAnimMontage* Montage = SkillData->ComboMontage[InComboIndex].LoadSynchronous())
+    const TArray<TSoftObjectPtr<UAnimMontage>>& ComboArray = SkillData->GetComboMontageForWeapon(PC->CurrentWeaponType);
+
+    if (!ComboArray.IsValidIndex(InComboIndex)) return;
+
+    if (UAnimMontage* Montage = ComboArray[InComboIndex].LoadSynchronous())
     {
         PC->PlayAnimMontage(Montage);
     }

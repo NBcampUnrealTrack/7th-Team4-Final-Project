@@ -149,6 +149,16 @@ struct FItemData : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     FVector WeaponRelativeScale = FVector(1.f, 1.f, 1.f);
+
+    //거치 상태(Normal) 트랜스폼
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual | Holster")
+    FVector WeaponHolsterRelativeLocation = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual | Holster")
+    FRotator WeaponHolsterRelativeRotation = FRotator::ZeroRotator;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual | Holster")
+    FVector WeaponHolsterRelativeScale = FVector(1.f, 1.f, 1.f);
 };
 
 
