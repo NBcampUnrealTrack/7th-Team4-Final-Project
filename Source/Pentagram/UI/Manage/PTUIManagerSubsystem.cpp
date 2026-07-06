@@ -121,6 +121,22 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
         CurrentUIWidget = nullptr;
     }
 
+    // 이 레벨에서 게임플레이 UI(인벤토리/샵/퀘스트/스킬창) 허용 여부 갱신
+    bAllowGameplayUI = Entry->bAllowGameplayUI;
+    if (!bAllowGameplayUI)
+    {
+        // 레벨 전환 시 열려있던 게임플레이 UI 강제로 닫기
+        RemoveWidget(InventoryInstance);
+        InventoryInstance = nullptr;
+        RemoveWidget(ShopInstance);
+        ShopInstance = nullptr;
+        CloseShopInventory();
+        RemoveWidget(QuestInstance);
+        QuestInstance = nullptr;
+        RemoveWidget(SkillWindowInstance);
+        SkillWindowInstance = nullptr;
+    }
+
     // 이전 스트림 언로드
     if (!CurrentStreamLevelName.IsNone() && CurrentStreamLevelName != LevelName)
     {
@@ -229,6 +245,7 @@ void UPTUIManagerSubsystem::ShowNotify(const FPTNotifyData& InData)
 void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget> InventoryClass)
 {
     if (!InventoryClass) return;
+    if (!CanOpenGameplayUI()) return;
 
     CloseShopInventory();
 
@@ -255,6 +272,7 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
 void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass)
 {
     if (!ShopClass) return;
+    if (!CanOpenGameplayUI()) return;
 
     bool bIsShopOpen = false;
     if (ShopInstance)
@@ -335,6 +353,10 @@ void UPTUIManagerSubsystem::ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestC
     {
         return;
     }
+    if (!CanOpenGameplayUI())
+    {
+        return;
+    }
 
     if (QuestInstance != nullptr &&
         (QuestInstance->IsActivated() || QuestInstance->IsInViewport()))
@@ -359,6 +381,12 @@ void UPTUIManagerSubsystem::ToggleSkillWindow(TSubclassOf<UCommonActivatableWidg
     if (!SkillWindowClass)
     {
         UE_LOG(LogTemp, Error, TEXT("[SkillWindow] 6. SkillWindowClass가 NULL이라 리턴"));
+        return;
+    }
+
+    if (!CanOpenGameplayUI())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 6-1. 현재 레벨은 게임플레이 UI 비허용이라 리턴"));
         return;
     }
 
