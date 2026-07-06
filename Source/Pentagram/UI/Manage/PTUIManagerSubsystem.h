@@ -88,11 +88,16 @@ protected:
 private:
     void SetupNotifyWidgetForLevel(const FPTUILevelEntry& InEntry);
 
+    // 게임플레이 UI(인벤토리/샵/퀘스트/스킬창) 오픈 가능 여부 체크
+    bool CanOpenGameplayUI() const { return bAllowGameplayUI; }
+
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
 
     // 현재 스트림 레벨
     FName CurrentStreamLevelName;
+
+    bool bAllowGameplayUI = false;
 
     UPROPERTY()
     TObjectPtr<UPTNotifyManagerWidget> CurrentNotifyWidget;
