@@ -19,6 +19,10 @@ public:
 
     void TryBasicAttack();
 
+    void PlayPendingAction();
+
+    void ExecuteBasicAttack();
+
     // 쿨다운 시작을 소유 클라이언트에게 통지
     UFUNCTION(Client, Reliable)
     void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
@@ -102,4 +106,10 @@ public:
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillSlotAssigned OnSkillSlotAssigned;
 
+
+    bool bPendingBasicAttack = false;
+
+    bool bPendingSkill = false;
+
+    FPTSkillActivationRequest PendingSkillRequest;
 };

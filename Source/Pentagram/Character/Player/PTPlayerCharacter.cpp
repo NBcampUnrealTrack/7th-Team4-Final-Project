@@ -479,18 +479,22 @@ void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& N
     }
     else
     {
-        // SoftObjectPtr이므로 안전하게 동기식 로드(LoadSynchronous)하여 메시를 채웁니다.
         UStaticMesh* LoadedMesh = NewMeshAsset.LoadSynchronous();
         if (LoadedMesh)
         {
             WeaponMeshComp->SetStaticMesh(LoadedMesh);
-            UE_LOG(LogTemp, Log, TEXT("[비주얼] 무기 외형 변경 완료: %s"), *LoadedMesh->GetName());
+            UE_LOG(LogTemp, Log, TEXT("무기 외형 변경 완료: %s"), *LoadedMesh->GetName());
 
-            WeaponMeshComp->SetRelativeLocation(ItemData.WeaponRelativeLocation);
-            WeaponMeshComp->SetRelativeRotation(ItemData.WeaponRelativeRotation);
-            WeaponMeshComp->SetRelativeScale3D(ItemData.WeaponRelativeScale);
+            CurrentWeaponItemData = ItemData;
         }
         NewWeaponType = ItemData.WeaponType;
+    }
+
+    CurrentWeaponType = NewWeaponType;
+
+    if (NewWeaponType != EWeaponType::Hands)
+    {
+        AttachWeaponToSocket(bIsInCombat);
     }
 
     ApplyWeaponAnimLayer(NewWeaponType);
@@ -566,6 +570,17 @@ void APTPlayerCharacter::ApplyWeaponAnimLayer(EWeaponType NewWeaponType)
 
 void APTPlayerCharacter::EnterCombat()
 {
+    if (!bIsInCombat && !bIsTransitioningToCombat)
+    {
+        bIsTransitioningToCombat = true;
+        GetWorldTimerManager().SetTimer(
+            CombatTransitionTimerHandle,
+            this,
+            &APTPlayerCharacter::OnCombatTransitionFinished,
+            NormalToCombatTransitionDuration,
+            false);
+    }
+
     if (HasAuthority())
     {
         bIsInCombat = true;
@@ -621,6 +636,43 @@ void APTPlayerCharacter::PrewarmWeaponAnimLayers()
     ApplyWeaponAnimLayer(CurrentWeaponType);
 }
 
+void APTPlayerCharacter::AttachWeaponToSocket(bool bToHand)
+{
+    if (!WeaponMeshComp || CurrentWeaponType == EWeaponType::Hands) return;
+
+    FName Socket = bToHand
+        ? GetHandSocket(CurrentWeaponType)
+        : GetHolsterSocket(CurrentWeaponType);
+
+    WeaponMeshComp->AttachToComponent(
+            GetMesh(),
+            FAttachmentTransformRules::KeepRelativeTransform,
+            Socket);
+
+    if (bToHand)
+    {
+        WeaponMeshComp->SetRelativeLocation(CurrentWeaponItemData.WeaponRelativeLocation);
+        WeaponMeshComp->SetRelativeRotation(CurrentWeaponItemData.WeaponRelativeRotation);
+        WeaponMeshComp->SetRelativeScale3D(CurrentWeaponItemData.WeaponRelativeScale);
+    }
+    else
+    {
+        WeaponMeshComp->SetRelativeLocation(CurrentWeaponItemData.WeaponHolsterRelativeLocation);
+        WeaponMeshComp->SetRelativeRotation(CurrentWeaponItemData.WeaponHolsterRelativeRotation);
+        WeaponMeshComp->SetRelativeScale3D(CurrentWeaponItemData.WeaponHolsterRelativeScale);
+    }
+}
+
+void APTPlayerCharacter::OnCombatTransitionFinished()
+{
+    bIsTransitioningToCombat = false;
+
+    if (SkillComp)
+    {
+        SkillComp->PlayPendingAction();
+    }
+}
+
 void APTPlayerCharacter::OnRep_CurrentWeaponType()
 {
     ApplyWeaponAnimLayer(CurrentWeaponType);
@@ -630,4 +682,26 @@ void APTPlayerCharacter::Server_EnterCombat()
 {
     bIsInCombat = true;
     StartCombatExitTimer();
+}
+
+FName APTPlayerCharacter::GetHolsterSocket(EWeaponType Type) const
+{
+    switch (Type)
+    {
+        case EWeaponType::Sword: return TEXT("sword_holster");
+        case EWeaponType::Wand:  return TEXT("wand_back");
+        case EWeaponType::Bow:   return TEXT("Bow_back");
+        default:                 return NAME_None;
+    }
+}
+
+FName APTPlayerCharacter::GetHandSocket(EWeaponType Type) const
+{
+    switch (Type)
+    {
+        case EWeaponType::Sword: return TEXT("weapon_r");
+        case EWeaponType::Wand:  return TEXT("weapon_wand");
+        case EWeaponType::Bow:   return TEXT("weapon_bow");
+        default:                 return TEXT("weapon_r");
+    }
 }

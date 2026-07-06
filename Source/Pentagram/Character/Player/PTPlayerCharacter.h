@@ -83,6 +83,10 @@ public:
 
     void PrewarmWeaponAnimLayers();
 
+    void AttachWeaponToSocket(bool bToHand);
+
+    void OnCombatTransitionFinished();
+
     // 카메라를 가렸을 시 구조물 Alpha 처리
     UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
     void OnStructureHidden(AActor* HidingActor);
@@ -141,14 +145,27 @@ public:
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat")
     bool bIsInCombat = false;
 
+    UPROPERTY(BlueprintReadOnly, Category = "Combat")
+    bool bIsTransitioningToCombat = false;
+
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     float DodgeLaunchSpeed = 1200.f;
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "Buff")
     float AtkBuffBonus = 0.f;
 
+    UPROPERTY(EditAnywhere, Category = "Combat")
+    float NormalToCombatTransitionDuration = 0.35f;
+
     UPROPERTY(ReplicatedUsing = OnRep_CurrentWeaponType, VisibleAnywhere, Category = "Equip")
     EWeaponType CurrentWeaponType = EWeaponType::Hands;
+
+    UPROPERTY()
+    FItemData CurrentWeaponItemData;
+
+    FName GetHolsterSocket(EWeaponType Type)const;
+
+    FName GetHandSocket(EWeaponType Type) const;
 
     UPROPERTY()
     TSubclassOf<UAnimInstance> CurrentLinkedAnimLayerClass;
@@ -175,6 +192,8 @@ public:
     FTimerHandle BuffTimerHandle;
 
     FTimerHandle CombatExitTimerHandle;
+
+    FTimerHandle CombatTransitionTimerHandle;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 
