@@ -28,8 +28,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|Boss|Pattern")
     void ExecutePendingSkill();
 
+    const FPTBossSkillRow* GetPendingSkillSnapshot() const { return &PendingSkillSnapshot; }
+
+    bool HasPendingSkill() const { return bHasPendingSkill; }
+
     UFUNCTION(NetMulticast, Reliable)
-    void MulticastSpawnAreaWarningBatch(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius);
+    void MulticastSpawnAreaWarningBatch(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius, bool bGroundMode);
 
     UFUNCTION(NetMulticast, Reliable)
     void MulticastSpawnAreaFX(FVector CastLocation, bool bHasSafeZone, FVector SafeZoneCenter, UNiagaraSystem* CastFX, UNiagaraSystem* SafeZoneFX, float SafeZoneRadius, float AreaAttackDelay);

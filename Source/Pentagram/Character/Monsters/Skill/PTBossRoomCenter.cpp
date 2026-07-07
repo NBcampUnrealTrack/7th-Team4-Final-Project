@@ -1,27 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "Character/Monsters/Skill/PTBossRoomCenter.h"
 
-// Sets default values
 APTBossRoomCenter::APTBossRoomCenter()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-
+    PrimaryActorTick.bCanEverTick = false;
 }
 
-// Called when the game starts or when spawned
-void APTBossRoomCenter::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
-
-// Called every frame
-void APTBossRoomCenter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
 

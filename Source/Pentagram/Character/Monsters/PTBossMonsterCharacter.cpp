@@ -3,6 +3,7 @@
 #include "Character/Skill/PTBossPatternComponent.h"
 #include "Character/Skill/PTMonsterSkillComponent.h"
 #include "Character/Player/PTPlayerCharacter.h"
+#include "Character/Monsters/Skill/PTBossRoomCenter.h"
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
@@ -68,7 +69,6 @@ UAnimMontage* APTBossMonsterCharacter::GetAttackMontageForPhase(int32 Phase) con
 
     if (!IsValid(AttackMontage))
     {
-        // BP에서 AttackMontage 미설정 감지용 — 개발 중 잡을 문제, Shipping 제외
 #if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossMonster] AttackMontage가 설정되지 않았습니다."));
 #endif
@@ -172,6 +172,20 @@ float APTBossMonsterCharacter::StartAttack()
         const float SkillPlayLength = BossPatternComponent->ExecuteSkillForPhase(Phase);
         if (SkillPlayLength > 0.f)
         {
+            if (BossPatternComponent->HasPendingSkill())
+            {
+                const FPTBossSkillRow* Snapshot = BossPatternComponent->GetPendingSkillSnapshot();
+                if (Snapshot->bRequiresCenterMove && IsValid(RoomCenterActor))
+                {
+                    SetActorLocation(RoomCenterActor->GetActorLocation());
+                }
+
+                if (Snapshot->bLockMovementDuringAttack)
+                {
+                    ApplyAttackMovementLock();
+                }
+            }
+
             return SkillPlayLength;
         }
     }
@@ -179,6 +193,7 @@ float APTBossMonsterCharacter::StartAttack()
     UAnimMontage* Montage = GetAttackMontageForPhase(GetCurrentPhase());
     if (IsValid(Montage))
     {
+        ApplyAttackMovementLock();
         return Montage->GetPlayLength();
     }
 
@@ -187,6 +202,8 @@ float APTBossMonsterCharacter::StartAttack()
 
 void APTBossMonsterCharacter::StopAttack()
 {
+    RestoreAttackMovementLock();
+
     USkeletalMeshComponent* MeshComp = GetMesh();
     if (!IsValid(MeshComp))
     {

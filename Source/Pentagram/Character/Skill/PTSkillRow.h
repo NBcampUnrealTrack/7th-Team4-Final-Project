@@ -129,6 +129,9 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Hit")
     EHitReactionType HitReactionType = EHitReactionType::Light;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile")
+    float ProjectileSpeed = 800.f;
+
     FPTHitInfo MakeHitInfo(AActor* InAttacker) const
     {
         FPTHitInfo HitInfo;
@@ -167,9 +170,6 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     EBossSkillType SkillType = EBossSkillType::Melee;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile")
-    float ProjectileSpeed = 800.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Condition")
     float MinUseDistance = 0.f;
@@ -221,4 +221,13 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
     bool bHoldMontageUntilDelay = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Area")
+    bool bGroundMode = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    bool bLockMovementDuringAttack = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    bool bRequiresCenterMove = false;
 };

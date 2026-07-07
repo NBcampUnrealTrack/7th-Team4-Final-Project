@@ -15,6 +15,7 @@
 #include "Character/Monsters/Skill/PTAreaWarning.h"
 #include "DrawDebugHelpers.h"
 
+
 UPTBossPatternComponent::UPTBossPatternComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
@@ -247,7 +248,7 @@ void UPTBossPatternComponent::SetSkillComponent(UPTMonsterSkillComponent* InSkil
     SkillComponent = InSkillComponent;
 }
 
-void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius)
+void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius, bool bGroundMode)
 {
 #if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Warning, TEXT("[MulticastSpawnAreaWarning] HasAuth: %d"), GetOwner()->HasAuthority());
@@ -274,7 +275,8 @@ void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(cons
                 DropLocations[i],
                 BaseDelay + Interval * i,
                 FallEffect, ImpactEffect,
-                StartHeight, MaxRadius
+                StartHeight, MaxRadius,
+                bGroundMode
             );
         }
     }
@@ -545,7 +547,6 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
 
         SafeZoneCenter = BossLocation + SafeDirection * RowSnapshot.SafeZoneDistance;
 
-        // 안전지대 디버그 시각화 — 개발 확인용, Shipping 제외
 #if !UE_BUILD_SHIPPING
         DrawDebugSphere(World, SafeZoneCenter, RowSnapshot.SafeZoneRadius,
             16, FColor::Green, false, RowSnapshot.AreaAttackDelay + 1.f);
@@ -554,7 +555,6 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
 
     for (const FVector& DropPos : DropLocations)
     {
-        // 낙하 반경 디버그 로그 + 시각화 — 루프 내 호출이라 Shipping 제외 시 성능 영향 큼
 #if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[Impact] AreaAttackRadius: %.1f"), RowSnapshot.AreaAttackRadius);
         DrawDebugSphere(World, DropPos, RowSnapshot.AreaAttackRadius,
@@ -580,7 +580,6 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
     const FPTBossSkillRow Snapshot = RowSnapshot;
     AreaAttackTimers.SetNum(Count);
 
-    // 장판 생성 확인용 디버그 로그 — 개발 확인용, Shipping 제외
 #if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Warning, TEXT("[SpawnArea] AreaAttackRadius: %.1f"), Snapshot.AreaAttackRadius);
 #endif
@@ -593,7 +592,8 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
         Snapshot.AreaImpactEffect.Get(),
         Snapshot.AreaStartHeight,
         Snapshot.AreaWarningClass,
-        Snapshot.AreaAttackRadius
+        Snapshot.AreaAttackRadius,
+        Snapshot.bGroundMode
     );
 
     bAreaAttackInProgress = true;
