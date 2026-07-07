@@ -26,6 +26,31 @@ void APTBasePlayerState::OnRep_MaxMP()
     OnManaChanged.Broadcast(CurrentMP, MaxMP);
 }
 
+void APTBasePlayerState::OnRep_BaseAtk()
+{
+    OnAttackChanged.Broadcast(BaseAtk);
+}
+
+void APTBasePlayerState::OnRep_BaseDef()
+{
+    OnDefenseChanged.Broadcast(BaseDef);
+}
+
+void APTBasePlayerState::OnRep_CriticalChance()
+{
+    OnCriticalChanged.Broadcast(CriticalChance, CriticalATK);
+}
+
+void APTBasePlayerState::OnRep_CriticalATK()
+{
+    OnCriticalChanged.Broadcast(CriticalChance, CriticalATK);
+}
+
+void APTBasePlayerState::OnRep_MoveSpeed()
+{
+    OnMoveSpeedChanged.Broadcast(MoveSpeed);
+}
+
 void APTBasePlayerState::OnRep_CurrentGold()
 {
     OnGoldChanged.Broadcast(CurrentGold);
@@ -70,6 +95,10 @@ void APTBasePlayerState::BroadcastAllStats()
 {
     OnHealthChanged.Broadcast(CurrentHP, MaxHP);
     OnManaChanged.Broadcast(CurrentMP, MaxMP);
+    OnAttackChanged.Broadcast(BaseAtk);
+    OnDefenseChanged.Broadcast(BaseDef);
+    OnCriticalChanged.Broadcast(CriticalChance, CriticalATK);
+    OnMoveSpeedChanged.Broadcast(MoveSpeed);
     OnLevelChanged.Broadcast(PlayerLevel);
     OnExpChanged.Broadcast(CurrentExp, RequiredExp);
     OnGoldChanged.Broadcast(CurrentGold);
@@ -112,6 +141,11 @@ void APTBasePlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProper
     DOREPLIFETIME(APTBasePlayerState, MaxHP);
     DOREPLIFETIME(APTBasePlayerState, CurrentMP);
     DOREPLIFETIME(APTBasePlayerState, MaxMP);
+    DOREPLIFETIME(APTBasePlayerState, BaseAtk);
+    DOREPLIFETIME(APTBasePlayerState, BaseDef);
+    DOREPLIFETIME(APTBasePlayerState, CriticalChance);
+    DOREPLIFETIME(APTBasePlayerState, CriticalATK);
+    DOREPLIFETIME(APTBasePlayerState, MoveSpeed);
     DOREPLIFETIME(APTBasePlayerState, CurrentGold);
     DOREPLIFETIME(APTBasePlayerState, CurrentExp);
     DOREPLIFETIME(APTBasePlayerState, PlayerLevel);

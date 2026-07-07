@@ -108,6 +108,7 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Skill3)    EnhancedInput->BindAction(IA_Skill3,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill3);
         if (IA_Skill4)    EnhancedInput->BindAction(IA_Skill4,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill4);
         if (IA_SkillWindow)  EnhancedInput->BindAction(IA_SkillWindow,  ETriggerEvent::Started,   this, &APTPlayerController::OnSkillWindowPressed);
+        if (IA_CharacterSheet) EnhancedInput->BindAction(IA_CharacterSheet, ETriggerEvent::Started, this, &APTPlayerController::OnCharacterSheetPressed);
         // [디버그] 즉사
         if (IA_DebugKill) EnhancedInput->BindAction(IA_DebugKill, ETriggerEvent::Started,   this, &APTPlayerController::OnDebugKillPressed);
 
@@ -1141,6 +1142,31 @@ void APTPlayerController::OnSkillWindowPressed()
         SkillWindowClass ? *SkillWindowClass->GetName() : TEXT("NULL!!"));
 
     UIManager->ToggleSkillWindow(SkillWindowClass);
+}
+
+// 캐릭터 시트 (K) - 스킬창(OnSkillWindowPressed)과 동일한 형태
+void APTPlayerController::OnCharacterSheetPressed()
+{
+    UE_LOG(LogTemp, Warning, TEXT("[CharacterSheet] 1. OnCharacterSheetPressed 호출됨"));
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[CharacterSheet] 2. GetLocalPlayer() 실패 - NULL"));
+        return;
+    }
+
+    UPTUIManagerSubsystem* UIManager = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UIManager)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[CharacterSheet] 3. UIManagerSubsystem 실패 - NULL"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[CharacterSheet] 4. CharacterSheetClass=%s"),
+        CharacterSheetClass ? *CharacterSheetClass->GetName() : TEXT("NULL!!"));
+
+    UIManager->ToggleCharacterSheet(CharacterSheetClass);
 }
 
 void APTPlayerController::Server_RequestAssignSkillToSlot_Implementation(FName SkillID, int32 SlotIndex)

@@ -17,6 +17,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnExpChanged, float, CurrentExp,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnGoldChanged, int64, NewAmount);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnSkillCooldownStart, int32, SlotIndex, float, Duration);
 
+// 캐릭터 시트 - 전투 스탯 변경 (아이템 장착 시에도 이 델리게이트들로 반영 예정)
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnAttackChanged, float, NewAttack);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnDefenseChanged, float, NewDefense);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnCriticalChanged, float, CriticalChance, float, CriticalDamage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnMoveSpeedChanged, float, NewMoveSpeed);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnBossSpawned, AActor*, BossActor);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam (FPTOnBossPhaseChanged, int32, NewPhase);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnBossHealthChanged, float, CurrentHP, float, MaxHP);

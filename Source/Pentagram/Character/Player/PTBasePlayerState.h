@@ -14,7 +14,7 @@ class PENTAGRAM_API APTBasePlayerState : public APlayerState
 public:
     // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
-    // 모든 스탯 델리게이트를 한 번에 브로드캐스트 (UI 초기화용)
+    // 모든 스탯 델리게이트를 한 번에 브로드캐스트 (UI 초기화용 / 창 열릴 때 리프레시용)
     UFUNCTION(BlueprintCallable, Category = "PT|Delegates")
     void BroadcastAllStats();
 
@@ -52,6 +52,22 @@ protected:
     UFUNCTION()
     void OnRep_MaxMP();
 
+    // 캐릭터 시트 - 전투 스탯
+    UFUNCTION()
+    void OnRep_BaseAtk();
+
+    UFUNCTION()
+    void OnRep_BaseDef();
+
+    UFUNCTION()
+    void OnRep_CriticalChance();
+
+    UFUNCTION()
+    void OnRep_CriticalATK();
+
+    UFUNCTION()
+    void OnRep_MoveSpeed();
+
     UFUNCTION()
     void OnRep_CurrentGold();
 
@@ -84,6 +100,24 @@ public:
 
     UPROPERTY(ReplicatedUsing = OnRep_MaxMP, VisibleAnywhere, Category = "PT|Stat")
     float MaxMP;
+
+    // 캐릭터 시트용 - APTBaseCharacter에서 SyncCombatStatsToPlayerState()로 반영됨
+    UPROPERTY(ReplicatedUsing = OnRep_BaseAtk, VisibleAnywhere, Category = "PT|Stat")
+    float BaseAtk = 0.f;
+
+    UPROPERTY(ReplicatedUsing = OnRep_BaseDef, VisibleAnywhere, Category = "PT|Stat")
+    float BaseDef = 0.f;
+
+    // 치명타 확률 (0~1). 몬스터는 미사용 → 0
+    UPROPERTY(ReplicatedUsing = OnRep_CriticalChance, VisibleAnywhere, Category = "PT|Stat")
+    float CriticalChance = 0.f;
+
+    // 치명타 데미지 배율 (2.0 = 200%). 몬스터는 미사용 → 0
+    UPROPERTY(ReplicatedUsing = OnRep_CriticalATK, VisibleAnywhere, Category = "PT|Stat")
+    float CriticalATK = 0.f;
+
+    UPROPERTY(ReplicatedUsing = OnRep_MoveSpeed, VisibleAnywhere, Category = "PT|Stat")
+    float MoveSpeed = 0.f;
 
     UPROPERTY(ReplicatedUsing = OnRep_CurrentGold, VisibleAnywhere, Category = "PT|Economy")
     int32 CurrentGold = 0;
@@ -121,6 +155,18 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
     FPTOnManaChanged OnManaChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnAttackChanged OnAttackChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnDefenseChanged OnDefenseChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnCriticalChanged OnCriticalChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
+    FPTOnMoveSpeedChanged OnMoveSpeedChanged;
 
     UPROPERTY(BlueprintAssignable, Category = "PlayerState|Delegates")
     FPTOnLevelChanged OnLevelChanged;
