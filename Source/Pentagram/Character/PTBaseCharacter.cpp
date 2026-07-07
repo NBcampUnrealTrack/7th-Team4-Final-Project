@@ -39,16 +39,12 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     {
         FinalDamageAmount = AttackerPlayer->GetTotalAttack() * DamageAmount;
 
-        // 크리티컬 판정
-        if (const FPTCharacterRow* Row =
-                AttackerPlayer->CharacterDataHandle.GetRow<FPTCharacterRow>(TEXT("Crit")))
+        // 크리티컬 판정 (BeginPlay에서 Row로부터 로드된 멤버 변수 사용 - DataTable 재조회 불필요)
+        if (FMath::FRand() < AttackerPlayer->CriticalChance)
         {
-            if (FMath::FRand() < Row->CriticalChance)
-            {
-                float CritMult = (Row->CriticalATK > 0.f) ? Row->CriticalATK : 2.f;
-                FinalDamageAmount *= CritMult;
-                bIsCritical = true;
-            }
+            float CritMult = (AttackerPlayer->CriticalATK > 0.f) ? AttackerPlayer->CriticalATK : 2.f;
+            FinalDamageAmount *= CritMult;
+            bIsCritical = true;
         }
     }
 
@@ -120,8 +116,14 @@ void APTBaseCharacter::PostInitializeComponents()
         BaseDef = Row->BaseDef;     BaseAtk = Row->BaseAtk;
         AttackSpeed = Row->AttackSpeed;
         MoveSpeed = Row->MoveSpeed;
+        CriticalChance = Row->CriticalChance;
+        CriticalATK = Row->CriticalATK;
         GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
     }
+
+    // PostInitializeComponents 시점엔 PlayerState가 아직 없을 수 있어(특히 클라이언트)
+    // 실패해도 무해함 - BeginPlay에서 한 번 더 시도함
+    SyncCombatStatsToPlayerState();
 }
 
 void APTBaseCharacter::OnDeath()
@@ -146,6 +148,32 @@ void APTBaseCharacter::RequestHitStop(float Duration)
     ApplyHitStop(Duration);
 }
 
+void APTBaseCharacter::SyncCombatStatsToPlayerState()
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
+    if (!PS)
+    {
+        return;
+    }
+
+    PS->BaseAtk = BaseAtk;
+    PS->BaseDef = BaseDef;
+    PS->CriticalChance = CriticalChance;
+    PS->CriticalATK = CriticalATK;
+    PS->MoveSpeed = MoveSpeed;
+
+    // 서버 자신(리슨서버 호스트)의 UI는 OnRep이 안 불리므로 직접 브로드캐스트
+    PS->OnAttackChanged.Broadcast(PS->BaseAtk);
+    PS->OnDefenseChanged.Broadcast(PS->BaseDef);
+    PS->OnCriticalChanged.Broadcast(PS->CriticalChance, PS->CriticalATK);
+    PS->OnMoveSpeedChanged.Broadcast(PS->MoveSpeed);
+}
+
 void APTBaseCharacter::BeginPlay()
 {
     Super::BeginPlay();
@@ -161,8 +189,13 @@ void APTBaseCharacter::BeginPlay()
         BaseAtk = Row->BaseAtk;
         AttackSpeed = Row->AttackSpeed;
         MoveSpeed = Row->MoveSpeed;
+        CriticalChance = Row->CriticalChance;
+        CriticalATK = Row->CriticalATK;
         GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
     }
+
+    // BeginPlay 시점엔 대부분 PossessedBy가 끝난 뒤라 PlayerState 확보돼있음
+    SyncCombatStatsToPlayerState();
 }
 
 void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -177,6 +210,15 @@ void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty
     DOREPLIFETIME(APTBaseCharacter, BaseAtk);
     DOREPLIFETIME(APTBaseCharacter, AttackSpeed);
     DOREPLIFETIME(APTBaseCharacter, MoveSpeed);
+    DOREPLIFETIME(APTBaseCharacter, CriticalChance);
+    DOREPLIFETIME(APTBaseCharacter, CriticalATK);
+}
+
+void APTBaseCharacter::PossessedBy(AController* NewController)
+{
+    Super::PossessedBy(NewController);
+
+    SyncCombatStatsToPlayerState();
 }
 
 void APTBaseCharacter::ApplyHit(const FPTHitInfo& HitInfo)

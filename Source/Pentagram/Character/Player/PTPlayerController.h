@@ -44,6 +44,7 @@ public:
     void RegisterNearbyNPC(APTNPCCharacter* NPC);
     void UnregisterNearbyNPC(APTNPCCharacter* NPC);
     void OnSkillWindowPressed();
+    void OnCharacterSheetPressed();
 
     void RestoreGameplayInput();
     void SetGameplayInputBlockedByUI(bool bBlocked);
@@ -173,18 +174,20 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_SkillWindow;
 
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_CharacterSheet;
     // [디버그] 즉사 키
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_DebugKill;
-
-    UPROPERTY(EditAnywhere, Category = "Input")
-    FKey InventoryFallbackKey = EKeys::I;
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> SkillWindowClass;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> CharacterSheetClass;
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UPTPrimaryLayout> PrimaryLayoutClass;

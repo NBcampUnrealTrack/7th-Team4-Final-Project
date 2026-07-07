@@ -42,11 +42,14 @@ public:
     FName GetCharacterDataRowName() const { return CharacterDataHandle.RowName; }
     void RequestHitStop(float Duration);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|Combat")
+    void SyncCombatStatsToPlayerState();
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+    virtual void PossessedBy(AController* NewController) override;
 
     virtual void ApplyHit(const FPTHitInfo& HitInfo);
     void ApplyHitStop(float Duration);
@@ -89,6 +92,14 @@ public:
 
     UPROPERTY(Replicated, VisibleAnywhere, Category = "PT|Stats")
     float MoveSpeed;    // 이동 속도
+
+    // 치명타 확률
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "PT|Stats")
+    float CriticalChance = 0.f;
+
+    // 치명타 데미지 배율
+    UPROPERTY(Replicated, VisibleAnywhere, Category = "PT|Stats")
+    float CriticalATK = 0.f;
 
     UPROPERTY(EditAnywhere, Category = "PT|Hit")
     TObjectPtr<UAnimMontage> HitReaction_Light;

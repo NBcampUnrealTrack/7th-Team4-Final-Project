@@ -34,6 +34,8 @@ void UPTUIManagerSubsystem::Deinitialize()
     CurrentUIWidget = nullptr;
     RemoveWidget(SkillWindowInstance);
     SkillWindowInstance = nullptr;
+    RemoveWidget(CharacterSheetInstance);
+    CharacterSheetInstance = nullptr;
 
     if (CurrentNotifyWidget)
     {
@@ -121,7 +123,7 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
         CurrentUIWidget = nullptr;
     }
 
-    // 이 레벨에서 게임플레이 UI(인벤토리/샵/퀘스트/스킬창) 허용 여부 갱신
+    // 이 레벨에서 게임플레이 UI(인벤토리/샵/퀘스트/스킬창/캐릭터시트) 허용 여부 갱신
     bAllowGameplayUI = Entry->bAllowGameplayUI;
     if (!bAllowGameplayUI)
     {
@@ -135,6 +137,8 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
         QuestInstance = nullptr;
         RemoveWidget(SkillWindowInstance);
         SkillWindowInstance = nullptr;
+        RemoveWidget(CharacterSheetInstance);
+        CharacterSheetInstance = nullptr;
     }
 
     // 이전 스트림 언로드
@@ -380,17 +384,13 @@ void UPTUIManagerSubsystem::ToggleSkillWindow(TSubclassOf<UCommonActivatableWidg
 
     if (!SkillWindowClass)
     {
-        UE_LOG(LogTemp, Error, TEXT("[SkillWindow] 6. SkillWindowClass가 NULL이라 리턴"));
         return;
     }
 
     if (!CanOpenGameplayUI())
     {
-        UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 6-1. 현재 레벨은 게임플레이 UI 비허용이라 리턴"));
         return;
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 6. PrimaryLayout Valid=%d"), PrimaryLayout.IsValid());
 
     bool bIsOpen = false;
     if (SkillWindowInstance)
@@ -400,22 +400,57 @@ void UPTUIManagerSubsystem::ToggleSkillWindow(TSubclassOf<UCommonActivatableWidg
             bIsOpen = true;
         }
     }
-    UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 7. bIsOpen=%d (SkillWindowInstance=%d)"),
-        bIsOpen, SkillWindowInstance != nullptr);
-
     if (bIsOpen)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 8. 이미 열려있어서 닫음"));
+
         RemoveWidget(SkillWindowInstance);
         SkillWindowInstance = nullptr;
         return;
     }
 
-    // 인벤토리/샵과 겹치지 않게 정리
+    // 인벤토리/샵/캐릭터시트와 겹치지 않게 정리
     if (InventoryInstance) { RemoveWidget(InventoryInstance); InventoryInstance = nullptr; }
     if (ShopInstance) { RemoveWidget(ShopInstance); ShopInstance = nullptr; CloseShopInventory(); }
+    if (CharacterSheetInstance) { RemoveWidget(CharacterSheetInstance); CharacterSheetInstance = nullptr; }
 
     SkillWindowInstance = PushWidget(SkillWindowClass, EPTUILayer::GameMenu);
 
     UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 9. PushWidget 결과=%d"), SkillWindowInstance != nullptr);
+}
+
+void UPTUIManagerSubsystem::ToggleCharacterSheet(TSubclassOf<UCommonActivatableWidget> CharacterSheetClass)
+{
+    if (!CharacterSheetClass)
+    {
+        return;
+    }
+
+    if (!CanOpenGameplayUI())
+    {
+        return;
+    }
+
+    bool bIsOpen = false;
+    if (CharacterSheetInstance)
+    {
+        if (CharacterSheetInstance->IsActivated() || CharacterSheetInstance->IsInViewport())
+        {
+            bIsOpen = true;
+        }
+    }
+
+    if (bIsOpen)
+    {
+        RemoveWidget(CharacterSheetInstance);
+        CharacterSheetInstance = nullptr;
+        return;
+    }
+
+    // 인벤토리/샵/스킬창과 겹치지 않게 정리
+    if (InventoryInstance) { RemoveWidget(InventoryInstance); InventoryInstance = nullptr; }
+    if (ShopInstance) { RemoveWidget(ShopInstance); ShopInstance = nullptr; CloseShopInventory(); }
+    if (SkillWindowInstance) { RemoveWidget(SkillWindowInstance); SkillWindowInstance = nullptr; }
+
+    CharacterSheetInstance = PushWidget(CharacterSheetClass, EPTUILayer::GameMenu);
+
 }
