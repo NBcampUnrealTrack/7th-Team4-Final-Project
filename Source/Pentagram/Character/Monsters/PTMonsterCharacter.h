@@ -12,6 +12,7 @@ struct FDataTableRowHandle;
 class APTBasePlayerState;
 class APTGoldPickup;
 class UPTMonsterSkillComponent;
+class APTBossProjectile;
 
 UCLASS()
 class PENTAGRAM_API APTMonsterCharacter : public APTBaseCharacter
@@ -41,6 +42,12 @@ public:
     EMonsterState GetCurrentState() const { return CurrentState; }
     bool    IsDead()                const { return CurrentState == EMonsterState::Dead; }
     const TSet<TWeakObjectPtr<APTBasePlayerState>>& GetExpContributors() const { return ExpContributors; }
+
+    UFUNCTION(BlueprintPure, Category = "PT|Monster|Combat")
+    bool IsRangedMonster() const { return bIsRanged; }
+
+    UFUNCTION(BlueprintPure, Category = "PT|Monster|Combat")
+    float GetOptimalRange() const { return OptimalRangeValue; }
 
     virtual void PerformAttack();
     virtual float StartAttack();
@@ -82,6 +89,9 @@ protected:
     void RestartBTAfterStagger(float Duration);
     void OnStaggerEnd();
 
+    void ApplyAttackMovementLock();
+    void RestoreAttackMovementLock();
+
     UPROPERTY(ReplicatedUsing = OnRep_CurrentState, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     EMonsterState CurrentState = EMonsterState::Idle;
 
@@ -105,6 +115,21 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Combat", meta = (AllowPrivateAccess = "true"))
     float AttackRadius = 150.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    bool bIsRanged = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    float OptimalRangeValue = 600.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    TSubclassOf<APTBossProjectile> ProjectileClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    FName ProjectileSocketName = TEXT("hand_r");
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    float ProjectileSpeed = 1200.f;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
@@ -155,6 +180,8 @@ private:
     float DestroyDelayAfterMontage = 1.5f;
 
     bool bHasSuperArmor = false;
+    bool bSavedOrientRotationToMovement = true;
+    bool bAppliedMovementLock = false;
 
     FTimerHandle DestroyTimerHandle;
     FTimerHandle StaggerResumeTimerHandle;

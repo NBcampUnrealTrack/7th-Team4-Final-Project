@@ -40,13 +40,6 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
         return EBTNodeResult::Failed;
     }
 
-    UCharacterMovementComponent* MoveComp = Monster->GetCharacterMovement();
-    if (IsValid(MoveComp))
-    {
-        MoveComp->bOrientRotationToMovement = false;
-        MoveComp->StopMovementImmediately();
-    }
-
     AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
     if (IsValid(Target))
     {
@@ -63,6 +56,13 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
     Monster->SetMonsterState(EMonsterState::Attack);
 
     const float AttackDuration = Monster->StartAttack();
+
+    if (AttackDuration <= 0.f)
+    {
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+        Monster->SetMonsterState(EMonsterState::Idle);
+        return EBTNodeResult::Failed;
+    }
 
     TWeakObjectPtr<UPTBTTask_Attack> WeakThis(this);
     TWeakObjectPtr<UBehaviorTreeComponent> WeakOwnerComp(&OwnerComp);
@@ -87,8 +87,6 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
                     return;
                 }
 
-                WeakThis->RestoreMovementRotation(*OwnerCompPtr);
-
                 BlackboardPtr->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
                 WeakThis->FinishLatentTask(*OwnerCompPtr, EBTNodeResult::Succeeded);
             }),
@@ -111,6 +109,7 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
         if (APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn()))
         {
             Monster->StopAttack();
+            Monster->SetMonsterState(EMonsterState::Idle);
         }
     }
 
@@ -119,35 +118,10 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
         BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
     }
 
-    RestoreMovementRotation(OwnerComp);
-
     return EBTNodeResult::Aborted;
 }
 
 uint16 UPTBTTask_Attack::GetInstanceMemorySize() const
 {
     return sizeof(FPTAttackTaskMemory);
-}
-
-void UPTBTTask_Attack::RestoreMovementRotation(UBehaviorTreeComponent& OwnerComp)
-{
-    AAIController* AIC = OwnerComp.GetAIOwner();
-    if (!IsValid(AIC))
-    {
-        return;
-    }
-
-    APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn());
-    if (!IsValid(Monster))
-    {
-        return;
-    }
-
-    UCharacterMovementComponent* MoveComp = Monster->GetCharacterMovement();
-    if (!IsValid(MoveComp))
-    {
-        return;
-    }
-
-    MoveComp->bOrientRotationToMovement = true;
 }

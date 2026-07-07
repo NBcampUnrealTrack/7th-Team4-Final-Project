@@ -3,12 +3,16 @@
 #include "Character/Skill/PTBossPatternComponent.h"
 #include "Character/Skill/PTMonsterSkillComponent.h"
 #include "Character/Player/PTPlayerCharacter.h"
+#include "Character/Monsters/Skill/PTBossRoomCenter.h"
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
     CharacterType = ECharacterType::BossMonster;
 
     BossPatternComponent = CreateDefaultSubobject<UPTBossPatternComponent>(TEXT("BossPatternComponent"));
+
+    bIsRanged = true;
+    OptimalRangeValue = 800.f;
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
@@ -65,20 +69,28 @@ UAnimMontage* APTBossMonsterCharacter::GetAttackMontageForPhase(int32 Phase) con
 
     if (!IsValid(AttackMontage))
     {
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("[BossMonster] AttackMontage가 설정되지 않았습니다."));
+#endif
     }
 
     return AttackMontage;
 }
 
+void APTBossMonsterCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    if (IsValid(BossPatternComponent) && IsValid(SkillComponent))
+    {
+        BossPatternComponent->SetSkillComponent(SkillComponent);
+        BossPatternComponent->PreloadAllSkills();
+    }
+}
+
 void APTBossMonsterCharacter::BeginPlay()
 {
     Super::BeginPlay();
-
-    if (IsValid(BossPatternComponent))
-    {
-        BossPatternComponent->PreloadAllSkills();
-    }
 }
 
 void APTBossMonsterCharacter::PerformAttack()
@@ -160,6 +172,20 @@ float APTBossMonsterCharacter::StartAttack()
         const float SkillPlayLength = BossPatternComponent->ExecuteSkillForPhase(Phase);
         if (SkillPlayLength > 0.f)
         {
+            if (BossPatternComponent->HasPendingSkill())
+            {
+                const FPTBossSkillRow* Snapshot = BossPatternComponent->GetPendingSkillSnapshot();
+                if (Snapshot->bRequiresCenterMove && IsValid(RoomCenterActor))
+                {
+                    SetActorLocation(RoomCenterActor->GetActorLocation());
+                }
+
+                if (Snapshot->bLockMovementDuringAttack)
+                {
+                    ApplyAttackMovementLock();
+                }
+            }
+
             return SkillPlayLength;
         }
     }
@@ -167,6 +193,7 @@ float APTBossMonsterCharacter::StartAttack()
     UAnimMontage* Montage = GetAttackMontageForPhase(GetCurrentPhase());
     if (IsValid(Montage))
     {
+        ApplyAttackMovementLock();
         return Montage->GetPlayLength();
     }
 
@@ -175,6 +202,8 @@ float APTBossMonsterCharacter::StartAttack()
 
 void APTBossMonsterCharacter::StopAttack()
 {
+    RestoreAttackMovementLock();
+
     USkeletalMeshComponent* MeshComp = GetMesh();
     if (!IsValid(MeshComp))
     {

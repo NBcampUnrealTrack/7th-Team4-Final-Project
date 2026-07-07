@@ -24,7 +24,7 @@ APTAreaWarning::APTAreaWarning()
     BorderMesh->SetRelativeLocation(FVector(0.f, 0.f, 0.1f));
 }
 
-void APTAreaWarning::Launch(const FVector& GroundLocation, float InFallDuration, UNiagaraSystem* InFallEffect, UNiagaraSystem* InImpactEffect, float StartHeight, float InMaxRadius)
+void APTAreaWarning::Launch(const FVector& GroundLocation, float InFallDuration, UNiagaraSystem* InFallEffect, UNiagaraSystem* InImpactEffect, float StartHeight, float InMaxRadius, bool bInGroundMode)
 {
     TargetLocation      = GroundLocation;
     StartLocation       = GroundLocation + FVector(0.f, 0.f, StartHeight);
@@ -35,10 +35,23 @@ void APTAreaWarning::Launch(const FVector& GroundLocation, float InFallDuration,
     PendingImpactEffect = InImpactEffect;
     MaxRadius           = InMaxRadius;
     CachedStartHeight   = StartHeight;
+    bGroundMode         = bInGroundMode;
 
-    SetActorLocation(GroundLocation);
+    FVector AdjustedLocation = GroundLocation;
+    if (bGroundMode)
+    {
+        FHitResult FloorHit;
+        const FVector TraceStart = GroundLocation + FVector(0.f, 0.f, 300.f);
+        const FVector TraceEnd = GroundLocation - FVector(0.f, 0.f, 500.f);
+        if (GetWorld()->LineTraceSingleByChannel(FloorHit, TraceStart, TraceEnd, ECC_Visibility))
+        {
+            AdjustedLocation.Z = FloorHit.ImpactPoint.Z + 1.f;
+        }
+    }
 
-    if (InFallEffect)
+    SetActorLocation(bGroundMode ? AdjustedLocation : StartLocation);
+
+    if (InFallEffect && !bGroundMode)
     {
         FallEffectComp = UNiagaraFunctionLibrary::SpawnSystemAttached(
             InFallEffect, GetRootComponent(), NAME_None,
@@ -73,12 +86,16 @@ void APTAreaWarning::Tick(float DeltaTime)
 
     ElapsedTime += DeltaTime;
     const float Alpha = FMath::Clamp(ElapsedTime / FallDuration, 0.f, 1.f);
-    SetActorLocation(FMath::Lerp(StartLocation, TargetLocation, Alpha));
 
-    if (IsValid(FallEffectComp))
+    if (!bGroundMode)
     {
-        const float CurrentZ = FMath::Lerp(CachedStartHeight, 0.f, Alpha);
-        FallEffectComp->SetRelativeLocation(FVector(0.f, 0.f, CurrentZ));
+        SetActorLocation(FMath::Lerp(StartLocation, TargetLocation, Alpha));
+
+        if (IsValid(FallEffectComp))
+        {
+            const float CurrentZ = FMath::Lerp(CachedStartHeight, 0.f, Alpha);
+            FallEffectComp->SetRelativeLocation(FVector(0.f, 0.f, CurrentZ));
+        }
     }
 
     if (IsValid(WarningMesh) && WarningMesh->GetStaticMesh())

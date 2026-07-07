@@ -18,6 +18,7 @@ public:
 	APTBossProjectile();
 
     void Launch(const FVector& Direction, float InDamage, float InSpeed, const FPTHitInfo& InHitInfo);
+    void IgnoreActor(AActor* ActorToIgnore);
 
 protected:
 	virtual void BeginPlay() override;

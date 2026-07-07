@@ -40,6 +40,16 @@ void APTBossProjectile::Launch(const FVector& Direction, float InDamage, float I
     ProjectileMovement->Velocity     = Direction.GetSafeNormal() * InSpeed;
 }
 
+void APTBossProjectile::IgnoreActor(AActor* ActorToIgnore)
+{
+    if (!IsValid(ActorToIgnore) || !IsValid(CollisionComp))
+    {
+        return;
+    }
+
+    CollisionComp->IgnoreActorWhenMoving(ActorToIgnore, true);
+}
+
 void APTBossProjectile::BeginPlay()
 {
 	Super::BeginPlay();

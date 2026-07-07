@@ -19,7 +19,7 @@ public:
 
     void Launch(const FVector& GroundLocation, float InFallDuration,
         UNiagaraSystem* InFallEffect, UNiagaraSystem* InImpactEffect,
-        float StartHeight = 2000.f, float InMaxRedius = 300.f);
+        float StartHeight = 2000.f, float InMaxRedius = 300.f, bool bInGroundMode = false);
 
 protected:
     virtual void Tick(float DeltaTime) override;
@@ -47,6 +47,7 @@ private:
     bool bLanded            = false;
     float MaxRadius         = 300.f;
     float CachedStartHeight = 2000.f;
+    bool bGroundMode        = false;
 
     TObjectPtr<UNiagaraSystem> PendingImpactEffect;
 };

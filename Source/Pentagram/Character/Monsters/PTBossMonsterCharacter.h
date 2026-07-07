@@ -5,6 +5,7 @@
 #include "PTBossMonsterCharacter.generated.h"
 
 class UPTBossPatternComponent;
+class APTBossRoomCenter;
 
 UCLASS()
 class PENTAGRAM_API APTBossMonsterCharacter : public APTMonsterCharacter
@@ -36,7 +37,11 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Boss|Pattern")
     TObjectPtr<UPTBossPatternComponent> BossPatternComponent;
 
+    UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "PT|Boss|Room")
+    TObjectPtr<APTBossRoomCenter> RoomCenterActor;
+
 protected:
+    virtual void PostInitializeComponents() override;
     virtual void BeginPlay() override;
     virtual float StartAttack() override;
     virtual void StopAttack() override;

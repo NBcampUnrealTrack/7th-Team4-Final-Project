@@ -137,11 +137,6 @@ bool APTBaseCharacter::IsDead() const
     return CurrentHP <= 0.f;
 }
 
-bool APTBaseCharacter::IsAlive() const
-{
-    return CurrentHP > 0.f;
-}
-
 void APTBaseCharacter::OnRep_CurrentHP()
 {
 }
@@ -295,7 +290,10 @@ void APTBaseCharacter::ApplyKnockback(const FPTHitInfo& HitInfo)
 
 void APTBaseCharacter::Multicast_PlayHitReactionMontage_Implementation(EHitReactionType ReactionType)
 {
+    // 몽타주 호출 확인용 로그 — 개발 확인용, Shipping 제외
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Warning, TEXT("Hit Montage Multicast Called"));
+#endif
 
     UAnimMontage* Montage = (ReactionType == EHitReactionType::Light)
         ? HitReaction_Light
@@ -303,7 +301,10 @@ void APTBaseCharacter::Multicast_PlayHitReactionMontage_Implementation(EHitReact
 
     if (!IsValid(Montage))
     {
+        // 몽타주 미설정 감지용 — 개발 중 잡을 문제, Shipping 제외
+#if !UE_BUILD_SHIPPING
         UE_LOG(LogTemp, Warning, TEXT("Hit Montage is null"));
+#endif
         return;
     }
 

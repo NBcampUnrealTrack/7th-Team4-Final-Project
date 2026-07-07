@@ -18,6 +18,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Character/Skill/PTMonsterSkillComponent.h"
 #include "Character/PTCombatTypes.h"
+#include "Character/Monsters/Projectile/PTBossProjectile.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -155,6 +157,58 @@ void APTMonsterCharacter::PerformAttack()
         return;
     }
 
+    if (bIsRanged && ProjectileClass)
+    {
+        AActor* Target = nullptr;
+        if (AAIController* AIC = Cast<AAIController>(GetController()))
+        {
+            if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+            {
+                Target = Cast<AActor>(BB->GetValueAsObject(TEXT("TargetActor")));
+            }
+        }
+
+        if (!IsValid(Target))
+        {
+            return;
+        }
+
+        const FVector SpawnLoc = GetMesh()->DoesSocketExist(ProjectileSocketName)
+            ? GetMesh()->GetSocketLocation(ProjectileSocketName) + GetActorForwardVector() * 80.f
+            : GetActorLocation() + GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 50.f);
+
+        const FVector Direction = (Target->GetActorLocation() - SpawnLoc).GetSafeNormal();
+
+        FActorSpawnParameters Params;
+        Params.Owner = this;
+        Params.Instigator = this;
+        Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+        APTBossProjectile* Proj = World->SpawnActor<APTBossProjectile>(ProjectileClass, SpawnLoc, Direction.Rotation(), Params);
+        if (IsValid(Proj))
+        {
+            Proj->IgnoreActor(this);
+            FPTHitInfo HitInfo;
+            float Speed = ProjectileSpeed;
+            float Damage = GetAttackDamage();
+            if (IsValid(SkillComponent) && IsValid(SkillComponent->SkillDataTable))
+            {
+                const FPTSkillRow* Row = SkillComponent->GetSkillData(SkillComponent->GetCurrentSkillID());
+                if (Row)
+                {
+                    HitInfo              = Row->MakeHitInfo(this);
+                    HitInfo.HitDirection = Direction;
+                    Speed                = Row->ProjectileSpeed;
+                    Damage              *= Row->DamageMultiplier;
+                }
+            }
+
+            Proj->Launch(Direction, Damage, Speed, HitInfo);
+        }
+
+        return;
+    }
+
     const FVector TraceStart = GetActorLocation()
         + GetActorForwardVector() * AttackForwardOffset
         + FVector(0.f, 0.f, AttackHeightOffset);
@@ -192,6 +246,7 @@ void APTMonsterCharacter::PerformAttack()
         if (APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(HitActor))
         {
             FPTHitInfo HitInfo;
+            float Damage = GetAttackDamage();
 
             if (IsValid(SkillComponent) && IsValid(SkillComponent->SkillDataTable))
             {
@@ -200,10 +255,11 @@ void APTMonsterCharacter::PerformAttack()
                 {
                     HitInfo              = Row->MakeHitInfo(this);
                     HitInfo.HitDirection = GetActorForwardVector();
+                    Damage              *= Row->DamageMultiplier;
                 }
             }
 
-            Player->ApplyDamageWithHit(GetAttackDamage(), this, HitInfo);
+            Player->ApplyDamageWithHit(Damage, this, HitInfo);
         }
     }
 }
@@ -222,6 +278,8 @@ float APTMonsterCharacter::StartAttack()
     {
         return 0.f;
     }
+
+    ApplyAttackMovementLock();
 
     if (IsValid(SkillComponent->SkillDataTable))
     {
@@ -246,6 +304,9 @@ float APTMonsterCharacter::StartAttack()
 void APTMonsterCharacter::StopAttack()
 {
     SetSuperArmor(false);
+    HitActors.Empty();
+
+    RestoreAttackMovementLock();
 
     USkeletalMeshComponent* MeshComp = GetMesh();
     if (!IsValid(MeshComp))
@@ -276,7 +337,9 @@ void APTMonsterCharacter::Multicast_PlayAttackMontage_Implementation(UAnimMontag
 
     AnimInstance->Montage_Play(MontageToPlay);
 
+#if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Log, TEXT("[Monster] Multicast Play Montage: %s"), *GetNameSafe(MontageToPlay));
+#endif
 }
 
 FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
@@ -302,8 +365,16 @@ void APTMonsterCharacter::OnRep_CurrentState()
 {
     if (CurrentState == EMonsterState::Dead)
     {
-        GetCharacterMovement()->DisableMovement();
-        GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+        {
+            Movement->DisableMovement();
+        }
+
+        if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+        {
+            GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        }
+
         PlayDeathMontage();
     }
 }
@@ -319,6 +390,17 @@ void APTMonsterCharacter::BeginPlay()
     if (SkillComponent)
     {
         SkillComponent->AssignSkillToSlot(SkillComponent->BasicAttackRowName, 0);
+    }
+
+    if (SkillComponent && SkillComponent->SkillDataTable)
+    {
+        FPTSkillRow* Row = SkillComponent->SkillDataTable->FindRow<FPTSkillRow>(SkillComponent->BasicAttackRowName, TEXT(""));
+        if (Row)
+        {
+            Row->SkillMontage.LoadSynchronous();
+            Row->SkillEffect.LoadSynchronous();
+            Row->SkillSound.LoadSynchronous();
+        }
     }
 }
 
@@ -350,12 +432,14 @@ void APTMonsterCharacter::OnDeath()
     }
 
     SetSuperArmor(false);
+    HitActors.Empty();
     GetWorldTimerManager().ClearTimer(StaggerResumeTimerHandle);
 
     Super::OnDeath();
 
     SetMonsterState(EMonsterState::Dead);
 
+    StopAttack();
     const float MontageLength = PlayDeathMontage();
     const float ActualDelay   = MontageLength > 0.f ? MontageLength + DestroyDelayAfterMontage : DestroyDelay;
 
@@ -451,8 +535,13 @@ void APTMonsterCharacter::OnStaggerEnd()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("After Stagger MaxWalkSpeed: %f"),
-        GetCharacterMovement()->MaxWalkSpeed);
+#if !UE_BUILD_SHIPPING
+    if (UCharacterMovementComponent* Movement = GetCharacterMovement())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("After Stagger MaxWalkSpeed: %f"),
+            Movement->MaxWalkSpeed);
+    }
+#endif
 
     AAIController* AIC = Cast<AAIController>(GetController());
     if (!IsValid(AIC) || !IsValid(AIC->BrainComponent))
@@ -462,6 +551,43 @@ void APTMonsterCharacter::OnStaggerEnd()
 
     AIC->StopMovement();
     AIC->BrainComponent->RestartLogic();
+}
+
+void APTMonsterCharacter::ApplyAttackMovementLock()
+{
+    if (bAppliedMovementLock)
+    {
+        return;
+    }
+
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        bSavedOrientRotationToMovement = MoveComp->bOrientRotationToMovement;
+        bAppliedMovementLock = true;
+
+        MoveComp->StopMovementImmediately();
+        MoveComp->bOrientRotationToMovement = false;
+    }
+
+    if (AAIController* AIC = Cast<AAIController>(GetController()))
+    {
+        AIC->StopMovement();
+    }
+}
+
+void APTMonsterCharacter::RestoreAttackMovementLock()
+{
+    if (!bAppliedMovementLock)
+    {
+        return;
+    }
+
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        MoveComp->bOrientRotationToMovement = bSavedOrientRotationToMovement;
+    }
+
+    bAppliedMovementLock = false;
 }
 
 void APTMonsterCharacter::RegisterDamageContributor(AActor* DamageCauser)
