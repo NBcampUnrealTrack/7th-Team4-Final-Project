@@ -12,6 +12,7 @@ struct FDataTableRowHandle;
 class APTBasePlayerState;
 class APTGoldPickup;
 class UPTMonsterSkillComponent;
+class APTBossProjectile;
 
 UCLASS()
 class PENTAGRAM_API APTMonsterCharacter : public APTBaseCharacter
@@ -88,6 +89,9 @@ protected:
     void RestartBTAfterStagger(float Duration);
     void OnStaggerEnd();
 
+    void ApplyAttackMovementLock();
+    void RestoreAttackMovementLock();
+
     UPROPERTY(ReplicatedUsing = OnRep_CurrentState, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster")
     EMonsterState CurrentState = EMonsterState::Idle;
 
@@ -117,6 +121,15 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
     float OptimalRangeValue = 600.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    TSubclassOf<APTBossProjectile> ProjectileClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    FName ProjectileSocketName = TEXT("hand_r");
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    float ProjectileSpeed = 1200.f;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
@@ -167,6 +180,8 @@ private:
     float DestroyDelayAfterMontage = 1.5f;
 
     bool bHasSuperArmor = false;
+    bool bSavedOrientRotationToMovement = true;
+    bool bAppliedMovementLock = false;
 
     FTimerHandle DestroyTimerHandle;
     FTimerHandle StaggerResumeTimerHandle;

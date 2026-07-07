@@ -30,9 +30,9 @@ void APTMonsterAIController::PostPossessSetup(APawn* InPawn)
         MoveComp->bUseRVOAvoidance = true;
         MoveComp->AvoidanceWeight = 0.5f;
         MoveComp->AvoidanceConsiderationRadius = 500.f;
-        MoveComp->bUseControllerDesiredRotation = false;
-        MoveComp->bOrientRotationToMovement = true;
         MoveComp->RotationRate = FRotator(0.f, 300.f, 0.f);
+        MoveComp->bUseControllerDesiredRotation = true;
+        MoveComp->bOrientRotationToMovement = false;
     }
 }
 

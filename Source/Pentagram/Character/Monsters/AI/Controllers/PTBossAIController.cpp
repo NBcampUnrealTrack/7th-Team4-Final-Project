@@ -2,6 +2,7 @@
 #include "Character/Monsters/PTBossMonsterCharacter.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 APTBossAIController::APTBossAIController()
 {
@@ -33,9 +34,20 @@ void APTBossAIController::InitializeBlackboard(APawn* InPawn)
 
 void APTBossAIController::PostPossessSetup(APawn* InPawn)
 {
-    if (APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(InPawn))
+    Super::PostPossessSetup(InPawn);
+
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(InPawn);
+    if (!IsValid(Boss))
     {
-        Boss->OnHPChanged.AddDynamic(this, &APTBossAIController::OnBossHPChanged);
+        return;
+    }
+
+    Boss->OnHPChanged.AddDynamic(this, &APTBossAIController::OnBossHPChanged);
+    if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
+    {
+        MoveComp->RotationRate = FRotator(0.f, 300.f, 0.f);
+        MoveComp->bUseControllerDesiredRotation = true;
+        MoveComp->bOrientRotationToMovement = false;
     }
 }
 
