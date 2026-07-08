@@ -54,6 +54,14 @@ public:
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_UsePotion(int32 SlotIndex);
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool UseItemAtSlot(int32 SlotIndex);
+
+    bool UseSkillBook(int32 SlotIndex);
+
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_UseSkillBook(int32 SlotIndex);
+
 public:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 

@@ -36,6 +36,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void InitWithSkillComponent(UPTPlayerSkillComponent* InSkillComp);
 
+    void RefreshUsability();
+
 protected:
     // 오버라이드
     virtual void NativeConstruct() override;

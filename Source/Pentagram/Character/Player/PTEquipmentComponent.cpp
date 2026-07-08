@@ -104,6 +104,18 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
             OwnerCharacter->UpdateWeaponVisual(NewItem.ItemMeshAsset, NewItem);
         }
     }
+    else if (NewItem.Item_Type == EItemType::Chest
+      || NewItem.Item_Type == EItemType::Helmet
+      || NewItem.Item_Type == EItemType::Gloves
+      || NewItem.Item_Type == EItemType::Boots)
+    {
+        APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+        if (OwnerCharacter)
+        {
+            // ItemType → EquipSlotType 매핑 필요 (아래 헬퍼 참고)
+            OwnerCharacter->UpdateArmorVisual(ToEquipSlot(NewItem.Item_Type), NewItem.ArmorChestMeshAsset);
+        }
+    }
 
     UE_LOG(LogTemp, Log, TEXT("[장비컴포넌트] 장착 완료: %s (누적 스탯 -> STR: %d, DEF: %d, HP: %d)"),
         *NewItem.Item_Name.ToString(), TotalBonusStr, TotalBonusDef, TotalBonusHp);
@@ -153,6 +165,15 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
         {
             // nullptr이나 IsNull() 상태라면 메시를 비움
             OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
+        }
+    }
+
+    if (SlotType == EEquipSlotType::Chest)
+    {
+        APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+        if (OwnerCharacter)
+        {
+            OwnerCharacter->UpdateArmorVisual(SlotType, TSoftObjectPtr<USkeletalMesh>());
         }
     }
 
@@ -266,4 +287,27 @@ void UPTEquipmentComponent::OnRep_EquippedWeapon()
             OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
         }
     }
+}
+
+void UPTEquipmentComponent::OnRep_EquippedChest()
+{
+    APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+    if (!OwnerCharacter) return;
+
+    if (EquippedChest.bIsEquipped)
+        OwnerCharacter->UpdateArmorVisual(EEquipSlotType::Chest, EquippedChest.MountedItem.ArmorChestMeshAsset);
+    else
+        OwnerCharacter->UpdateArmorVisual(EEquipSlotType::Chest, TSoftObjectPtr<USkeletalMesh>());
+}
+
+void UPTEquipmentComponent::OnRep_EquippedHelmet()
+{
+}
+
+void UPTEquipmentComponent::OnRep_EquippedGloves()
+{
+}
+
+void UPTEquipmentComponent::OnRep_EquippedBoots()
+{
 }

@@ -3,6 +3,7 @@
 #include "PTPlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
@@ -380,6 +381,71 @@ void UPTInventoryComponent::PrintInventoryLog()
         }
     }
     UE_LOG(LogTemp, Log, TEXT("======================================"));
+}
+
+bool UPTInventoryComponent::UseItemAtSlot(int32 SlotIndex)
+{
+    if (!InventorySlots.IsValidIndex(SlotIndex) || InventorySlots[SlotIndex].IsEmpty())
+        return false;
+
+    switch (InventorySlots[SlotIndex].ItemData.Item_Type)
+    {
+    case EItemType::Potion:    return UsePotion(SlotIndex);
+    case EItemType::SkillBook: return UseSkillBook(SlotIndex);
+    default:                   return false;
+    }
+}
+
+bool UPTInventoryComponent::UseSkillBook(int32 SlotIndex)
+{
+    if (!InventorySlots.IsValidIndex(SlotIndex) || InventorySlots[SlotIndex].IsEmpty())
+        return false;
+    if (InventorySlots[SlotIndex].ItemData.Item_Type != EItemType::SkillBook)
+        return false;
+
+    AActor* Owner = GetOwner();
+    if (!Owner) return false;
+
+    if (!Owner->HasAuthority())
+    {
+        Server_UseSkillBook(SlotIndex);
+        return true;
+    }
+
+    const FName SkillID = InventorySlots[SlotIndex].ItemData.GrantSkillID;
+    if (SkillID.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[스킬북] GrantSkillID 비어있음"));
+        return false;
+    }
+
+    UPTPlayerSkillComponent* SkillComp = Owner->FindComponentByClass<UPTPlayerSkillComponent>();
+    if (!SkillComp) return false;
+
+    if (SkillComp->IsSkillLearned(SkillID))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[스킬북] 이미 습득: %s"), *SkillID.ToString());
+        return false;
+    }
+
+    if (!SkillComp->LearnSkill(SkillID))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[스킬북] 습득 실패(레벨/데이터): %s"), *SkillID.ToString());
+        return false;
+    }
+
+    RemoveItemAtSlot(SlotIndex, 1); // 성공 시에만 책 1개 소모
+    return true;
+}
+
+void UPTInventoryComponent::Server_UseSkillBook_Implementation(int32 SlotIndex)
+{
+    UseSkillBook(SlotIndex);
+}
+
+bool UPTInventoryComponent::Server_UseSkillBook_Validate(int32 SlotIndex)
+{
+    return SlotIndex >= 0 && SlotIndex < MaxSlotCount;
 }
 
 void UPTInventoryComponent::BroadcastInventoryChanged()

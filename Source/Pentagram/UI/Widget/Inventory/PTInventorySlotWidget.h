@@ -13,6 +13,7 @@ class UPTItemTooltipWidget;
 // 해제 요청
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUnequipRequested, EItemType, EquipType, int32, ToIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnInventorySlotClicked, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSlotUseRequested, int32, SlotIndex);
 
 UCLASS()
 class PENTAGRAM_API UPTInventorySlotWidget : public UCommonUserWidget
@@ -26,6 +27,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "PT|Inventory")
     FPTOnInventorySlotClicked OnClicked;
+
+    UPROPERTY(BlueprintAssignable, Category = "PT|Inventory")
+    FPTOnSlotUseRequested OnUseRequested;
 
     // ── 일반 함수 ──
     void SetSlotData(const FInventorySlot& InSlot);

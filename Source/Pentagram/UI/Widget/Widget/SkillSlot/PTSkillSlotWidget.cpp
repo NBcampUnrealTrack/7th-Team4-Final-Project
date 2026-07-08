@@ -1,5 +1,6 @@
 ﻿#include "PTSkillSlotWidget.h"
 #include "PTSkillSlotEntryWidget.h"
+#include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 
 void UPTSkillSlotWidget::SetSlotIcon(int32 SlotIndex, UTexture2D* Icon)
@@ -48,6 +49,24 @@ void UPTSkillSlotWidget::InitWithSkillComponent(UPTPlayerSkillComponent* InSkill
                 SetSlotIcon(i, Row->SkillIcon.LoadSynchronous());
             }
         }
+    }
+}
+
+void UPTSkillSlotWidget::RefreshUsability()
+{
+    if (!SkillComp.IsValid()) return;
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwningPlayerPawn());
+    if (!PC) return;
+
+    for (int32 i = 0; i < Entries.Num(); ++i)
+    {
+        const FName ID = SkillComp->GetSkillAtSlot(i);
+        bool bUsable = false;
+        if (ID != NAME_None)
+            if (const FPTSkillRow* Row = SkillComp->GetSkillData(ID))
+                bUsable = Row->IsWeaponAllowed(PC->CurrentWeaponType);
+
+        SetSlotUsable(i, bUsable);
     }
 }
 

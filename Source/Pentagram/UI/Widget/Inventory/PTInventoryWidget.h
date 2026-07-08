@@ -54,6 +54,9 @@ protected:
     UFUNCTION()
     void HandleUnequipRequested(EItemType EquipType, int32 ToIndex);
 
+    UFUNCTION()
+    void HandleSlotUseRequested(int32 SlotIndex);
+
     // ── 위젯 바인딩 ──
     UPROPERTY(meta = (BindWidget))
     UUniformGridPanel* InventoryGrid;

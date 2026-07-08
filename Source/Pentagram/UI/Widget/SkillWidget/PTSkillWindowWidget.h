@@ -6,6 +6,7 @@
 #include "Interface/PTUIContentBoundsInterface.h" // 실제 경로에 맞게 수정
 #include "PTSkillWindowWidget.generated.h"
 
+class UPTPlayerSkillComponent;
 class UListView;
 class UImage;
 class UTextBlock;
@@ -43,9 +44,14 @@ protected:
     UFUNCTION()
     void HandleSkillAssignRequested(int32 SlotIndex, FName SkillID);
 
+    UFUNCTION()
+    void HandleSkillLearned(FName SkillID);
+
     void ShowSkillDetail(const FPTSkillRow& Row);
+
     void ClearSkillDetail();
 
+    UPTPlayerSkillComponent* GetSkillComponent() const;
 protected:
     // ── 위젯 바인딩 ──
     UPROPERTY(meta = (BindWidget))

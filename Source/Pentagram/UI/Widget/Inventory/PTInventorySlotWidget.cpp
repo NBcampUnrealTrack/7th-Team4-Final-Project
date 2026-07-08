@@ -26,14 +26,25 @@ FReply UPTInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 
 FReply UPTInventorySlotWidget::NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-    if (IsEmpty() || !InMouseEvent.GetEffectingButton().IsValid() ||
-        InMouseEvent.GetEffectingButton() != EKeys::LeftMouseButton)
+    if (IsEmpty()) return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+
+    const FKey Button = InMouseEvent.GetEffectingButton();
+
+    // 우클릭 = 사용
+    if (Button == EKeys::RightMouseButton)
     {
-        return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
+        OnUseRequested.Broadcast(SlotIndex);
+        return FReply::Handled();
     }
 
-    OnClicked.Broadcast(SlotIndex);
-    return FReply::Handled();
+    // 좌클릭 = 상점 판매, 선택
+    if (Button == EKeys::LeftMouseButton)
+    {
+        OnClicked.Broadcast(SlotIndex);
+        return FReply::Handled();
+    }
+
+    return Super::NativeOnMouseButtonUp(InGeometry, InMouseEvent);
 }
 
 void UPTInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)

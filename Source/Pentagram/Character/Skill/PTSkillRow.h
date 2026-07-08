@@ -68,6 +68,17 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     float BuffDuration = 0.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    int32 RequiredLevel = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Requirement")
+    TArray<EWeaponType> AllowedWeaponTypes;
+
+    bool IsWeaponAllowed(EWeaponType WeaponType) const
+    {
+        return AllowedWeaponTypes.Num() == 0 || AllowedWeaponTypes.Contains(WeaponType);
+    }
+
     //기본 공격 몽타주
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|BasicAttack")
     TArray<TSoftObjectPtr<UAnimMontage>> ComboMontage; // 검
