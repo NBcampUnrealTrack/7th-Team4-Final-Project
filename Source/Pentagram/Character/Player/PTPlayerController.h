@@ -99,6 +99,10 @@ public:
     UFUNCTION(Server, Reliable)
     void Server_SetReady(bool bReady);
 
+    // 로비 채팅 추가
+    UFUNCTION(Server, Reliable)
+    void Server_SendChatMessage(const FString& Message);
+
     UFUNCTION(Client, Unreliable)
     void Client_ShowDamageNumber(FVector WorldLocation, float DamageAmount, bool bIsCritical);
 
@@ -127,7 +131,7 @@ private:
     APTNPCCharacter* GetBestNearbyNPC() const;
     void AddUIInputMapping();
     void RemoveUIInputMapping();
-    
+
     bool IsMouseOverGameplayUI() const;
 
     // [디버그] 즉사 입력

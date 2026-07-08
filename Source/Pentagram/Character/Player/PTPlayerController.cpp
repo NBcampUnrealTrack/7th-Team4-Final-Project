@@ -24,6 +24,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/Manage/PTUIManagerSubsystem.h"
+#include "Core/PTGameState.h" // 로비 채팅 추가
 #include "UI/Widget/Inventory/PTInventoryWidget.h"
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
 #include "UI/Widget/Shop/PTShopWidget.h"
@@ -1149,6 +1150,22 @@ void APTPlayerController::Server_SetReady_Implementation(bool bReady)
     if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
     {
         PS->SetReady(bReady);
+    }
+}
+
+// 로비 채팅 추가
+void APTPlayerController::Server_SendChatMessage_Implementation(const FString& Message)
+{
+    const FString Trimmed = Message.TrimStartAndEnd();
+    if (Trimmed.IsEmpty() || Trimmed.Len() > 200)
+    {
+        return;
+    }
+
+    if (APTGameState* PTGameState = GetWorld()->GetGameState<APTGameState>())
+    {
+        const FString SenderName = PlayerState ? PlayerState->GetPlayerName() : TEXT("Unknown");
+        PTGameState->Server_AddChatMessage(SenderName, Trimmed);
     }
 }
 

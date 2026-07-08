@@ -84,6 +84,7 @@ protected:
     // 시작 최소 인원 로비 추가
     UPROPERTY(EditDefaultsOnly, Category = "PT|Lobby")
     int32 MinPlayersToStart = 2;
+
 private:
     // 로비 추가
     bool bIsTraveling = false;

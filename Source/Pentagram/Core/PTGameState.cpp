@@ -12,6 +12,7 @@ void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
     DOREPLIFETIME(APTGameState, CurrentPhase);
     DOREPLIFETIME(APTGameState, QuestDataTable);
     DOREPLIFETIME(APTGameState, ItemDataTable);
+    DOREPLIFETIME(APTGameState, ChatLog); // 로비 채팅 추가
 }
 
 void APTGameState::SetCurrentPhase(EGamePhase NewPhase)
@@ -144,3 +145,33 @@ void APTGameState::ApplyItemDataTable() const
     }
 }
 
+// 로비 채팅 추가
+void APTGameState::Server_AddChatMessage(const FString& SenderName, const FString& Message)
+{
+    if (!HasAuthority())
+    {
+        return;
+    }
+
+    FPTChatLogEntry NewEntry;
+    NewEntry.SenderName = SenderName;
+    NewEntry.Message = Message;
+    ChatLog.Add(NewEntry);
+
+    if (ChatLog.Num() > MaxChatLogSize)
+    {
+        ChatLog.RemoveAt(0, ChatLog.Num() - MaxChatLogSize);
+    }
+
+    ForceNetUpdate();
+}
+
+// 로비 채팅 추가
+void APTGameState::OnRep_ChatLog()
+{
+    for (int32 Index = LastBroadcastChatIndex; Index < ChatLog.Num(); ++Index)
+    {
+        OnChatMessageReceived.Broadcast(ChatLog[Index].SenderName, ChatLog[Index].Message);
+    }
+    LastBroadcastChatIndex = ChatLog.Num();
+}

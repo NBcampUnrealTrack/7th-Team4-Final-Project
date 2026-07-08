@@ -10,6 +10,19 @@ class UDataTable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnGamePhaseChanged, EGamePhase, NewPhase);
 
+// 로비 채팅 추가
+USTRUCT(BlueprintType)
+struct FPTChatLogEntry
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FString SenderName;
+
+    UPROPERTY()
+    FString Message;
+};
+
 UCLASS()
 class PENTAGRAM_API APTGameState : public AGameStateBase
 {
@@ -39,6 +52,12 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|GameState")
     void SetItemDataTable(UDataTable* InItemDataTable);
 
+    // 로비 채팅 추가
+    void Server_AddChatMessage(const FString& SenderName, const FString& Message);
+
+    // 로비 채팅 추가
+    UPROPERTY(ReplicatedUsing = OnRep_ChatLog)
+    TArray<FPTChatLogEntry> ChatLog;
 protected:
     UFUNCTION()
     void OnRep_CurrentPhase();
@@ -48,6 +67,10 @@ protected:
 
     UFUNCTION()
     void OnRep_ItemDataTable();
+
+    // 로비 채팅 추가
+    UFUNCTION()
+    void OnRep_ChatLog();
 
     void OnGamePhaseChanged();
     void ApplyQuestDataTable() const;
@@ -62,11 +85,20 @@ protected:
     UPROPERTY(ReplicatedUsing = OnRep_ItemDataTable, VisibleAnywhere, Category = "PT|Item")
     TObjectPtr<UDataTable> ItemDataTable;
 
+private:
+    // 로비 채팅 추가
+    int32 LastBroadcastChatIndex = 0;
+    static constexpr int32 MaxChatLogSize = 100;
+
 public:
     // 로비 갱신 신호 로비 추가
     UPROPERTY(BlueprintAssignable, Category = "PT|Lobby")
     FPTOnLobbyUpdated OnLobbyUpdated;
-    
+
+    // 로비 채팅 추가
+    UPROPERTY(BlueprintAssignable, Category = "PT|Lobby")
+    FPTOnChatMessageReceived OnChatMessageReceived;
+
     UPROPERTY(BlueprintAssignable, Category = "PT|GameState")
     FOnGamePhaseChanged OnGamePhaseChangedEvent;
 };
