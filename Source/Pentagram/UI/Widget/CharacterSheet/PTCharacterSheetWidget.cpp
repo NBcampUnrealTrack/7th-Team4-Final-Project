@@ -2,6 +2,8 @@
 
 #include "PTCharacterSheetWidget.h"
 #include "Components/TextBlock.h"
+#include "Components/Widget.h"
+#include "Layout/SlateRect.h"
 #include "GameFramework/PlayerController.h"
 #include "Character/Player/PTBasePlayerState.h" // 실제 경로에 맞게 수정
 
@@ -29,11 +31,14 @@ void UPTCharacterSheetWidget::NativeOnActivated()
         TryBindFromOwningPlayerState();
     }
 
-    // 창을 열 때마다 최신값으로 전부 리프레시 (HP/MP/공격력/방어력/치명타/이동속도)
+    // 창을 열 때마다 최신값으로 전부 리프레시 (HP/MP/공격력/방어력/치명타/이동속도/레벨)
     if (APTBasePlayerState* PS = BoundPlayerState.Get())
     {
         PS->BroadcastAllStats();
     }
+
+    // 이름은 델리게이트가 없어 매번 직접 읽음
+    RefreshPlayerName();
 }
 
 void UPTCharacterSheetWidget::TryBindFromOwningPlayerState()
@@ -75,6 +80,7 @@ void UPTCharacterSheetWidget::BindToPlayerState(APTBasePlayerState* InPS)
     InPS->OnDefenseChanged.AddUniqueDynamic(this, &UPTCharacterSheetWidget::HandleDefenseChanged);
     InPS->OnCriticalChanged.AddUniqueDynamic(this, &UPTCharacterSheetWidget::HandleCriticalChanged);
     InPS->OnMoveSpeedChanged.AddUniqueDynamic(this, &UPTCharacterSheetWidget::HandleMoveSpeedChanged);
+    InPS->OnLevelChanged.AddUniqueDynamic(this, &UPTCharacterSheetWidget::HandleLevelChanged);
 
     // 바인딩 시점 값 1회 반영 (델리게이트는 값이 변할 때만 브로드캐스트되므로)
     HandleHealthChanged(InPS->CurrentHP, InPS->MaxHP);
@@ -83,6 +89,8 @@ void UPTCharacterSheetWidget::BindToPlayerState(APTBasePlayerState* InPS)
     HandleDefenseChanged(InPS->BaseDef);
     HandleCriticalChanged(InPS->CriticalChance, InPS->CriticalATK);
     HandleMoveSpeedChanged(InPS->MoveSpeed);
+    HandleLevelChanged(InPS->PlayerLevel);
+    RefreshPlayerName();
 }
 
 void UPTCharacterSheetWidget::UnbindFromPlayerState()
@@ -95,6 +103,7 @@ void UPTCharacterSheetWidget::UnbindFromPlayerState()
         PS->OnDefenseChanged.RemoveDynamic(this, &UPTCharacterSheetWidget::HandleDefenseChanged);
         PS->OnCriticalChanged.RemoveDynamic(this, &UPTCharacterSheetWidget::HandleCriticalChanged);
         PS->OnMoveSpeedChanged.RemoveDynamic(this, &UPTCharacterSheetWidget::HandleMoveSpeedChanged);
+        PS->OnLevelChanged.RemoveDynamic(this, &UPTCharacterSheetWidget::HandleLevelChanged);
     }
 
     BoundPlayerState.Reset();
@@ -150,7 +159,7 @@ void UPTCharacterSheetWidget::HandleCriticalChanged(float CriticalChance, float 
 
     if (Txt_CritDamage)
     {
-        // CriticalATK는 배율(2.0 = 200%) 그대로 저장되므로 100 곱해서 % 표기
+
         Txt_CritDamage->SetText(FText::FromString(FString::Printf(TEXT("%.0f%%"), CriticalDamage * 100.f)));
     }
 }
@@ -163,6 +172,26 @@ void UPTCharacterSheetWidget::HandleMoveSpeedChanged(float NewMoveSpeed)
     }
 }
 
+void UPTCharacterSheetWidget::HandleLevelChanged(int32 NewLevel)
+{
+    if (Txt_Level)
+    {
+        Txt_Level->SetText(FText::AsNumber(NewLevel));
+    }
+}
+
+void UPTCharacterSheetWidget::RefreshPlayerName()
+{
+    APTBasePlayerState* PS = BoundPlayerState.Get();
+    if (!PS || !Txt_Name)
+    {
+        return;
+    }
+
+
+    Txt_Name->SetText(FText::FromString(PS->GetPlayerName()));
+}
+
 FText UPTCharacterSheetWidget::FormatStatWithItemBonus(float BaseValue, float ItemBonus) const
 {
     if (FMath::IsNearlyZero(ItemBonus))
@@ -171,4 +200,50 @@ FText UPTCharacterSheetWidget::FormatStatWithItemBonus(float BaseValue, float It
     }
 
     return FText::FromString(FString::Printf(TEXT("%.0f (+%.0f)"), BaseValue, ItemBonus));
+}
+
+bool UPTCharacterSheetWidget::IsScreenPositionOverContent_Implementation(const FVector2D& ScreenPosition) const
+{
+
+    if (Border_Background)
+    {
+        return Border_Background->GetCachedGeometry().IsUnderLocation(ScreenPosition);
+    }
+
+
+    const UWidget* ContentWidgets[] = {
+        Txt_Name, Txt_Level, Txt_HP, Txt_MP,
+        Txt_Atk, Txt_Def, Txt_CritChance, Txt_CritDamage, Txt_MoveSpeed
+    };
+
+    float MinX = TNumericLimits<float>::Max();
+    float MinY = TNumericLimits<float>::Max();
+    float MaxX = TNumericLimits<float>::Lowest();
+    float MaxY = TNumericLimits<float>::Lowest();
+    bool bHasAny = false;
+
+    for (const UWidget* Widget : ContentWidgets)
+    {
+        if (!Widget)
+        {
+            continue;
+        }
+
+        const FSlateRect Rect = Widget->GetCachedGeometry().GetLayoutBoundingRect();
+        MinX = FMath::Min(MinX, Rect.Left);
+        MinY = FMath::Min(MinY, Rect.Top);
+        MaxX = FMath::Max(MaxX, Rect.Right);
+        MaxY = FMath::Max(MaxY, Rect.Bottom);
+        bHasAny = true;
+    }
+
+    if (!bHasAny)
+    {
+        return false;
+    }
+
+    constexpr float ContentPaddingPx = 24.f;
+    const FSlateRect PaddedRect(MinX - ContentPaddingPx, MinY - ContentPaddingPx, MaxX + ContentPaddingPx, MaxY + ContentPaddingPx);
+
+    return PaddedRect.ContainsPoint(ScreenPosition);
 }

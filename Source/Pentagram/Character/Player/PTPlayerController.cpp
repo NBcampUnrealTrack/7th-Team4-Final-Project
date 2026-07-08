@@ -28,6 +28,7 @@
 #include "UI/Widget/NPC/PTNPCDialogueWidget.h"
 #include "UI/Widget/Shop/PTShopWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Framework/Application/SlateApplication.h"
 #include "TimerManager.h"
 
 APTPlayerController::APTPlayerController()
@@ -651,9 +652,42 @@ void APTPlayerController::RotateTowardsMouse()
     Server_SetActorRotation(Rotation);
 }
 
+bool APTPlayerController::IsMouseOverGameplayUI() const
+{
+    if (!IsLocalPlayerController())
+    {
+        return false;
+    }
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    UPTUIManagerSubsystem* UIManager = LP != nullptr ? LP->GetSubsystem<UPTUIManagerSubsystem>() : nullptr;
+    if (!UIManager)
+    {
+        return false;
+    }
+
+    // GetMousePosition()은 뷰포트 픽셀 좌표라서, GetCachedGeometry()/IsUnderLocation()이 쓰는
+    // DPI 스케일 적용된 Slate 절대 좌표랑 어긋남 (DPI Scale이 1.0이 아니면 - 이 프로젝트는 0.67).
+    // FSlateApplication의 커서 좌표를 써야 Slate 기준 좌표계랑 정확히 일치함.
+    const FVector2D AbsoluteCursorPos = FSlateApplication::Get().GetCursorPos();
+
+    return UIManager->IsScreenPositionOverGameplayUI(AbsoluteCursorPos);
+}
+
 void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 {
     if (bGameplayInputBlockedByUI) return;
+
+    if (IsMouseOverGameplayUI())
+    {
+        // IA_Move는 Triggered라 누르고 있는 동안 매 프레임 호출됨.
+        // 드래그 중 커서가 UI 위로 들어오면 새 목적지를 안 찍는 것만으론 부족하고,
+        // 이미 진행 중이던 이동도 여기서 같이 끊어야 함 (안 그러면 Tick이 UI 진입 전
+        // 목적지를 향해 계속 걸어감).
+        bMoveToDestination = false;
+        StopMovement();
+        return;
+    }
 
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
@@ -676,6 +710,7 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
 void APTPlayerController::OnLeftClick(const FInputActionValue& Value)
 {
     if (bGameplayInputBlockedByUI) return;
+    if (IsMouseOverGameplayUI()) return;
 
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
@@ -909,7 +944,6 @@ void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRot
     }
 }
 
-// 서버에서 아이템 획득 시도 처리
 void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBase* TargetItem)
 {
     if (!TargetItem) return;
@@ -917,7 +951,6 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
-    // 서버에서도 캐릭터와 아이템 간의 거리가 유효한지 검증
     float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
     if (Distance2D > 250.0f)
     {
@@ -925,7 +958,6 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
         return;
     }
 
-    // 서버 권한으로 인벤토리에 안전하게 아이템 집어넣기 시도
     if (PlayerCharacter->GetInventoryComponent() &&
         PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
     {
@@ -1120,6 +1152,8 @@ void APTPlayerController::Server_SetReady_Implementation(bool bReady)
 //skill 창
 void APTPlayerController::OnSkillWindowPressed()
 {
+    if (!IsLocalPlayerController()) return;
+
     UE_LOG(LogTemp, Warning, TEXT("[SkillWindow] 1. OnSkillWindowPressed 호출됨"));
 
     ULocalPlayer* LP = GetLocalPlayer();
@@ -1144,9 +1178,11 @@ void APTPlayerController::OnSkillWindowPressed()
     UIManager->ToggleSkillWindow(SkillWindowClass);
 }
 
-// 캐릭터 시트 (K) - 스킬창(OnSkillWindowPressed)과 동일한 형태
+
 void APTPlayerController::OnCharacterSheetPressed()
 {
+    if (!IsLocalPlayerController()) return;
+
     UE_LOG(LogTemp, Warning, TEXT("[CharacterSheet] 1. OnCharacterSheetPressed 호출됨"));
 
     ULocalPlayer* LP = GetLocalPlayer();

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
 #include "Pentagram/Character/Skill/PTSkillRow.h"
+#include "Interface/PTUIContentBoundsInterface.h" // 실제 경로에 맞게 수정
 #include "PTSkillWindowWidget.generated.h"
 
 class UListView;
@@ -11,9 +12,10 @@ class UTextBlock;
 class UPTSkillSlotWidget;
 class UPTSkillEntryObject;
 class UUserWidget;
+class UWidget;
 
 UCLASS()
-class PENTAGRAM_API UPTSkillWindowWidget : public UCommonActivatableWidget
+class PENTAGRAM_API UPTSkillWindowWidget : public UCommonActivatableWidget, public IPTUIContentBoundsInterface
 {
     GENERATED_BODY()
 
@@ -29,6 +31,9 @@ protected:
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
 
+    // Img_Background(창 전체 배경) 기준으로 콘텐츠 영역 판정.
+    virtual bool IsScreenPositionOverContent_Implementation(const FVector2D& ScreenPosition) const override;
+
     // 항목 위젯 생성 시점 (클릭 델리게이트 바인딩용)
     void HandleEntryWidgetGenerated(UUserWidget& EntryWidget);
 
@@ -43,7 +48,6 @@ protected:
 
 protected:
     // ── 위젯 바인딩 ──
-    // 스킬 리스트 (최대 6줄 노출, 나머지 스크롤 — 높이/엔트리크기는 WBP에서 설정)
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UListView> SkillListView;
 
@@ -72,6 +76,9 @@ protected:
 
     UPROPERTY(meta = (BindWidgetOptional))
     TObjectPtr<UTextBlock> Txt_DetailCooldown;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UWidget> Img_Background;
 
     // ── 설정 ──
     UPROPERTY(EditAnywhere, Category = "PT|UI|Skill")

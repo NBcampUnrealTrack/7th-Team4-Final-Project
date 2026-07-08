@@ -9,8 +9,9 @@
 #include "Kismet/GameplayStatics.h"
 #include "Engine/LocalPlayer.h"
 #include "UI/Setting/PTUISettings.h"
-#include "UI/Widget/Notify/PTNotifyManagerWidget.h" // 실제 경로에 맞게 수정
-#include "UI/Widget/Notify/PTNotifyTypes.h"                   // 실제 경로에 맞게 수정
+#include "Interface/PTUIContentBoundsInterface.h"
+#include "UI/Widget/Notify/PTNotifyManagerWidget.h"
+#include "UI/Widget/Notify/PTNotifyTypes.h"
 
 UPTUIManagerSubsystem::UPTUIManagerSubsystem()
 {
@@ -23,19 +24,9 @@ void UPTUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UPTUIManagerSubsystem::Deinitialize()
 {
-    CloseShopInventory();
-    RemoveWidget(InventoryInstance);
-    InventoryInstance = nullptr;
-    RemoveWidget(ShopInstance);
-    ShopInstance = nullptr;
-    RemoveWidget(QuestInstance);
-    QuestInstance = nullptr;
+    CloseAllGameplayUI();
     RemoveWidget(CurrentUIWidget);
     CurrentUIWidget = nullptr;
-    RemoveWidget(SkillWindowInstance);
-    SkillWindowInstance = nullptr;
-    RemoveWidget(CharacterSheetInstance);
-    CharacterSheetInstance = nullptr;
 
     if (CurrentNotifyWidget)
     {
@@ -86,6 +77,21 @@ void UPTUIManagerSubsystem::RemoveWidget(UCommonActivatableWidget* WidgetToRemov
     WidgetToRemove->DeactivateWidget();
 }
 
+void UPTUIManagerSubsystem::CloseAllGameplayUI()
+{
+    RemoveWidget(InventoryInstance);
+    InventoryInstance = nullptr;
+    RemoveWidget(ShopInstance);
+    ShopInstance = nullptr;
+    CloseShopInventory();
+    RemoveWidget(QuestInstance);
+    QuestInstance = nullptr;
+    RemoveWidget(SkillWindowInstance);
+    SkillWindowInstance = nullptr;
+    RemoveWidget(CharacterSheetInstance);
+    CharacterSheetInstance = nullptr;
+}
+
 void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
 {
     // 진입 로그
@@ -123,22 +129,11 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
         CurrentUIWidget = nullptr;
     }
 
-    // 이 레벨에서 게임플레이 UI(인벤토리/샵/퀘스트/스킬창/캐릭터시트) 허용 여부 갱신
     bAllowGameplayUI = Entry->bAllowGameplayUI;
     if (!bAllowGameplayUI)
     {
-        // 레벨 전환 시 열려있던 게임플레이 UI 강제로 닫기
-        RemoveWidget(InventoryInstance);
-        InventoryInstance = nullptr;
-        RemoveWidget(ShopInstance);
-        ShopInstance = nullptr;
-        CloseShopInventory();
-        RemoveWidget(QuestInstance);
-        QuestInstance = nullptr;
-        RemoveWidget(SkillWindowInstance);
-        SkillWindowInstance = nullptr;
-        RemoveWidget(CharacterSheetInstance);
-        CharacterSheetInstance = nullptr;
+
+        CloseAllGameplayUI();
     }
 
     // 이전 스트림 언로드
@@ -182,10 +177,8 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
             *LevelName.ToString(), *Entry->WidgetClass.ToSoftObjectPath().ToString());
     }
 
-    // 레벨별 알림 위젯 갱신 (None이면 내부에서 스킵)
     SetupNotifyWidgetForLevel(*Entry);
 
-    // 지역명이 설정돼 있으면 레벨 진입과 동시에 자동 표시
     if (!Entry->ZoneDisplayName.IsEmpty())
     {
         FPTNotifyData ZoneData;
@@ -198,14 +191,12 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
 
 void UPTUIManagerSubsystem::SetupNotifyWidgetForLevel(const FPTUILevelEntry& InEntry)
 {
-    // 레벨이 바뀌면 기존 알림 위젯은 항상 정리
     if (CurrentNotifyWidget)
     {
         CurrentNotifyWidget->RemoveFromParent();
         CurrentNotifyWidget = nullptr;
     }
 
-    // 이 레벨은 알림 기능 없음 (인트로, 메인메뉴 등)
     if (InEntry.NotifyWidgetClass.IsNull())
     {
         return;
@@ -230,7 +221,6 @@ void UPTUIManagerSubsystem::SetupNotifyWidgetForLevel(const FPTUILevelEntry& InE
     CurrentNotifyWidget = CreateWidget<UPTNotifyManagerWidget>(PlayerController, NotifyClass);
     if (CurrentNotifyWidget)
     {
-        // 다른 UI(샵 등 ZOrder 20)보다 위에 뜨도록 높게 설정
         CurrentNotifyWidget->AddToPlayerScreen(100);
     }
 }
@@ -239,7 +229,6 @@ void UPTUIManagerSubsystem::ShowNotify(const FPTNotifyData& InData)
 {
     if (!CurrentNotifyWidget)
     {
-        // 현재 레벨에 알림 위젯이 설정 안 돼있음 (None) - 조용히 무시
         return;
     }
 
@@ -251,26 +240,17 @@ void UPTUIManagerSubsystem::ToggleInventory(TSubclassOf<UCommonActivatableWidget
     if (!InventoryClass) return;
     if (!CanOpenGameplayUI()) return;
 
-    CloseShopInventory();
+    const bool bWasOpen = InventoryInstance &&
+        (InventoryInstance->IsActivated() || InventoryInstance->IsInViewport());
 
-    bool bIsInventoryOpen = false;
-    if (InventoryInstance)
+    CloseAllGameplayUI();
+
+    if (bWasOpen)
     {
-        if (InventoryInstance->IsActivated() || InventoryInstance->IsInViewport())
-        {
-            bIsInventoryOpen = true;
-        }
+        return;
     }
 
-    if (bIsInventoryOpen)
-    {
-        RemoveWidget(InventoryInstance);
-        InventoryInstance = nullptr;
-    }
-    else
-    {
-        InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
-    }
+    InventoryInstance = PushWidget(InventoryClass, EPTUILayer::GameMenu);
 }
 
 void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> ShopClass)
@@ -278,25 +258,17 @@ void UPTUIManagerSubsystem::ToggleShop(TSubclassOf<UCommonActivatableWidget> Sho
     if (!ShopClass) return;
     if (!CanOpenGameplayUI()) return;
 
-    bool bIsShopOpen = false;
-    if (ShopInstance)
+    const bool bWasOpen = ShopInstance &&
+        (ShopInstance->IsActivated() || ShopInstance->IsInViewport());
+
+    CloseAllGameplayUI();
+
+    if (bWasOpen)
     {
-        if (ShopInstance->IsActivated() || ShopInstance->IsInViewport())
-        {
-            bIsShopOpen = true;
-        }
+        return;
     }
 
-    if (bIsShopOpen)
-    {
-        RemoveWidget(ShopInstance);
-        ShopInstance = nullptr;
-        CloseShopInventory();
-    }
-    else
-    {
-        ShopInstance = PushWidget(ShopClass, EPTUILayer::GameMenu);
-    }
+    ShopInstance = PushWidget(ShopClass, EPTUILayer::GameMenu);
 }
 
 UCommonActivatableWidget* UPTUIManagerSubsystem::OpenInventoryForShop(
@@ -362,11 +334,13 @@ void UPTUIManagerSubsystem::ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestC
         return;
     }
 
-    if (QuestInstance != nullptr &&
-        (QuestInstance->IsActivated() || QuestInstance->IsInViewport()))
+    const bool bWasOpen = QuestInstance &&
+        (QuestInstance->IsActivated() || QuestInstance->IsInViewport());
+
+    CloseAllGameplayUI();
+
+    if (bWasOpen)
     {
-        RemoveWidget(QuestInstance);
-        QuestInstance = nullptr;
         return;
     }
 
@@ -392,26 +366,15 @@ void UPTUIManagerSubsystem::ToggleSkillWindow(TSubclassOf<UCommonActivatableWidg
         return;
     }
 
-    bool bIsOpen = false;
-    if (SkillWindowInstance)
-    {
-        if (SkillWindowInstance->IsActivated() || SkillWindowInstance->IsInViewport())
-        {
-            bIsOpen = true;
-        }
-    }
-    if (bIsOpen)
-    {
+    const bool bWasOpen = SkillWindowInstance &&
+        (SkillWindowInstance->IsActivated() || SkillWindowInstance->IsInViewport());
 
-        RemoveWidget(SkillWindowInstance);
-        SkillWindowInstance = nullptr;
+    CloseAllGameplayUI();
+
+    if (bWasOpen)
+    {
         return;
     }
-
-    // 인벤토리/샵/캐릭터시트와 겹치지 않게 정리
-    if (InventoryInstance) { RemoveWidget(InventoryInstance); InventoryInstance = nullptr; }
-    if (ShopInstance) { RemoveWidget(ShopInstance); ShopInstance = nullptr; CloseShopInventory(); }
-    if (CharacterSheetInstance) { RemoveWidget(CharacterSheetInstance); CharacterSheetInstance = nullptr; }
 
     SkillWindowInstance = PushWidget(SkillWindowClass, EPTUILayer::GameMenu);
 
@@ -430,27 +393,45 @@ void UPTUIManagerSubsystem::ToggleCharacterSheet(TSubclassOf<UCommonActivatableW
         return;
     }
 
-    bool bIsOpen = false;
-    if (CharacterSheetInstance)
-    {
-        if (CharacterSheetInstance->IsActivated() || CharacterSheetInstance->IsInViewport())
-        {
-            bIsOpen = true;
-        }
-    }
+    const bool bWasOpen = CharacterSheetInstance &&
+        (CharacterSheetInstance->IsActivated() || CharacterSheetInstance->IsInViewport());
 
-    if (bIsOpen)
+    CloseAllGameplayUI();
+
+    if (bWasOpen)
     {
-        RemoveWidget(CharacterSheetInstance);
-        CharacterSheetInstance = nullptr;
         return;
     }
 
-    // 인벤토리/샵/스킬창과 겹치지 않게 정리
-    if (InventoryInstance) { RemoveWidget(InventoryInstance); InventoryInstance = nullptr; }
-    if (ShopInstance) { RemoveWidget(ShopInstance); ShopInstance = nullptr; CloseShopInventory(); }
-    if (SkillWindowInstance) { RemoveWidget(SkillWindowInstance); SkillWindowInstance = nullptr; }
-
     CharacterSheetInstance = PushWidget(CharacterSheetClass, EPTUILayer::GameMenu);
+}
 
+bool UPTUIManagerSubsystem::IsScreenPositionOverGameplayUI(const FVector2D& ScreenPosition) const
+{
+    auto IsOverWidget = [&ScreenPosition](UCommonActivatableWidget* Widget) -> bool
+    {
+        if (!Widget)
+        {
+            return false;
+        }
+
+        if (!Widget->IsActivated() && !Widget->IsInViewport())
+        {
+            return false;
+        }
+
+        if (Widget->Implements<UPTUIContentBoundsInterface>())
+        {
+            return IPTUIContentBoundsInterface::Execute_IsScreenPositionOverContent(Widget, ScreenPosition);
+        }
+
+        return false;
+    };
+
+    return IsOverWidget(InventoryInstance)
+        || IsOverWidget(ShopInstance)
+        || IsOverWidget(ShopInventoryInstance)
+        || IsOverWidget(QuestInstance)
+        || IsOverWidget(SkillWindowInstance)
+        || IsOverWidget(CharacterSheetInstance);
 }
