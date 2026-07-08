@@ -127,6 +127,8 @@ private:
     APTNPCCharacter* GetBestNearbyNPC() const;
     void AddUIInputMapping();
     void RemoveUIInputMapping();
+    
+    bool IsMouseOverGameplayUI() const;
 
     // [디버그] 즉사 입력
     void OnDebugKillPressed();

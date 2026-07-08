@@ -41,6 +41,21 @@ void UPTInventoryWidget::ClearShopSellTarget()
     ShopWidgetForSell = nullptr;
 }
 
+bool UPTInventoryWidget::IsScreenPositionOverContent_Implementation(const FVector2D& ScreenPosition) const
+{
+    if (EquipPanel && EquipPanel->GetCachedGeometry().IsUnderLocation(ScreenPosition))
+    {
+        return true;
+    }
+
+    if (InventoryGrid && InventoryGrid->GetCachedGeometry().IsUnderLocation(ScreenPosition))
+    {
+        return true;
+    }
+
+    return false;
+}
+
 void UPTInventoryWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
@@ -54,6 +69,7 @@ void UPTInventoryWidget::NativeOnActivated()
     BindInventoryChanged();
     RefreshAllSlots();
 }
+
 
 void UPTInventoryWidget::NativeOnDeactivated()
 {

@@ -5,6 +5,7 @@
 #include "Components/ListView.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/Widget.h"
 #include "Character/Player/PTPlayerController.h"
 
 void UPTSkillWindowWidget::NativeOnInitialized()
@@ -28,9 +29,6 @@ void UPTSkillWindowWidget::NativeOnActivated()
 
     RefreshSkillList();
     ClearSkillDetail();
-
-    // 스킬창은 인벤토리와 달리 열려있는 동안에도 마우스 이동/공격이 계속 가능해야 하므로
-    // 게임 입력을 막지 않는다 (SetGameplayInputBlockedByUI 호출 없음)
 }
 
 void UPTSkillWindowWidget::NativeOnDeactivated()
@@ -47,6 +45,16 @@ bool UPTSkillWindowWidget::NativeOnHandleBackAction()
 {
     DeactivateWidget();
     return true;
+}
+
+bool UPTSkillWindowWidget::IsScreenPositionOverContent_Implementation(const FVector2D& ScreenPosition) const
+{
+    if (!Img_Background)
+    {
+        return false;
+    }
+
+    return Img_Background->GetCachedGeometry().IsUnderLocation(ScreenPosition);
 }
 
 void UPTSkillWindowWidget::RefreshSkillList()
@@ -107,7 +115,6 @@ void UPTSkillWindowWidget::HandleSkillAssignRequested(int32 SlotIndex, FName Ski
 {
     if (SkillID == NAME_None) return;
 
-    // 서버에 배정 요청 → 성공 시 Client RPC로 모든 슬롯바 인스턴스(HUD 포함)가 자동 동기화됨
     if (APTPlayerController* PC = Cast<APTPlayerController>(GetOwningPlayer()))
     {
         PC->Server_RequestAssignSkillToSlot(SkillID, SlotIndex);

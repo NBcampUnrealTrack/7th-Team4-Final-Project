@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
 #include "Item/PTItemTypes.h"
+#include "Interface/PTUIContentBoundsInterface.h" // 실제 경로에 맞게 수정
 #include "PTInventoryWidget.generated.h"
 
 class UUniformGridPanel;
@@ -12,7 +13,7 @@ class UPTEquipPanelWidget;
 class UPTShopWidget;
 
 UCLASS()
-class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget
+class PENTAGRAM_API UPTInventoryWidget : public UCommonActivatableWidget, public IPTUIContentBoundsInterface
 {
     GENERATED_BODY()
 
@@ -23,12 +24,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|Inventory|Shop")
     void ClearShopSellTarget();
 
+     virtual bool IsScreenPositionOverContent_Implementation(const FVector2D& ScreenPosition) const override;
+
 protected:
     // ── 오버라이드 ──
     virtual void NativeOnInitialized() override;
     virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
+
 
     // ── 일반 함수 ──
     void BuildSlots();
