@@ -61,6 +61,10 @@ APTPlayerCharacter::APTPlayerCharacter()
     bUseControllerRotationYaw = false;
 
     CharacterType = ECharacterType::Player;
+
+    ArmorChestMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ArmorChestMesh"));
+    ArmorChestMesh->SetupAttachment(GetMesh());
+    ArmorChestMesh->SetAnimationMode(EAnimationMode::AnimationCustomMode);
 }
 
 void APTPlayerCharacter::PossessedBy(AController* NewController)
@@ -84,6 +88,8 @@ void APTPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
     UE_LOG(LogTemp, Warning, TEXT("PlayerCharacter BeginPlay Called"));
+
+    ArmorChestMesh->SetLeaderPoseComponent(GetMesh());
 
     AController* CT = GetController();
     if (CT)
@@ -500,6 +506,30 @@ void APTPlayerCharacter::UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& N
     ApplyWeaponAnimLayer(NewWeaponType);
 }
 
+void APTPlayerCharacter::UpdateArmorVisual(EEquipSlotType SlotType, TSoftObjectPtr<USkeletalMesh> ArmorMesh)
+{
+    USkeletalMeshComponent* TargetComp = nullptr;
+    switch (SlotType)
+    {
+        case EEquipSlotType::Chest:  TargetComp = ArmorChestMesh;  break;
+        //case EEquipSlotType::Helmet: TargetComp = ArmorHelmetMesh; break;
+        //case EEquipSlotType::Gloves: TargetComp = ArmorGlovesMesh; break;
+        //case EEquipSlotType::Boots:  TargetComp = ArmorBootsMesh; break;
+        default: return;
+    }
+    if (!TargetComp) return;
+
+    if (ArmorMesh.IsNull())
+    {
+        TargetComp->SetSkeletalMesh(nullptr); // 벗기기
+        return;
+    }
+
+    USkeletalMesh* Loaded = ArmorMesh.LoadSynchronous();
+    TargetComp->SetSkeletalMesh(Loaded);
+    TargetComp->SetLeaderPoseComponent(GetMesh());
+}
+
 void APTPlayerCharacter::ApplyBuff(float BonusMultiplier, float Duration)
 {
     if (!HasAuthority()) return;
@@ -671,6 +701,12 @@ void APTPlayerCharacter::OnCombatTransitionFinished()
     {
         SkillComp->PlayPendingAction();
     }
+}
+
+void APTPlayerCharacter::EquipArmorChest(USkeletalMesh* NewArmorMesh)
+{
+    ArmorChestMesh->SetSkeletalMesh(NewArmorMesh);
+    ArmorChestMesh->SetLeaderPoseComponent(GetMesh());
 }
 
 void APTPlayerCharacter::OnRep_CurrentWeaponType()

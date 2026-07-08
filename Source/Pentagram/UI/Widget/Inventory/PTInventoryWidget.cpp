@@ -105,8 +105,13 @@ void UPTInventoryWidget::BuildSlots()
         InventorySlot->SetSlotIndex(i);
         InventorySlot->OnClicked.RemoveDynamic(this, &UPTInventoryWidget::HandleSlotClicked);
         InventorySlot->OnClicked.AddDynamic(this, &UPTInventoryWidget::HandleSlotClicked);
+
+        InventorySlot->OnUseRequested.RemoveDynamic(this, &UPTInventoryWidget::HandleSlotUseRequested);
+        InventorySlot->OnUseRequested.AddDynamic(this, &UPTInventoryWidget::HandleSlotUseRequested);
+
         InventoryGrid->AddChildToUniformGrid(InventorySlot, i / Columns, i % Columns);
         SlotWidgets.Add(InventorySlot);
+
     }
 
 }
@@ -201,4 +206,15 @@ void UPTInventoryWidget::HandleUnequipRequested(EItemType EquipType, int32 ToInd
     if (!PC) return;
 
     PC->RequestUnequipItem(EquipType, ToIndex);
+}
+
+void UPTInventoryWidget::HandleSlotUseRequested(int32 SlotIndex)
+{
+    // 상점에서 판매 대상 선택 모드일 땐 사용하지 않음 (안전장치)
+    if (ShopWidgetForSell != nullptr) return;
+
+    UPTInventoryComponent* Inventory = ResolveInventoryComponent();
+    if (!Inventory) return;
+
+    Inventory->UseItemAtSlot(SlotIndex);
 }

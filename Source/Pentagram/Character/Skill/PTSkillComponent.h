@@ -34,6 +34,8 @@ public:
 
     virtual bool TryActivateSkillChecked(const FPTSkillActivationRequest& Request);
 
+    virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
     // 스킬 슬롯에 배치
     UFUNCTION(BlueprintCallable, Category = "Skill")
     void AssignSkillToSlot(FName SkillID, int32 SlotIndex);
@@ -80,7 +82,7 @@ public:
     TObjectPtr<UDataTable> SkillDataTable;
 
     // 스킬 슬롯 (Q, W, E, R)
-    UPROPERTY(EditAnywhere, Category = "Skill")
+    UPROPERTY(EditAnywhere, Replicated, Category = "Skill")
     TArray<FName> SkillSlots;
 
     // 쿨다운 중인 슬롯 플래그

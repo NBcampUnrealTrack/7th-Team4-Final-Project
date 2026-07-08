@@ -26,7 +26,8 @@ enum class EItemType : uint8
     Helmet       UMETA(DisplayName = "Helmet"),
     Gloves       UMETA(DisplayName = "Gloves"),
     Boots        UMETA(DisplayName = "Boots"),
-    Potion       UMETA(DisplayName = "Potion")
+    Potion       UMETA(DisplayName = "Potion"),
+    SkillBook    UMETA(DisplayName = "Skill Book")
 };
 
 //무기 소분류
@@ -36,7 +37,8 @@ enum class EWeaponType : uint8
     Hands       UMETA(DisplayName = "Hands"),
     Sword       UMETA(DisplayName = "Sword"),
     Wand         UMETA(DisplayName = "Wand"),
-    Bow          UMETA(DisplayName = "Bow")
+    Bow          UMETA(DisplayName = "Bow"),
+    None         UMETA(DisplayName = "None")
 };
 
 // 아이템 등급
@@ -47,6 +49,7 @@ enum class EItemGrade : uint8
     Common       UMETA(DisplayName = "Common"),
     Rare         UMETA(DisplayName = "Rare")
 };
+
 
 // 부위별 추가 옵션의 종류, 확률 가중치, 수치 범위를 정하는 구조체
 USTRUCT(BlueprintType)
@@ -89,6 +92,9 @@ struct FItemData : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     FText Item_Description;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Skill")
+    FName GrantSkillID;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EItemCategory Item_Category;
@@ -141,6 +147,10 @@ struct FItemData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<UStaticMesh> ItemMeshAsset;
 
+    // 방어구 외형용 — 캐릭터 스켈레톤 공유, 리더 포즈로 구동
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    TSoftObjectPtr<USkeletalMesh> ArmorChestMeshAsset;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     FVector WeaponRelativeLocation = FVector::ZeroVector;
 
@@ -188,4 +198,6 @@ struct FInventorySlot
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<UTexture2D> ItemIconAsset;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    TSoftObjectPtr<USkeletalMesh> ArmorChestMeshAsset;
 };

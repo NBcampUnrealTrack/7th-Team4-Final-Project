@@ -4,6 +4,7 @@
 #include "Character/PTBaseCharacter.h"
 #include "InputActionValue.h"
 #include "Item/PTItemTypes.h"
+#include "PTEquipmentComponent.h"
 #include "PTPlayerCharacter.generated.h"
 
 class UPTInventoryComponent;
@@ -69,6 +70,8 @@ public:
     // [장비 컴포넌트] 무기 장착/해제 시 외형 업데이트 호출
     void UpdateWeaponVisual(const TSoftObjectPtr<UStaticMesh>& NewMeshAsset, const FItemData& ItemData = FItemData());
 
+    void UpdateArmorVisual(EEquipSlotType SlotType, TSoftObjectPtr<USkeletalMesh> ArmorMesh);
+
     void ApplyBuff(float BonusMultiplier, float Duration);
 
     void OnAtkBuffExpired();
@@ -93,6 +96,9 @@ public:
 
     UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
     void OnStructureUnHidden(AActor* UnHiddenActor);
+
+    UFUNCTION(BlueprintCallable, Category = "Equip")
+    void EquipArmorChest(USkeletalMesh* NewArmorMesh);
 
     UFUNCTION()
     void OnRep_CurrentWeaponType();
@@ -181,6 +187,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Equip|AnimLayer")
     TSubclassOf<UAnimInstance> BowAnimLayerClass;
+
+    UPROPERTY(VisibleAnywhere, Category = "Equip")
+    TObjectPtr<USkeletalMeshComponent> ArmorChestMesh;
 
     UPROPERTY(EditAnywhere, Category = "Anim")
     TObjectPtr<UAnimMontage> DeathMontage;

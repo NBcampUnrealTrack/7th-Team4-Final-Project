@@ -6,6 +6,7 @@
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Net/UnrealNetwork.h"
 
 void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& Request)
 {
@@ -48,6 +49,21 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
     if (bIsCooldown[SlotIndex])
     {
         UE_LOG(LogTemp, Warning, TEXT("Skill 쿨다운 중 - 남은 시간: %.1f초"), GetCooldownRemaining(SlotIndex));
+        return;
+    }
+
+    // 스킬 습득 여부
+    if (!IsSkillLearned(Request.SkillRowName))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 미습득 - %s"), *Request.SkillRowName.ToString());
+        return;
+    }
+
+    // 무기/레벨 제한
+    FText Reason;
+    if (!CanUseSkill(*SkillData, Reason))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 사용 제한 - %s"), *Reason.ToString());
         return;
     }
 
@@ -159,6 +175,12 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
     {
         PC->EnterCombat();
     }
+}
+
+void UPTPlayerSkillComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME_CONDITION(UPTPlayerSkillComponent, LearnedSkills, COND_OwnerOnly);
 }
 
 void UPTPlayerSkillComponent::TryDodge()
@@ -447,12 +469,86 @@ void UPTPlayerSkillComponent::Multicast_StopMovementForSkill_Implementation()
     }
 }
 
+void UPTPlayerSkillComponent::TryActivateSkillBySlot(int32 SlotIndex)
+{
+    if (!SkillSlots.IsValidIndex(SlotIndex)) return;
+
+    const FName SkillID = SkillSlots[SlotIndex];
+    if (SkillID.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Skill 슬롯 %d 비어있음"), SlotIndex)
+        return;
+    }
+
+    FPTSkillActivationRequest Request;
+    Request.SkillRowName = SkillID;
+    Request.SkillDataTable = SkillDataTable;
+    TryActivateSkill(Request);
+}
+
+void UPTPlayerSkillComponent::OnRep_LearnedSkills()
+{
+    OnSkillLearned.Broadcast(NAME_None);
+}
+
+bool UPTPlayerSkillComponent::IsSkillLearned(FName SkillID) const
+{
+    return SkillID != NAME_None && LearnedSkills.Contains(SkillID);
+}
+
+bool UPTPlayerSkillComponent::LearnSkill(FName SkillID)
+{
+    AActor* Owner = GetOwner();
+    if (!Owner || !Owner->HasAuthority() || SkillID.IsNone()) return false;
+    if (LearnedSkills.Contains(SkillID)) return false;
+
+    const FPTSkillRow* Row = GetSkillData(SkillID);
+    if (!Row) return false;
+
+    if (GetOwnerLevel() < Row->RequiredLevel) return false; // 레벨 제한
+
+    LearnedSkills.Add(SkillID);
+    OnSkillLearned.Broadcast(SkillID);   // 리슨서버 호스트 UI 갱신
+    return true;
+}
+
+bool UPTPlayerSkillComponent::CanUseSkill(const FPTSkillRow& Row, FText& OutReason) const
+{
+    if (GetOwnerLevel() < Row.RequiredLevel)
+    {
+        OutReason = FText::FromString(TEXT("레벨이 부족합니다."));
+        return false;
+    }
+    if (const APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner()))
+    {
+        if (!Row.IsWeaponAllowed(PC->CurrentWeaponType))
+        {
+            OutReason = FText::FromString(TEXT("현재 무기로는 사용할 수 없습니다."));
+            return false;
+        }
+    }
+    return true;
+}
+
 void UPTPlayerSkillComponent::OnCooldownEnd(int32 SlotIndex)
 {
     Super::OnCooldownEnd(SlotIndex);
 
     // UI 쿨다운 종료 델리게이트 발행
     OnSkillCooldownEnd.Broadcast(SlotIndex);
+}
+
+int32 UPTPlayerSkillComponent::GetOwnerLevel() const
+{
+    if (const APawn* P = Cast<APawn>(GetOwner()))
+    {
+        if (const APTBasePlayerState* PS = P->GetPlayerState<APTBasePlayerState>())
+        {
+            // TODO: PlayerState의 실제 레벨 필드/게터에 맞춰 교체
+            // return PS->CurrentLevel;
+        }
+    }
+    return 1;
 }
 
 void UPTPlayerSkillComponent::Client_NotifyCooldownStarted_Implementation(int32 SlotIndex, float Duration)

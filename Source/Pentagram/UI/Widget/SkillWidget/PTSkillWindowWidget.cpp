@@ -7,6 +7,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Widget.h"
 #include "Character/Player/PTPlayerController.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 
 void UPTSkillWindowWidget::NativeOnInitialized()
 {
@@ -21,6 +22,8 @@ void UPTSkillWindowWidget::NativeOnInitialized()
     {
         EquippedSlots->OnSkillAssignRequested.AddUniqueDynamic(this, &UPTSkillWindowWidget::HandleSkillAssignRequested);
     }
+
+    if (UPTPlayerSkillComponent* SC = GetSkillComponent()) SC->OnSkillLearned.AddUniqueDynamic(this, &UPTSkillWindowWidget::HandleSkillLearned);
 }
 
 void UPTSkillWindowWidget::NativeOnActivated()
@@ -59,7 +62,27 @@ bool UPTSkillWindowWidget::IsScreenPositionOverContent_Implementation(const FVec
 
 void UPTSkillWindowWidget::RefreshSkillList()
 {
-    UE_LOG(LogTemp, Warning, TEXT("[SkillList] RefreshSkillList 호출, SkillListView=%d, SkillDataTable=%d"),
+    if (!SkillListView) return;
+
+    SkillListView->ClearListItems();
+    SkillEntries.Reset();
+
+    UPTPlayerSkillComponent* SkillComp = GetSkillComponent();
+    if (!SkillComp || !SkillDataTable) return;
+
+    for (const FName& SkillID : SkillComp->LearnedSkills)
+    {
+        const FPTSkillRow* Row = SkillDataTable->FindRow<FPTSkillRow>(SkillID, TEXT("RefreshSkillList"));
+        if (!Row) continue;
+
+        UPTSkillEntryObject* Entry = NewObject<UPTSkillEntryObject>(this);
+        Entry->SkillID  = SkillID;
+        Entry->SkillRow = *Row;
+        SkillEntries.Add(Entry);
+        SkillListView->AddItem(Entry);
+    }
+
+   /* UE_LOG(LogTemp, Warning, TEXT("[SkillList] RefreshSkillList 호출, SkillListView=%d, SkillDataTable=%d"),
         SkillListView != nullptr, SkillDataTable != nullptr);
 
     if (!SkillListView || !SkillDataTable) return;
@@ -95,6 +118,7 @@ void UPTSkillWindowWidget::RefreshSkillList()
     }
 
     UE_LOG(LogTemp, Warning, TEXT("[SkillList] ListView에 AddItem 완료"));
+    */
 }
 
 void UPTSkillWindowWidget::HandleEntryWidgetGenerated(UUserWidget& EntryWidget)
@@ -119,6 +143,11 @@ void UPTSkillWindowWidget::HandleSkillAssignRequested(int32 SlotIndex, FName Ski
     {
         PC->Server_RequestAssignSkillToSlot(SkillID, SlotIndex);
     }
+}
+
+void UPTSkillWindowWidget::HandleSkillLearned(FName SkillID)
+{
+    RefreshSkillList();
 }
 
 void UPTSkillWindowWidget::ShowSkillDetail(const FPTSkillRow& Row)
@@ -155,4 +184,11 @@ void UPTSkillWindowWidget::ClearSkillDetail()
     if (Txt_DetailAttack)   Txt_DetailAttack->SetText(FText::GetEmpty());
     if (Txt_DetailManaCost) Txt_DetailManaCost->SetText(FText::GetEmpty());
     if (Txt_DetailCooldown) Txt_DetailCooldown->SetText(FText::GetEmpty());
+}
+
+UPTPlayerSkillComponent* UPTSkillWindowWidget::GetSkillComponent() const
+{
+    if (APawn* P = GetOwningPlayerPawn())
+        return P->FindComponentByClass<UPTPlayerSkillComponent>();
+    return nullptr;
 }

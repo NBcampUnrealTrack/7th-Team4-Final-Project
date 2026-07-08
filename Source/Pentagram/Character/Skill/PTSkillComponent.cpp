@@ -3,6 +3,7 @@
 #include "Character/PTBaseCharacter.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 static constexpr int32 MaxSkillSlots = 5;
 
@@ -115,6 +116,12 @@ bool UPTSkillComponent::TryActivateSkillChecked(const FPTSkillActivationRequest&
     }
 
     return true;
+}
+
+void UPTSkillComponent::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+    DOREPLIFETIME(UPTSkillComponent, SkillSlots);
 }
 
 FPTSkillRow* UPTSkillComponent::GetSkillData(FName SkillID) const

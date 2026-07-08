@@ -846,6 +846,9 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
           return;
       }
 
+    UE_LOG(LogTemp, Warning, TEXT("[Skill1] Slot0 = %s"), *PC->SkillComp->GetSkillAtSlot(0).ToString());
+    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
+
     if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[0]) return;
@@ -868,7 +871,7 @@ void APTPlayerController::OnSkill2(const FInputActionValue& Value)
           return;
       }
 
-    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+    if (PC->SkillComp->GetCooldownRemaining(1) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[1]) return;
 
@@ -889,7 +892,7 @@ void APTPlayerController::OnSkill3(const FInputActionValue& Value)
           return;
       }
 
-    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+    if (PC->SkillComp->GetCooldownRemaining(2) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[2]) return;
 
@@ -910,7 +913,7 @@ void APTPlayerController::OnSkill4(const FInputActionValue& Value)
           return;
       }
 
-    if (PC->SkillComp->GetCooldownRemaining(0) > 0.f) return;
+    if (PC->SkillComp->GetCooldownRemaining(3) > 0.f) return;
 
     if (PC->SkillComp->bIsCooldown[3]) return;
 

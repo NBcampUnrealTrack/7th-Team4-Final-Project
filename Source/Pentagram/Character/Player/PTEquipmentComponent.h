@@ -15,6 +15,18 @@ enum class EEquipSlotType : uint8
     Boots   UMETA(DisplayName = "Boots")
 };
 
+static EEquipSlotType ToEquipSlot(EItemType ItemType)
+{
+    switch (ItemType)
+    {
+    case EItemType::Chest:  return EEquipSlotType::Chest;
+    case EItemType::Helmet: return EEquipSlotType::Helmet;
+    case EItemType::Gloves: return EEquipSlotType::Gloves;
+    case EItemType::Boots:  return EEquipSlotType::Boots;
+    default:                return EEquipSlotType::Weapon;
+    }
+}
+
 USTRUCT(BlueprintType)
 struct FEquipmentSlot
 {
@@ -94,6 +106,18 @@ protected:
     UFUNCTION()
     void OnRep_EquippedWeapon();
 
+    UFUNCTION()
+    void OnRep_EquippedChest();
+
+    UFUNCTION()
+    void OnRep_EquippedHelmet();
+
+    UFUNCTION()
+    void OnRep_EquippedGloves();
+
+    UFUNCTION()
+    void OnRep_EquippedBoots();
+
     // ── 멤버 변수 (protected) ────────────────────────────────────────────────
 
     // 장착된 무기 슬롯
@@ -101,19 +125,19 @@ protected:
     FEquipmentSlot EquippedWeapon;
 
     // 장착된 갑옷 슬롯
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_EquippedChest, Category = "Equipment")
     FEquipmentSlot EquippedChest;
 
     // 장착된 모자 슬롯
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_EquippedHelmet, Category = "Equipment")
     FEquipmentSlot EquippedHelmet;
 
     // 장착된 장갑 슬롯
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_EquippedGloves, Category = "Equipment")
     FEquipmentSlot EquippedGloves;
 
     // 장착된 신발 슬롯
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Equipment")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_EquippedBoots, Category = "Equipment")
     FEquipmentSlot EquippedBoots;
 
     // 장착 중인 모든 장비의 스탯 합산

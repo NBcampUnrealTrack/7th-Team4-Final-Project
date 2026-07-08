@@ -14,6 +14,8 @@ public:
     // 스킬 발동 시도
     virtual void TryActivateSkill(const FPTSkillActivationRequest& Request) override;
 
+    virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+
     // 닷지 발동 시도 (로컬 클라이언트에서 호출)
     void TryDodge();
 
@@ -74,6 +76,19 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_StopBasicAttack();
 
+    UFUNCTION(BlueprintCallable, Category = "Skill")
+    void TryActivateSkillBySlot(int32 SlotIndex);
+
+    UFUNCTION()
+    void OnRep_LearnedSkills();
+
+    UFUNCTION(BlueprintPure, Category = "Skill")
+    bool IsSkillLearned(FName SkillID) const;
+
+    bool LearnSkill(FName SkillID);
+
+    bool CanUseSkill(const FPTSkillRow& Row, FText& OutReason) const;
+
 protected:
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex) override;
@@ -86,7 +101,12 @@ public:
     UPROPERTY(EditAnywhere, Category = "BasicAttack")
     FName BasicAttackSkillID = FName("BasicAttack");
 
+    UPROPERTY(ReplicatedUsing = OnRep_LearnedSkills, VisibleAnywhere, BlueprintReadOnly, Category = "PT|Skill")
+    TArray<FName> LearnedSkills;
+
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillCooldownEnd, int32, SlotIndex);
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSkillLearned, FName, SkillID);
 
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillCooldownEnd OnSkillCooldownEnd;
@@ -102,14 +122,18 @@ public:
 
     UPROPERTY(VisibleAnywhere, Category = "Attack")
     bool bIsAttacking = false;  // 공격 중 여부
-    
+
     UPROPERTY(BlueprintAssignable)
     FPTOnSkillSlotAssigned OnSkillSlotAssigned;
 
+    UPROPERTY(BlueprintAssignable, Category = "Skill")
+    FPTOnSkillLearned OnSkillLearned;
 
     bool bPendingBasicAttack = false;
 
     bool bPendingSkill = false;
 
     FPTSkillActivationRequest PendingSkillRequest;
+
+    int32 GetOwnerLevel() const;
 };
