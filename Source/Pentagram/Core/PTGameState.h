@@ -55,9 +55,14 @@ public:
     // 로비 채팅 추가
     void Server_AddChatMessage(const FString& SenderName, const FString& Message);
 
-    // 로비 채팅 추가
-    UPROPERTY(ReplicatedUsing = OnRep_ChatLog)
+    // 로비 채팅 추가 (과거 로그 조회용, 실시간 알림은 Multicast로 처리)
+    UPROPERTY(Replicated)
     TArray<FPTChatLogEntry> ChatLog;
+
+    // 서버 호출 시 서버 자신 + 모든 클라이언트에서 동시에 실행됨 (리슨서버 호스트도 예외 없음)
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_ChatMessage(const FString& SenderName, const FString& Message);
+
 protected:
     UFUNCTION()
     void OnRep_CurrentPhase();
@@ -67,10 +72,6 @@ protected:
 
     UFUNCTION()
     void OnRep_ItemDataTable();
-
-    // 로비 채팅 추가
-    UFUNCTION()
-    void OnRep_ChatLog();
 
     void OnGamePhaseChanged();
     void ApplyQuestDataTable() const;
@@ -86,8 +87,7 @@ protected:
     TObjectPtr<UDataTable> ItemDataTable;
 
 private:
-    // 로비 채팅 추가
-    int32 LastBroadcastChatIndex = 0;
+    // 로비 채팅 추가 (로그 최대 보관 개수)
     static constexpr int32 MaxChatLogSize = 100;
 
 public:
