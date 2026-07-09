@@ -132,7 +132,6 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     bAllowGameplayUI = Entry->bAllowGameplayUI;
     if (!bAllowGameplayUI)
     {
-
         CloseAllGameplayUI();
     }
 

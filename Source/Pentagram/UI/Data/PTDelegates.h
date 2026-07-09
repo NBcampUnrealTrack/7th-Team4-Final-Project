@@ -48,3 +48,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnNotifyFinished);
 
 // 스킬 슬롯
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnSkillSlotAssigned, int32, SlotIndex, FName, SkillID);
+
+// 로비 채팅
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnChatMessageReceived, FString, SenderName, FString, Message);
