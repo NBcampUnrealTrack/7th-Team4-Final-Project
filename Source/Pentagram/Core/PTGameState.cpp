@@ -12,7 +12,7 @@ void APTGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
     DOREPLIFETIME(APTGameState, CurrentPhase);
     DOREPLIFETIME(APTGameState, QuestDataTable);
     DOREPLIFETIME(APTGameState, ItemDataTable);
-    DOREPLIFETIME(APTGameState, ChatLog); // 로비 채팅 추가
+    DOREPLIFETIME(APTGameState, ChatLog);
 }
 
 void APTGameState::SetCurrentPhase(EGamePhase NewPhase)
@@ -91,13 +91,11 @@ void APTGameState::RemovePlayerState(APlayerState* PlayerState)
     NotifyLobbyUpdated();
 }
 
-// 로비 추가
 void APTGameState::NotifyLobbyUpdated()
 {
     OnLobbyUpdated.Broadcast();
 }
 
-// 로비 추가
 int32 APTGameState::GetReadyCount() const
 {
     int32 ReadyCount = 0;
@@ -145,7 +143,6 @@ void APTGameState::ApplyItemDataTable() const
     }
 }
 
-// 로비 채팅 추가
 void APTGameState::Server_AddChatMessage(const FString& SenderName, const FString& Message)
 {
     if (!HasAuthority())
@@ -163,12 +160,9 @@ void APTGameState::Server_AddChatMessage(const FString& SenderName, const FStrin
         ChatLog.RemoveAt(0, ChatLog.Num() - MaxChatLogSize);
     }
 
-    // ChatLog 배열은 늦게 들어온 플레이어의 과거 로그 조회용으로만 리플리케이트.
-    // 실시간 알림은 Multicast RPC로 처리 -> 서버(리슨서버 호스트 포함) + 모든 클라이언트가 동시에 받음
-    Multicast_ChatMessage(SenderName, Message);
+     Multicast_ChatMessage(SenderName, Message);
 }
 
-// 로비 채팅 추가
 void APTGameState::Multicast_ChatMessage_Implementation(const FString& SenderName, const FString& Message)
 {
     OnChatMessageReceived.Broadcast(SenderName, Message);

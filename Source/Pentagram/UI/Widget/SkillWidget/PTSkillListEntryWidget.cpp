@@ -18,6 +18,7 @@ void UPTSkillListEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
     {
         if (!CachedRow.SkillIcon.IsNull())
         {
+            // 크기는 WBP(SizeBox/Slot Alignment)에서 전적으로 제어. 코드에서 크기 개입 안 함.
             Img_Icon->SetBrushFromSoftTexture(CachedRow.SkillIcon, false);
             Img_Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
         }
