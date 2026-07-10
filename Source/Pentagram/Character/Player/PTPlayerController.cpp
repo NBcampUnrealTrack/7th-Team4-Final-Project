@@ -25,6 +25,7 @@
 #include "Core/Subsystems/PTItemSubsystem.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Input/PTControlSettingsSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/Manage/PTUIManagerSubsystem.h"
 #include "Core/PTGameState.h" // 로비 채팅 추가
@@ -48,6 +49,14 @@ void APTPlayerController::BeginPlay()
 {
     Super::BeginPlay();
     if (!IsLocalPlayerController()) return;
+
+    if (UGameInstance* GameInstance = GetGameInstance())
+    {
+        if (UPTControlSettingsSubsystem* ControlSettingsSubsystem = GameInstance->GetSubsystem<UPTControlSettingsSubsystem>())
+        {
+            ControlSettingsSubsystem->ApplyControlSettings(this);
+        }
+    }
 
     AddUIInputMapping();
 
@@ -111,6 +120,7 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Inventory) EnhancedInput->BindAction(IA_Inventory, ETriggerEvent::Started,   this, &APTPlayerController::OnInventoryPressed);
         if (IA_Shop)      EnhancedInput->BindAction(IA_Shop,      ETriggerEvent::Started,   this, &APTPlayerController::OnShopPressed);
         if (IA_Quest)     EnhancedInput->BindAction(IA_Quest,     ETriggerEvent::Started,   this, &APTPlayerController::OnQuestPressed);
+        if (IA_OpenSettings) EnhancedInput->BindAction(IA_OpenSettings, ETriggerEvent::Started, this, &APTPlayerController::OnSettingsPressed);
         if (IA_Dodge)     EnhancedInput->BindAction(IA_Dodge,     ETriggerEvent::Started,   this, &APTPlayerController::OnDodge);
 
         if (IA_Skill1)
@@ -978,6 +988,27 @@ void APTPlayerController::OnQuestPressed()
     if (!UI || !QuestClass) return;
 
     UI->ToggleQuest(QuestClass);
+}
+
+void APTPlayerController::OnSettingsPressed()
+{
+    if (!IsLocalPlayerController()) return;
+
+    if (SettingsInstance != nullptr &&
+        (SettingsInstance->IsActivated() || SettingsInstance->IsInViewport()))
+    {
+        SettingsInstance->DeactivateWidget();
+        SettingsInstance = nullptr;
+        return;
+    }
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP) return;
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI || !SettingsClass) return;
+
+    SettingsInstance = UI->PushWidget(SettingsClass, EPTUILayer::Modal);
 }
 
 void APTPlayerController::AddUIInputMapping()

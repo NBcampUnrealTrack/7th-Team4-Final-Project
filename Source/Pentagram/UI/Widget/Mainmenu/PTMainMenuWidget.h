@@ -45,4 +45,10 @@ protected:
     // 로비 레벨
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MainMenu")
     FName LobbyLevelName = TEXT("L_Lobby");
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MainMenu")
+    int32 MaxLobbyPlayers = 4;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MainMenu")
+    bool bShowSteamInviteUIAfterHost = false;
 };

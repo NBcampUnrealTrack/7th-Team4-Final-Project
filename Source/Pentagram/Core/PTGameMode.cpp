@@ -12,6 +12,10 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
+namespace
+{
+const FString LegacyMissingGameMapPath = TEXT("/Game/Pentagram/Level/Field_1");
+}
 
 APTGameMode::APTGameMode()
 {
@@ -317,7 +321,8 @@ void APTGameMode::TravelToGame()
         return;
     }
 
-    if (GameMapPath.IsEmpty())
+    const FString TargetGameMapPath = ResolveGameMapPath();
+    if (TargetGameMapPath.IsEmpty())
     {
         return;
     }
@@ -331,7 +336,7 @@ void APTGameMode::TravelToGame()
     bIsTraveling = true;
     SetGamePhase(EGamePhase::Loading);
 
-    UE_LOG(LogTemp, Log, TEXT("[Loading] TravelToGame started. TargetMap=%s"), *GameMapPath);
+    UE_LOG(LogTemp, Log, TEXT("[Loading] TravelToGame started. TargetMap=%s"), *TargetGameMapPath);
 
     UPTLoadingSubsystem* LoadingSubsystem =
         GetGameInstance() != nullptr ? GetGameInstance()->GetSubsystem<UPTLoadingSubsystem>() : nullptr;
@@ -373,13 +378,35 @@ void APTGameMode::TravelToGame()
 void APTGameMode::HandleTravelPreloadComplete()
 {
     UWorld* World = GetWorld();
-    if (World == nullptr || GameMapPath.IsEmpty())
+    const FString TargetGameMapPath = ResolveGameMapPath();
+    if (World == nullptr || TargetGameMapPath.IsEmpty())
     {
         bIsTraveling = false;
         return;
     }
 
-    World->ServerTravel(GameMapPath);
+    World->ServerTravel(TargetGameMapPath);
+}
+
+FString APTGameMode::ResolveGameMapPath() const
+{
+    if (!GameMapPath.IsEmpty() && !GameMapPath.Equals(LegacyMissingGameMapPath, ESearchCase::IgnoreCase))
+    {
+        return GameMapPath;
+    }
+
+    if (!FallbackGameMapPath.IsEmpty())
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Loading] GameMapPath is empty or points to legacy missing map. GameMapPath=%s Fallback=%s"),
+            *GameMapPath,
+            *FallbackGameMapPath);
+        return FallbackGameMapPath;
+    }
+
+    return GameMapPath;
 }
 
 void APTGameMode::InitializePlayerState(APTBasePlayerState* PlayerState) const

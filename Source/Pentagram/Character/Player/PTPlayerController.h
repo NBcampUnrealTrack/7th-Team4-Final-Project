@@ -45,6 +45,7 @@ public:
     void OnInventoryPressed();
     void OnShopPressed();
     void OnQuestPressed();
+    void OnSettingsPressed();
     void RegisterNearbyNPC(APTNPCCharacter* NPC);
     void UnregisterNearbyNPC(APTNPCCharacter* NPC);
     void OnSkillWindowPressed();
@@ -194,6 +195,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "Input")
     TObjectPtr<UInputAction> IA_Quest;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Input")
+    TObjectPtr<UInputAction> IA_OpenSettings;
+
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_Skill1;
 
@@ -241,6 +245,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> DeathMenuClass;
 
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> SettingsClass;
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UPTDamageNumberWidget> DamageNumberWidgetClass;
 
@@ -264,6 +271,9 @@ private:
 
     UPROPERTY()
     TObjectPtr<UPTPrimaryLayout> PrimaryLayout;
+
+    UPROPERTY()
+    TObjectPtr<UCommonActivatableWidget> SettingsInstance;
 
     bool bUIInputMappingAdded = false;
     bool bGameplayInputBlockedByUI = false;

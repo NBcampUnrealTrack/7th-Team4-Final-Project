@@ -2,11 +2,13 @@
 #include "PTLobbySlotWidget.h"
 #include "PTLobbyPreviewActor.h"
 #include "Core/PTGameState.h"
+#include "Core/Subsystems/PTOnlineSubsystem.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/Player/PTPlayerController.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 #include "Components/Image.h"
+#include "Engine/GameInstance.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -20,6 +22,11 @@ void UPTLobbyWidget::NativeConstruct()
     if (ReadyButton && !ReadyButton->OnClicked.IsAlreadyBound(this, &UPTLobbyWidget::OnReadyClicked))
     {
         ReadyButton->OnClicked.AddDynamic(this, &UPTLobbyWidget::OnReadyClicked);
+    }
+
+    if (InviteButton && !InviteButton->OnClicked.IsAlreadyBound(this, &UPTLobbyWidget::OnInviteClicked))
+    {
+        InviteButton->OnClicked.AddDynamic(this, &UPTLobbyWidget::OnInviteClicked);
     }
 
     BindGameState();
@@ -42,6 +49,11 @@ void UPTLobbyWidget::NativeDestruct()
     if (ReadyButton)
     {
         ReadyButton->OnClicked.RemoveDynamic(this, &UPTLobbyWidget::OnReadyClicked);
+    }
+
+    if (InviteButton)
+    {
+        InviteButton->OnClicked.RemoveDynamic(this, &UPTLobbyWidget::OnInviteClicked);
     }
 
     if (PreviewActor)
@@ -172,5 +184,17 @@ void UPTLobbyWidget::OnReadyClicked()
     if (ReadyButtonText)
     {
         ReadyButtonText->SetText(FText::FromString(bLocalReady ? TEXT("준비 취소") : TEXT("준비")));
+    }
+}
+
+void UPTLobbyWidget::OnInviteClicked()
+{
+    UWorld* World = GetWorld();
+    UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+    UPTOnlineSubsystem* OnlineSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTOnlineSubsystem>() : nullptr;
+    if (OnlineSubsystem != nullptr)
+    {
+        OnlineSubsystem->ShowSteamInviteUI();
     }
 }
