@@ -35,6 +35,9 @@ protected:
     UFUNCTION()
     void OnReadyClicked();
 
+    UFUNCTION()
+    void OnInviteClicked();
+
 protected:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
@@ -52,6 +55,9 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> ReadyButton;
+
+    UPROPERTY(meta = (BindWidgetOptional))
+    TObjectPtr<UButton> InviteButton;
 
     UPROPERTY(meta = (BindWidgetOptional))
     TObjectPtr<UTextBlock> ReadyButtonText;

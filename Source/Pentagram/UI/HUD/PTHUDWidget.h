@@ -9,6 +9,7 @@
 class UPTPlayerStatusWidget;
 class UPTSkillSlotWidget;
 class UPTMonsterHealthBarWidget;
+class UButton;
 UCLASS()
 class PENTAGRAM_API UPTHUDWidget : public UCommonActivatableWidget
 {
@@ -22,6 +23,9 @@ public:
     //몬스터 타겟 확인
     UFUNCTION()
     void HandleMonsterTargeted(AActor* TargetMonster);
+
+    UFUNCTION(BlueprintCallable, Category = "PT|Online")
+    void OpenSteamInviteUI();
 protected:
     // 오버라이드
     virtual void NativeOnActivated() override;
@@ -39,4 +43,6 @@ protected:
     // 몬스터 체크
     UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
     TObjectPtr<UPTMonsterHealthBarWidget> MonsterTargetFrame;
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional))
+    TObjectPtr<UButton> InviteButton;
 };

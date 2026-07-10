@@ -48,6 +48,7 @@ private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
     void SavePlayerState(AController* PlayerController) const;
     void StartAutoSaveIfAvailable() const;
+    FString ResolveGameMapPath() const;
 
     void TravelToGame();    // 서버 트래블 로비 추가
     void HandleTravelPreloadComplete();
@@ -80,6 +81,9 @@ protected:
     // 인게임 맵 경로 로비 추가
     UPROPERTY(EditDefaultsOnly, Category = "PT|Lobby")
     FString GameMapPath;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Lobby")
+    FString FallbackGameMapPath = TEXT("/Game/Pentagram/Level/01_Abandoned_Mine/L_Abandoned_Mine_01_Quarry");
 
     // 시작 최소 인원 로비 추가
     UPROPERTY(EditDefaultsOnly, Category = "PT|Lobby")

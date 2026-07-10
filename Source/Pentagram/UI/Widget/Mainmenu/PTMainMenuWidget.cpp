@@ -1,12 +1,13 @@
 ﻿#include "PTMainMenuWidget.h"
 
 #include "Components/Button.h"
+#include "Core/Subsystems/PTOnlineSubsystem.h"
 #include "MediaPlayer.h"
 #include "MediaSource.h"
+#include "Engine/GameInstance.h"
 #include "Engine/World.h"
-#include "Engine/LocalPlayer.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "UI/Manage/PTUIManagerSubsystem.h"
 
 void UPTMainMenuWidget::NativeConstruct()
 {
@@ -55,21 +56,20 @@ void UPTMainMenuWidget::PlayMenuVideo()
 
 void UPTMainMenuWidget::HandleGameStartClicked()
 {
-    //서브레벨 이동
-    ULocalPlayer* LP = GetOwningLocalPlayer();
-    if (!LP) return;
+    UWorld* World = GetWorld();
+    UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+    UPTOnlineSubsystem* OnlineSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTOnlineSubsystem>() : nullptr;
+    if (OnlineSubsystem != nullptr)
+    {
+        OnlineSubsystem->HostSteamSession(LobbyLevelName, MaxLobbyPlayers, bShowSteamInviteUIAfterHost);
+        return;
+    }
 
-    UPTUIManagerSubsystem* UIManager = LP->GetSubsystem<UPTUIManagerSubsystem>();
-    if (!UIManager) return;
-
-    UIManager->OpenUILevel(LobbyLevelName);
-
-    // 임시 트레블
-    // if (UWorld* World = GetWorld())
-    // {
-    //     // TODO: 테스트 후 삭제, 경로만 교체
-    //     World->ServerTravel(TEXT("/Game/Pentagram/Level/L_Lobby"));
-    // }
+    if (World != nullptr)
+    {
+        UGameplayStatics::OpenLevel(World, LobbyLevelName, true, TEXT("listen"));
+    }
 }
 
 void UPTMainMenuWidget::HandleQuitClicked()
