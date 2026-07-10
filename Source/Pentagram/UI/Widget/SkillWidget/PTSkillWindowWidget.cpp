@@ -156,6 +156,7 @@ void UPTSkillWindowWidget::ShowSkillDetail(const FPTSkillRow& Row)
     {
         if (!Row.SkillIcon.IsNull())
         {
+            // 크기는 WBP(SizeBox/Slot Alignment)에서 전적으로 제어. 코드에서 크기 개입 안 함.
             Img_DetailIcon->SetBrushFromSoftTexture(Row.SkillIcon, false);
             Img_DetailIcon->SetVisibility(ESlateVisibility::HitTestInvisible);
         }
