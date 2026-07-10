@@ -1,4 +1,6 @@
 #include "Character/Player/PTPlayerController.h"
+
+#include "AudioMixerBlueprintLibrary.h"
 #include "CommonActivatableWidget.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "EnhancedInputComponent.h"
@@ -7,6 +9,7 @@
 #include "PTEquipmentComponent.h"
 #include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
+#include "SAdvancedRotationInputBox.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
@@ -31,6 +34,8 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Framework/Application/SlateApplication.h"
 #include "TimerManager.h"
+#include "Character/Skill/PTSkillIndicatorActor.h"
+#include "Materials/MaterialIREmitter.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -71,6 +76,8 @@ void APTPlayerController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    if (bIsAiming) UpdateSkillAim();   // 조준 중 매 프레임 갱신
+
     if (!bMoveToDestination) return;
 
     ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
@@ -105,10 +112,27 @@ void APTPlayerController::SetupInputComponent()
         if (IA_Shop)      EnhancedInput->BindAction(IA_Shop,      ETriggerEvent::Started,   this, &APTPlayerController::OnShopPressed);
         if (IA_Quest)     EnhancedInput->BindAction(IA_Quest,     ETriggerEvent::Started,   this, &APTPlayerController::OnQuestPressed);
         if (IA_Dodge)     EnhancedInput->BindAction(IA_Dodge,     ETriggerEvent::Started,   this, &APTPlayerController::OnDodge);
-        if (IA_Skill1)    EnhancedInput->BindAction(IA_Skill1,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill1);
-        if (IA_Skill2)    EnhancedInput->BindAction(IA_Skill2,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
-        if (IA_Skill3)    EnhancedInput->BindAction(IA_Skill3,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill3);
-        if (IA_Skill4)    EnhancedInput->BindAction(IA_Skill4,    ETriggerEvent::Started,   this, &APTPlayerController::OnSkill4);
+
+        if (IA_Skill1)
+        {
+            EnhancedInput->BindAction(IA_Skill1, ETriggerEvent::Started,   this, &APTPlayerController::OnSkill1);
+            EnhancedInput->BindAction(IA_Skill1, ETriggerEvent::Completed, this, &APTPlayerController::OnSkill1Released);
+        }
+        if (IA_Skill2)
+        {
+            EnhancedInput->BindAction(IA_Skill2, ETriggerEvent::Started,   this, &APTPlayerController::OnSkill2);
+            EnhancedInput->BindAction(IA_Skill2, ETriggerEvent::Completed, this, &APTPlayerController::OnSkill2Released);
+        }
+        if (IA_Skill3)
+        {
+            EnhancedInput->BindAction(IA_Skill3, ETriggerEvent::Started,   this, &APTPlayerController::OnSkill3);
+            EnhancedInput->BindAction(IA_Skill3, ETriggerEvent::Completed, this, &APTPlayerController::OnSkill3Released);
+        }
+        if (IA_Skill4)
+        {
+            EnhancedInput->BindAction(IA_Skill4, ETriggerEvent::Started,   this, &APTPlayerController::OnSkill4);
+            EnhancedInput->BindAction(IA_Skill4, ETriggerEvent::Completed, this, &APTPlayerController::OnSkill4Released);
+        }
         if (IA_SkillWindow)  EnhancedInput->BindAction(IA_SkillWindow,  ETriggerEvent::Started,   this, &APTPlayerController::OnSkillWindowPressed);
         if (IA_CharacterSheet) EnhancedInput->BindAction(IA_CharacterSheet, ETriggerEvent::Started, this, &APTPlayerController::OnCharacterSheetPressed);
         // [디버그] 즉사
@@ -836,7 +860,7 @@ APTNPCCharacter* APTPlayerController::GetBestNearbyNPC() const
     return BestNPC;
 }
 
-void APTPlayerController::OnSkill1(const FInputActionValue& Value)
+/*void APTPlayerController::OnSkill1(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
@@ -860,70 +884,7 @@ void APTPlayerController::OnSkill1(const FInputActionValue& Value)
     RotateTowardsMouse();
 
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
-}
-
-void APTPlayerController::OnSkill2(const FInputActionValue& Value)
-{
-    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC) return;
-
-      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
-      {
-          return;
-      }
-
-    if (PC->SkillComp->GetCooldownRemaining(1) > 0.f) return;
-
-    if (PC->SkillComp->bIsCooldown[1]) return;
-
-    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(1));
-    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
-
-    RotateTowardsMouse();
-    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(1));
-}
-
-void APTPlayerController::OnSkill3(const FInputActionValue& Value)
-{
-    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC) return;
-
-      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
-      {
-          return;
-      }
-
-    if (PC->SkillComp->GetCooldownRemaining(2) > 0.f) return;
-
-    if (PC->SkillComp->bIsCooldown[2]) return;
-
-    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(2));
-    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
-
-    RotateTowardsMouse();
-    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(2));
-}
-
-void APTPlayerController::OnSkill4(const FInputActionValue& Value)
-{
-    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC) return;
-
-      if (!PC->EquipmentComponent || !PC->EquipmentComponent->IsWeaponEquipped())
-      {
-          return;
-      }
-
-    if (PC->SkillComp->GetCooldownRemaining(3) > 0.f) return;
-
-    if (PC->SkillComp->bIsCooldown[3]) return;
-
-    const FPTSkillRow* SkillData = PC->SkillComp->GetSkillData(PC->SkillComp->GetSkillAtSlot(3));
-    if (SkillData && PC->CurrentMP < SkillData->MPCost) return;
-
-    RotateTowardsMouse();
-    PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(3));
-}
+}*/
 
 void APTPlayerController::OnDodge(const FInputActionValue& Value)
 {
@@ -1235,4 +1196,168 @@ void APTPlayerController::Server_RequestAssignSkillToSlot_Implementation(FName S
         SkillComp->AssignSkillToSlot(SkillID, SlotIndex);
         SkillComp->Client_NotifySkillSlotAssigned(SlotIndex, SkillID);
     }
+}
+
+void APTPlayerController::HandleSkillPressed(int32 SlotIndex)
+{
+    if (bGameplayInputBlockedByUI || IsMouseOverGameplayUI()) return;
+
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC || !PC->SkillComp) return;
+
+    const FName SkillID = PC->SkillComp->GetSkillAtSlot(SlotIndex);
+    if (SkillID.IsNone()) return;
+
+    // 쿨다운/MP
+    if (PC->SkillComp->GetCooldownRemaining(SlotIndex) > 0.f) return;
+    const FPTSkillRow* Row = PC->SkillComp->GetSkillData(SkillID);
+    if (!Row) return;
+    if (PC->CurrentMP < Row->MPCost) return;
+
+    // 인디케이터 없거나 즉시시전 -> 기존 동작 (커서 방향 바로 발사)
+    if (Row->IndicatorShape == ESkillIndicatorShape::None || Row->bQuickCast)
+    {
+        FVector Ground;
+        FVector Dir = PC->GetActorForwardVector();
+        FVector Point = PC->GetActorLocation();
+        if (GetGroundPointUnderCursor(Ground))
+        {
+            FVector To = Ground - PC->GetActorLocation(); To.Z = 0.f;
+            if (!To.IsNearlyZero()) { Dir = To.GetSafeNormal(); Point = Ground; }
+        }
+        PC->SetActorRotation(Dir.Rotation());
+        Server_SetActorRotation(Dir.Rotation());
+        PC->Server_UseSkill(SkillID, Point, Dir, nullptr);
+        return;
+    }
+
+    BeginSkillAim(SlotIndex);   // 조준 모드
+}
+
+void APTPlayerController::HandleSkillReleased(int32 SlotIndex)
+{
+    if (bIsAiming && AimingSlotIndex == SlotIndex)
+        ConfirmSkillAim();
+}
+
+void APTPlayerController::BeginSkillAim(int32 SlotIndex)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+
+    if (!IndicatorActor && IndicatorActorClass)
+    {
+        FActorSpawnParameters P; P.Owner = PC;
+        IndicatorActor = GetWorld()->SpawnActor<APTSkillIndicatorActor>(IndicatorActorClass, FTransform::Identity, P);
+    }
+
+    bIsAiming = true;
+    AimingSlotIndex = SlotIndex;
+    AimingSkillID = PC->SkillComp->GetSkillAtSlot(SlotIndex);
+    CachedTarget = nullptr;
+    UpdateSkillAim();
+}
+
+void APTPlayerController::UpdateSkillAim()
+{
+    if (!bIsAiming || !IndicatorActor) return;
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    const FPTSkillRow* Row = PC ? PC->SkillComp->GetSkillData(AimingSkillID) : nullptr;
+    if (!PC || !Row) return;
+
+    const FVector PlayerChar = PC->GetActorLocation();
+    FVector Ground;
+    if (!GetGroundPointUnderCursor(Ground)) return;
+
+    FVector To = Ground - PlayerChar; To.Z = 0.f;
+    const float Dist = To.Size();
+    const FVector Dir = (Dist > 1.f) ? To / Dist : PC->GetActorForwardVector();
+    const float Clamped = FMath::Min(Dist, Row->CastRange);
+    const FVector Point = PlayerChar + Dir * Clamped;   // 사거리 밖이면 원 위로 스냅
+
+    UWorld* W = GetWorld();
+    const FColor C = FColor::Cyan;
+
+    switch (Row->IndicatorShape)
+    {
+    case ESkillIndicatorShape::Line:
+        DrawDebugLine(W, PlayerChar, Point, C, false, -1.f, 0, 3.f);
+        DrawDebugSphere(W, Point, Row->IndicatorWidth * 0.5f, 12, C, false, -1.f);
+        break;
+
+    case ESkillIndicatorShape::Circle:
+        DrawDebugCircle(W, Point, Row->SkillRadius, 48, C, false, -1.f, 0, 3.f,
+                    FVector(1,0,0), FVector(0,1,0), false);
+        break;
+
+    case ESkillIndicatorShape::Cone:
+        DrawDebugCone(W, PlayerChar, Dir, Row->CastRange,
+                         FMath::DegreesToRadians(Row->IndicatorWidth * 0.5f),
+                         FMath::DegreesToRadians(Row->IndicatorWidth * 0.5f),
+                         24, C, false, -1.f);
+        break;
+
+    case ESkillIndicatorShape::SelfCircle:
+        DrawDebugCircle(W, PlayerChar, Row->SkillRadius, 48, C, false, -1.f, 0, 3.f,
+                            FVector(1,0,0), FVector(0,1,0), false);
+        break;
+    default: break;
+    }
+
+    // 캐릭터가 조준 방향 바라보게 (로컬만; 서버는 확정 시)
+    PC->SetActorRotation(Dir.Rotation());
+
+    if (Row->TargetingMode == ESkillTargetingMode::Targeted)
+        CachedTarget = FindTargetUnderCursor(Row->CastRange);
+}
+
+void APTPlayerController::ConfirmSkillAim()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    const FPTSkillRow* Row = PC ? PC->SkillComp->GetSkillData(AimingSkillID) : nullptr;
+    if (!PC || !Row) { CancelSkillAim(); return; }
+
+    const FVector PlayerChar = PC->GetActorLocation();
+    FVector Ground; GetGroundPointUnderCursor(Ground);
+    FVector To = Ground - PlayerChar; To.Z = 0.f;
+    const FVector Dir = To.IsNearlyZero() ? PC->GetActorForwardVector() : To.GetSafeNormal();
+    const float Clamped = FMath::Min(To.Size(), Row->CastRange);
+    const FVector Point = PlayerChar + Dir * Clamped;
+
+    AActor* Target = (Row->TargetingMode == ESkillTargetingMode::Targeted) ? CachedTarget : nullptr;
+
+    Server_SetActorRotation(Dir.Rotation());
+    PC->Server_UseSkill(AimingSkillID, Point, Dir, Target);
+    CancelSkillAim();
+}
+
+void APTPlayerController::CancelSkillAim()
+{
+    bIsAiming = false;
+    AimingSlotIndex = INDEX_NONE;
+    AimingSkillID = NAME_None;
+    CachedTarget = nullptr;
+    if (IndicatorActor) IndicatorActor->HideIndicator();
+}
+
+bool APTPlayerController::GetGroundPointUnderCursor(FVector& OutPoint) const
+{
+    FHitResult Hit;
+    if (const_cast<APTPlayerController*>(this)->GetHitResultUnderCursor(ECC_Visibility, false, Hit) && Hit.bBlockingHit)
+    {
+        OutPoint = Hit.Location;
+        return true;
+    }
+    return false;
+}
+
+AActor* APTPlayerController::FindTargetUnderCursor(float MaxRange) const
+{
+    FHitResult Hit;
+    if (!const_cast<APTPlayerController*>(this)->GetHitResultUnderCursor(ECC_Pawn, false, Hit)) return nullptr;
+
+    APTBaseCharacter* Enemy = Cast<APTBaseCharacter>(Hit.GetActor());
+    if (!Enemy || Cast<APTPlayerCharacter>(Enemy)) return nullptr;
+    if (FVector::Dist2D(GetPawn()->GetActorLocation(), Enemy->GetActorLocation()) > MaxRange) return nullptr;
+    return Enemy;
 }

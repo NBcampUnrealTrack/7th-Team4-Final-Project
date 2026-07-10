@@ -6,6 +6,7 @@
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Net/UnrealNetwork.h"
 
 void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& Request)
@@ -105,6 +106,13 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
 
     CurrentSkillID = Request.SkillRowName;
 
+    AimDirection   = Request.AimDirection;
+    TargetLocation = Request.TargetLocation;
+    TargetActor    = Request.TargetActor;
+
+    if (!Request.AimDirection.IsNearlyZero())
+        Owner->SetActorRotation(Request.AimDirection.Rotation());
+
     // 쿨다운 시작
     UWorld* World = GetWorld();
     if (!World) return;
@@ -156,7 +164,32 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
         // 이펙트/사운드 에셋 로드 (서버에서 한 번만 로드 후 Multicast로 전달)
         UNiagaraSystem* Effect = SkillData->SkillEffect.LoadSynchronous();
         USoundBase*     Sound  = SkillData->SkillSound.LoadSynchronous();
-        Multicast_PlaySkillMontageWithOffset(Montage, Effect, Sound, SkillData->SkillOffset, Request.SkillRowName);
+
+        const bool bIsAreaSkill =
+    SkillData->IndicatorShape == ESkillIndicatorShape::Circle ||
+    SkillData->IndicatorShape == ESkillIndicatorShape::SelfCircle;
+
+        if (SkillData->TargetingMode == ESkillTargetingMode::Targeted)
+        {
+            // 목표 위치에 vfx, 그 대상에게 데미지. 목표타겟 없으면 캐릭터 위치에서 헛방
+            const FVector Center = IsValid(TargetActor)
+                ? TargetActor->GetActorLocation()
+                : Owner->GetActorLocation();
+
+            Multicast_PlaySkillMontageAtLocation(Montage, nullptr, Sound, Center, Request.SkillRowName);
+        }
+        else if (bIsAreaSkill)
+        {
+            const FVector Center = (SkillData->IndicatorShape == ESkillIndicatorShape::SelfCircle)
+                ? Owner->GetActorLocation()
+                : FVector(TargetLocation);
+
+            Multicast_PlaySkillMontageAtLocation(Montage, nullptr, Sound, Center, Request.SkillRowName);
+        }
+        else
+        {
+            Multicast_PlaySkillMontageWithOffset(Montage, nullptr, Sound, SkillData->SkillOffset, Request.SkillRowName);
+        }
 
         if (SkillData->BuffDuration > 0.f && SkillData->AtkBuffMultiplier > 0.f)
         {
@@ -287,6 +320,64 @@ void UPTPlayerSkillComponent::ExecuteBasicAttack()
 
     Server_BasicAttack(ComboIndex);
     ComboIndex++;
+}
+
+void UPTPlayerSkillComponent::ApplyRadialDamageAtLocation(const FPTSkillRow& Row, const FVector& Center)
+{
+    APTPlayerCharacter* Owner = Cast<APTPlayerCharacter>(GetOwner());
+    if (!Owner || !Owner->HasAuthority()) return;
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World)) return;
+
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
+
+    TArray<AActor*> OverlapActors;
+    UKismetSystemLibrary::SphereOverlapActors(
+        World, Center, Row.SkillRadius, ObjectTypes, nullptr,
+        TArray<AActor*>{ Owner }, OverlapActors);
+
+    const float FinalDamage = Owner->GetTotalAttack() * Row.DamageMultiplier;
+
+    for (AActor* HitActor : OverlapActors)
+    {
+        APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor);
+        if (!Target || Cast<APTPlayerCharacter>(Target)) continue;
+
+        FPTHitInfo HitInfo = Row.MakeHitInfo(Owner);
+        FVector Dir = Target->GetActorLocation() - Center; Dir.Z = 0.f;
+        HitInfo.HitDirection = Dir.GetSafeNormal();   // 중심에서 바깥으로 넉백
+
+        Target->ApplyDamageWithHit(FinalDamage, Owner, HitInfo);
+
+        UE_LOG(LogTemp, Log, TEXT("AoE %s 명중 / 데미지 %.1f"), *Target->GetName(), FinalDamage);
+    }
+
+    if (USoundBase* HitSound = Row.SkillHitSound.LoadSynchronous())
+        Multicast_PlayHitSound(HitSound, Center);
+}
+
+void UPTPlayerSkillComponent::ApplyTargetedDamage(const FPTSkillRow& Row, AActor* Target)
+{
+    APTPlayerCharacter* Owner = Cast<APTPlayerCharacter>(GetOwner());
+    if (!Owner || !Owner->HasAuthority()) return;
+
+    APTBaseCharacter* Victim = Cast<APTBaseCharacter>(Target);
+    if (!Victim || Cast<APTPlayerCharacter>(Victim)) return;
+
+    const float FinalDamage = Owner->GetTotalAttack() * Row.DamageMultiplier;
+
+    FPTHitInfo HitInfo = Row.MakeHitInfo(Owner);
+    FVector Dir = Victim->GetActorLocation() - Owner->GetActorLocation(); Dir.Z = 0.f;
+    HitInfo.HitDirection = Dir.GetSafeNormal();
+
+    Victim->ApplyDamageWithHit(FinalDamage, Owner, HitInfo);
+
+    UE_LOG(LogTemp, Log, TEXT("Targeted %s 명중 / 데미지 %.1f"), *Victim->GetName(), FinalDamage);
+
+    if (USoundBase* HitSound = Row.SkillHitSound.LoadSynchronous())
+        Multicast_PlayHitSound(HitSound, Victim->GetActorLocation());
 }
 
 void UPTPlayerSkillComponent::Server_Dodge_Implementation()
@@ -555,7 +646,18 @@ void UPTPlayerSkillComponent::Client_NotifyCooldownStarted_Implementation(int32 
 {
     OnSkillCooldownStart.Broadcast(SlotIndex, Duration);
 }
+
 void UPTPlayerSkillComponent::Client_NotifySkillSlotAssigned_Implementation(int32 SlotIndex, FName SkillID)
 {
     OnSkillSlotAssigned.Broadcast(SlotIndex, SkillID);
+}
+
+void UPTPlayerSkillComponent::TriggerCachedAoEDamage()
+{
+    if (const FPTSkillRow* Row = GetSkillData(CurrentSkillID))
+    {
+        const FVector Center = (Row->IndicatorShape == ESkillIndicatorShape::SelfCircle)
+            ? GetOwner()->GetActorLocation() : FVector(TargetLocation);
+        ApplyRadialDamageAtLocation(*Row, Center);
+    }
 }

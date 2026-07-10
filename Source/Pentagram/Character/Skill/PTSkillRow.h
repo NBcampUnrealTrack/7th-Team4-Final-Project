@@ -14,6 +14,24 @@ enum class ESkillType : uint8
     Passive
 };
 
+UENUM(BlueprintType)
+enum class ESkillTargetingMode : uint8
+{
+    NonTargeted UMETA(DisplayName="논타겟(스킬샷)"),
+    Targeted    UMETA(DisplayName="타겟팅"),
+    Self        UMETA(DisplayName="자기대상"),
+};
+
+UENUM(BlueprintType)
+enum class ESkillIndicatorShape : uint8
+{
+    None,
+    Line       UMETA(DisplayName="직선"),      // 투사체/돌진
+    Circle     UMETA(DisplayName="지점원형"),   // 커서 위치 동그라미
+    Cone       UMETA(DisplayName="부채꼴"),
+    SelfCircle UMETA(DisplayName="자기중심원")
+};
+
 USTRUCT(BlueprintType)
 struct FPTSkillRow : public FTableRowBase
 {
@@ -70,6 +88,24 @@ struct FPTSkillRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     int32 RequiredLevel = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Targeting")
+    ESkillTargetingMode TargetingMode = ESkillTargetingMode::NonTargeted;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Targeting")
+    ESkillIndicatorShape IndicatorShape = ESkillIndicatorShape::Line;
+
+    // 최대 시전 사거리 (커서 지점/타겟까지 클램프 기준)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Targeting")
+    float CastRange = 800.f;
+
+    // Line 폭 / Cone 각도(deg)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Targeting")
+    float IndicatorWidth = 120.f;
+
+    // true면 인디케이터 없이 커서 방향 즉시 발동 (= 지금 동작 유지)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Targeting")
+    bool bQuickCast = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Requirement")
     TArray<EWeaponType> AllowedWeaponTypes;

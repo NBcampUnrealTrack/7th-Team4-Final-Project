@@ -292,35 +292,35 @@ bool APTPlayerCharacter::Server_TryInteract_Validate(AActor* TargetActor)
     return true;
 }
 
-void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID)
+void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID, FVector_NetQuantize InTargetLoc, FVector_NetQuantizeNormal InAimDir, AActor* InTargetActor)
 {
-    if (!HasAuthority()) return;
+    if (!HasAuthority() || !SkillComp) return;
 
-    if (SkillComp)
+    FPTSkillActivationRequest Request;
+    Request.SkillRowName   = SkillID;
+    Request.SkillDataTable = SkillComp->SkillDataTable;
+
+    if (const FPTSkillRow* Row = SkillComp->GetSkillData(SkillID))
     {
-        FPTSkillActivationRequest Request;
-        Request.SkillRowName    = SkillID;
-        Request.SkillDataTable  = SkillComp->SkillDataTable;
+        const FVector Origin = GetActorLocation();
 
-        SkillComp->TryActivateSkill(Request);
+        FVector To = FVector(InTargetLoc) - Origin; To.Z = 0.f;
+        const float Clamped = FMath::Min(To.Size(), Row->CastRange);
+        const FVector Dir = To.IsNearlyZero() ? GetActorForwardVector() : To.GetSafeNormal();
+
+        Request.TargetLocation = Origin + Dir * Clamped;
+        Request.AimDirection   = InAimDir.IsNearlyZero() ? GetActorForwardVector() : FVector(InAimDir);
+
+        if (Row->TargetingMode == ESkillTargetingMode::Targeted && InTargetActor)
+        {
+            if (FVector::Dist2D(Origin, InTargetActor->GetActorLocation()) <= Row->CastRange)
+                Request.TargetActor = InTargetActor;   // 사거리 내에서만 유효
+        }
     }
+
+    SkillComp->TryActivateSkill(Request);
 }
 
-/*
-void APTPlayerCharacter::Server_PlayAttackMontage_Implementation(int32 MontageIndex)
-{
-    Multicast_PlayAttackMontage(MontageIndex);
-}
-
-void APTPlayerCharacter::Multicast_PlayAttackMontage_Implementation(int32 MontageIndex)
-{
-    if (IsLocallyControlled()) return;
-
-    if (AttackMontages.IsValidIndex(MontageIndex))
-    {
-        PlayAnimMontage(AttackMontages[MontageIndex]);
-    }
-}*/
 void APTPlayerCharacter::OnDodgeInvincibleStart()
 {
     // 로컬 클라이언트에서 AnimNotify 발동 → 서버로 무적 ON 전달

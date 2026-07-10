@@ -33,10 +33,14 @@ public:
     virtual void AcknowledgePossession(class APawn* P) override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-    void OnSkill1(const FInputActionValue& Value);
-    void OnSkill2(const FInputActionValue& Value);
-    void OnSkill3(const FInputActionValue& Value);
-    void OnSkill4(const FInputActionValue& Value);
+    void OnSkill1(const FInputActionValue&) { HandleSkillPressed(0); }
+
+    void OnSkill2(const FInputActionValue&) { HandleSkillPressed(1); }
+
+    void OnSkill3(const FInputActionValue&) { HandleSkillPressed(2); }
+
+    void OnSkill4(const FInputActionValue&) { HandleSkillPressed(3); }
+
     void OnDodge(const FInputActionValue& Value);
     void OnInventoryPressed();
     void OnShopPressed();
@@ -120,6 +124,31 @@ public:
 
     UFUNCTION()
     void RefreshInventoryUI();
+
+    void OnSkill1Released(const FInputActionValue&) { HandleSkillReleased(0); }
+
+    void OnSkill2Released(const FInputActionValue&) { HandleSkillReleased(1); }
+
+    void OnSkill3Released(const FInputActionValue&) { HandleSkillReleased(2); }
+
+    void OnSkill4Released(const FInputActionValue&) { HandleSkillReleased(3); }
+
+    void HandleSkillPressed(int32 SlotIndex);
+
+    void HandleSkillReleased(int32 SlotIndex);
+
+    void BeginSkillAim(int32 SlotIndex);
+
+    void UpdateSkillAim();
+
+    void ConfirmSkillAim();
+
+    void CancelSkillAim();
+
+    bool GetGroundPointUnderCursor(FVector& OutPoint) const;
+
+    AActor* FindTargetUnderCursor(float MaxRange) const;
+
 protected:
     void PlayAttackMontage();
 
@@ -214,6 +243,19 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UPTDamageNumberWidget> DamageNumberWidgetClass;
+
+    UPROPERTY() TObjectPtr<AActor> CachedTarget = nullptr;
+
+    UPROPERTY() TObjectPtr<class APTSkillIndicatorActor> IndicatorActor;
+
+    UPROPERTY(EditDefaultsOnly, Category="Skill")
+    TSubclassOf<class APTSkillIndicatorActor> IndicatorActorClass;
+
+    bool  bIsAiming = false;
+
+    int32 AimingSlotIndex = INDEX_NONE;
+
+    FName AimingSkillID = NAME_None;
 
 private:
     FVector MoveDestination = FVector::ZeroVector;

@@ -45,7 +45,7 @@ public:
 
     // 서버에서 스킬 호출
     UFUNCTION(Server, Reliable)
-    void Server_UseSkill(FName SkillID);
+    void Server_UseSkill(FName SkillID, FVector_NetQuantize InTargetLoc, FVector_NetQuantizeNormal InAimDir, AActor* InTargetActor);
 /*
     UFUNCTION(Server, Reliable)
     void Server_PlayAttackMontage(int32 MontageIndex);

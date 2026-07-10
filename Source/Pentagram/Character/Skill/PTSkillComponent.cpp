@@ -24,6 +24,27 @@ void UPTSkillComponent::Multicast_PlayHitSound_Implementation(USoundBase* Sound,
     UGameplayStatics::PlaySoundAtLocation(GetWorld(), Sound, Location);
 }
 
+void UPTSkillComponent::Multicast_PlaySkillMontageAtLocation_Implementation(UAnimMontage* Montage,
+    UNiagaraSystem* Effect, USoundBase* Sound, FVector WorldLocation, FName SkillID)
+{
+    if (!IsValid(Montage)) return;
+
+    APTBaseCharacter* Owner = Cast<APTBaseCharacter>(GetOwner());
+    if (!IsValid(Owner)) return;
+
+    CurrentSkillID = SkillID;
+    Owner->PlayAnimMontage(Montage);
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World)) return;
+
+    // WithOffset과 달리 캐릭터 기준이 아니라 조준한 월드 지점에 스폰
+    if (Effect)
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, Effect, WorldLocation, FRotator::ZeroRotator);
+    if (Sound)
+        UGameplayStatics::PlaySoundAtLocation(World, Sound, WorldLocation);
+}
+
 void UPTSkillComponent::BeginPlay()
 {
     Super::BeginPlay();
@@ -122,6 +143,8 @@ void UPTSkillComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePropert
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(UPTSkillComponent, SkillSlots);
+    DOREPLIFETIME(UPTSkillComponent, TargetLocation);
+    DOREPLIFETIME(UPTSkillComponent, TargetActor);
 }
 
 FPTSkillRow* UPTSkillComponent::GetSkillData(FName SkillID) const

@@ -25,6 +25,12 @@ public:
 
     void ExecuteBasicAttack();
 
+    // 지점 AoE 데미지 판정
+    void ApplyRadialDamageAtLocation(const FPTSkillRow& Row, const FVector& Center);
+
+    // 단일 타겟 데미지
+    void ApplyTargetedDamage(const FPTSkillRow& Row, AActor* Target);
+
     // 쿨다운 시작을 소유 클라이언트에게 통지
     UFUNCTION(Client, Reliable)
     void Client_NotifyCooldownStarted(int32 SlotIndex, float Duration);
@@ -136,4 +142,5 @@ public:
     FPTSkillActivationRequest PendingSkillRequest;
 
     int32 GetOwnerLevel() const;
+    void TriggerCachedAoEDamage();
 };

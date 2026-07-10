@@ -10,14 +10,14 @@ struct FPTSkillActivationRequest
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FName SkillRowName = NAME_None;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FName SkillRowName = NAME_None;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TObjectPtr<UDataTable> SkillDataTable = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UAnimMontage> OverrideMontage;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TObjectPtr<UDataTable> SkillDataTable = nullptr;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSoftObjectPtr<UAnimMontage> OverrideMontage;
+    // 조준 데이터 (Server_UseSkill이 채워서 넘김)
+    UPROPERTY(BlueprintReadWrite) FVector_NetQuantize       TargetLocation = FVector::ZeroVector;
+    UPROPERTY(BlueprintReadWrite) FVector_NetQuantizeNormal AimDirection   = FVector::ZeroVector;
+    UPROPERTY(BlueprintReadWrite) TObjectPtr<AActor>        TargetActor    = nullptr;
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -63,7 +63,11 @@ public:
     void Multicast_PlaySkillMontageWithOffset(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector SkillOffset, FName SkillID);
 
     UFUNCTION(NetMulticast, Unreliable)
-void Multicast_PlayHitSound(USoundBase* Sound, FVector Location);
+    void Multicast_PlayHitSound(USoundBase* Sound, FVector Location);
+
+    // 월드 지점에 몽타주+이펙트 (지점형 AoE 스킬용)
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_PlaySkillMontageAtLocation(UAnimMontage* Montage, UNiagaraSystem* Effect, USoundBase* Sound, FVector WorldLocation, FName SkillID);
 
 protected:
 
@@ -84,6 +88,15 @@ public:
     // 스킬 슬롯 (Q, W, E, R)
     UPROPERTY(EditAnywhere, Replicated, Category = "Skill")
     TArray<FName> SkillSlots;
+
+    UPROPERTY(Replicated, BlueprintReadWrite)
+    FVector_NetQuantize TargetLocation = FVector::ZeroVector;
+
+    UPROPERTY(BlueprintReadWrite)
+    FVector_NetQuantizeNormal AimDirection = FVector::ZeroVector;
+
+    UPROPERTY(Replicated, BlueprintReadWrite)
+    TObjectPtr<AActor> TargetActor = nullptr;
 
     // 쿨다운 중인 슬롯 플래그
     TArray<bool> bIsCooldown;
