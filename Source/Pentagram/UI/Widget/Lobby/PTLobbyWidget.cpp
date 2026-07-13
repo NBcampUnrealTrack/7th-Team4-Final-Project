@@ -28,7 +28,8 @@ void UPTLobbyWidget::NativeConstruct()
     if (InviteButton && !InviteButton->OnClicked.IsAlreadyBound(this, &UPTLobbyWidget::OnInviteClicked))
     {
         InviteButton->OnClicked.AddDynamic(this, &UPTLobbyWidget::OnInviteClicked);
-        
+    }
+
     if (LeaveButton && !LeaveButton->OnClicked.IsAlreadyBound(this, &UPTLobbyWidget::OnLeaveClicked))
     {
         LeaveButton->OnClicked.AddDynamic(this, &UPTLobbyWidget::OnLeaveClicked);
