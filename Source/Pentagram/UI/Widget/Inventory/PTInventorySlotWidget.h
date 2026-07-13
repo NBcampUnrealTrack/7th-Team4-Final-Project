@@ -14,6 +14,12 @@ class UPTItemTooltipWidget;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnUnequipRequested, EItemType, EquipType, int32, ToIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnInventorySlotClicked, int32, SlotIndex);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnSlotUseRequested, int32, SlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FPTOnFieldDropRequested,
+    int32,
+    SlotIndex,
+    FVector2D,
+    ScreenPosition);
 
 UCLASS()
 class PENTAGRAM_API UPTInventorySlotWidget : public UCommonUserWidget
@@ -31,6 +37,9 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "PT|Inventory")
     FPTOnSlotUseRequested OnUseRequested;
 
+    UPROPERTY(BlueprintAssignable, Category = "PT|Inventory|Drop")
+    FPTOnFieldDropRequested OnFieldDropRequested;
+
     // ── 일반 함수 ──
     void SetSlotData(const FInventorySlot& InSlot);
     void ClearSlot();
@@ -47,6 +56,7 @@ protected:
     virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
+    virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
     virtual bool NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
     virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 

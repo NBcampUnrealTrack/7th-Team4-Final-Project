@@ -93,6 +93,9 @@ public:
 
     bool LearnSkill(FName SkillID);
 
+    const TArray<FName>& GetLearnedSkills() const { return LearnedSkills; }
+    bool RestoreSkillProgress(const TArray<FName>& InLearnedSkills, const TArray<FName>& InSkillSlots);
+
     bool CanUseSkill(const FPTSkillRow& Row, FText& OutReason) const;
 
 protected:

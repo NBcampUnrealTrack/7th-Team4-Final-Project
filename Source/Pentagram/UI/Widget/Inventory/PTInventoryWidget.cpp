@@ -6,6 +6,7 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 #include "PTInventorySlotWidget.h"
+#include "Character/Player/PTEquipmentComponent.h"
 #include "Character/Player/PTInventoryComponent.h"
 
 #include "Character/Player/PTPlayerController.h"
@@ -14,6 +15,9 @@
 void UPTInventoryWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
+
+    // CommonUI가 활성화 포커스를 게임 뷰포트로 되돌리지 않도록 합니다.
+    SetIsFocusable(true);
     BuildSlots();
 
     if (EquipPanel)
@@ -67,13 +71,16 @@ void UPTInventoryWidget::NativeOnActivated()
     }
 
     BindInventoryChanged();
+    BindEquipmentChanged();
     RefreshAllSlots();
+    RefreshEquipmentSlots();
 }
 
 
 void UPTInventoryWidget::NativeOnDeactivated()
 {
     UnbindInventoryChanged();
+    UnbindEquipmentChanged();
     ClearShopSellTarget();
 
     if (APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer()))
@@ -88,6 +95,12 @@ bool UPTInventoryWidget::NativeOnHandleBackAction()
 {
     DeactivateWidget();
     return true;
+}
+
+TOptional<FUIInputConfig> UPTInventoryWidget::GetDesiredInputConfig() const
+{
+    // 게임 단축키는 유지하되 첫 마우스 입력이 뷰포트 캡처 해제에 소비되지 않도록 합니다.
+    return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
 }
 
 void UPTInventoryWidget::BuildSlots()
@@ -108,6 +121,9 @@ void UPTInventoryWidget::BuildSlots()
 
         InventorySlot->OnUseRequested.RemoveDynamic(this, &UPTInventoryWidget::HandleSlotUseRequested);
         InventorySlot->OnUseRequested.AddDynamic(this, &UPTInventoryWidget::HandleSlotUseRequested);
+
+        InventorySlot->OnFieldDropRequested.RemoveDynamic(this, &UPTInventoryWidget::HandleFieldDropRequested);
+        InventorySlot->OnFieldDropRequested.AddDynamic(this, &UPTInventoryWidget::HandleFieldDropRequested);
 
         InventoryGrid->AddChildToUniformGrid(InventorySlot, i / Columns, i % Columns);
         SlotWidgets.Add(InventorySlot);
@@ -132,6 +148,42 @@ void UPTInventoryWidget::RefreshAllSlots()
             SlotWidgets[i]->SetSlotData(Slots[i]);
         else
             SlotWidgets[i]->ClearSlot();
+    }
+}
+
+void UPTInventoryWidget::RefreshEquipmentSlots()
+{
+    if (EquipPanel == nullptr)
+    {
+        return;
+    }
+
+    EquipPanel->ClearSlot(EItemType::Weapon);
+    EquipPanel->ClearSlot(EItemType::Chest);
+    EquipPanel->ClearSlot(EItemType::Helmet);
+    EquipPanel->ClearSlot(EItemType::Gloves);
+    EquipPanel->ClearSlot(EItemType::Boots);
+
+    UPTEquipmentComponent* Equipment = ResolveEquipmentComponent();
+    if (Equipment == nullptr)
+    {
+        return;
+    }
+
+    for (const FEquipmentSlot& EquipmentSlot : Equipment->GetEquipmentSlots())
+    {
+        if (!EquipmentSlot.bIsEquipped || EquipmentSlot.MountedItem.Item_ID.IsNone())
+        {
+            continue;
+        }
+
+        FInventorySlot DisplaySlot;
+        DisplaySlot.ItemData = EquipmentSlot.MountedItem;
+        DisplaySlot.Quantity = 1;
+        DisplaySlot.ItemIconAsset = EquipmentSlot.MountedItem.Item_Icon;
+        DisplaySlot.ItemMeshAsset = EquipmentSlot.MountedItem.ItemMeshAsset;
+        DisplaySlot.ArmorChestMeshAsset = EquipmentSlot.MountedItem.ArmorChestMeshAsset;
+        EquipPanel->RefreshSlot(EquipmentSlot.MountedItem.Item_Type, DisplaySlot);
     }
 }
 
@@ -163,9 +215,42 @@ void UPTInventoryWidget::UnbindInventoryChanged()
     BoundInventoryComponent.Reset();
 }
 
+void UPTInventoryWidget::BindEquipmentChanged()
+{
+    UPTEquipmentComponent* Equipment = ResolveEquipmentComponent();
+    if (Equipment == nullptr)
+    {
+        return;
+    }
+
+    if (BoundEquipmentComponent.IsValid() && BoundEquipmentComponent.Get() != Equipment)
+    {
+        UnbindEquipmentChanged();
+    }
+
+    Equipment->OnEquipmentChanged.RemoveDynamic(this, &UPTInventoryWidget::HandleEquipmentChanged);
+    Equipment->OnEquipmentChanged.AddDynamic(this, &UPTInventoryWidget::HandleEquipmentChanged);
+    BoundEquipmentComponent = Equipment;
+}
+
+void UPTInventoryWidget::UnbindEquipmentChanged()
+{
+    if (BoundEquipmentComponent.IsValid())
+    {
+        BoundEquipmentComponent->OnEquipmentChanged.RemoveDynamic(this, &UPTInventoryWidget::HandleEquipmentChanged);
+    }
+
+    BoundEquipmentComponent.Reset();
+}
+
 void UPTInventoryWidget::HandleInventoryChanged()
 {
     RefreshAllSlots();
+}
+
+void UPTInventoryWidget::HandleEquipmentChanged()
+{
+    RefreshEquipmentSlots();
 }
 
 void UPTInventoryWidget::HandleSlotClicked(int32 SlotIndex)
@@ -190,6 +275,13 @@ UPTInventoryComponent* UPTInventoryWidget::ResolveInventoryComponent() const
     if (!Pawn) return nullptr;
 
     return Pawn->FindComponentByClass<UPTInventoryComponent>();
+}
+
+UPTEquipmentComponent* UPTInventoryWidget::ResolveEquipmentComponent() const
+{
+    APlayerController* PlayerController = GetOwningPlayer();
+    APawn* Pawn = PlayerController != nullptr ? PlayerController->GetPawn() : nullptr;
+    return Pawn != nullptr ? Pawn->FindComponentByClass<UPTEquipmentComponent>() : nullptr;
 }
 
 void UPTInventoryWidget::HandleEquipRequested(int32 FromIndex, EItemType EquipType)
@@ -217,4 +309,32 @@ void UPTInventoryWidget::HandleSlotUseRequested(int32 SlotIndex)
     if (!Inventory) return;
 
     Inventory->UseItemAtSlot(SlotIndex);
+}
+
+void UPTInventoryWidget::HandleFieldDropRequested(int32 SlotIndex, FVector2D ScreenPosition)
+{
+    // 상점 판매 중이거나 인벤토리/장비 패널 안에 놓은 경우에는 필드 드랍으로 처리하지 않습니다.
+    if (ShopWidgetForSell != nullptr || IsScreenPositionOverContent_Implementation(ScreenPosition))
+    {
+        return;
+    }
+
+    UPTInventoryComponent* Inventory = ResolveInventoryComponent();
+    APTPlayerController* PlayerController = Cast<APTPlayerController>(GetOwningPlayer());
+    if (Inventory == nullptr || PlayerController == nullptr)
+    {
+        return;
+    }
+
+    const TArray<FInventorySlot>& Slots = Inventory->GetInventorySlots();
+    if (!Slots.IsValidIndex(SlotIndex) || Slots[SlotIndex].IsEmpty())
+    {
+        return;
+    }
+
+    const FInventorySlot& InventorySlot = Slots[SlotIndex];
+    PlayerController->RequestDropInventoryItem(
+        SlotIndex,
+        InventorySlot.ItemData.Item_ID,
+        InventorySlot.Quantity);
 }

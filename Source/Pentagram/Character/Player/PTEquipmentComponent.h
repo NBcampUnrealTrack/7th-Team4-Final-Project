@@ -48,6 +48,8 @@ struct FEquipmentSlot
     FEquipmentSlot(EEquipSlotType InType) : EquippedSlotType(InType), bIsEquipped(false) {}
 };
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnEquipmentChanged);
+
 // 장비창 컴포넌트 클래스
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTEquipmentComponent : public UActorComponent
@@ -85,6 +87,12 @@ public:
     FORCEINLINE int32 GetTotalBonusStr() const { return TotalBonusStr; }
     FORCEINLINE int32 GetTotalBonusDef() const { return TotalBonusDef; }
     FORCEINLINE int32 GetTotalBonusHp()  const { return TotalBonusHp;  }
+
+    TArray<FEquipmentSlot> GetEquipmentSlots() const;
+    bool RestoreEquipmentSlots(const TArray<FEquipmentSlot>& InEquipmentSlots);
+
+    UPROPERTY(BlueprintAssignable, Category = "PT|Equipment")
+    FPTOnEquipmentChanged OnEquipmentChanged;
 
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────

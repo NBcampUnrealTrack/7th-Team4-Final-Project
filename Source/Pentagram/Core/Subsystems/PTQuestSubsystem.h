@@ -52,6 +52,7 @@ private:
     bool ConsumeRequiredCollectItems(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
     bool GiveQuestRewards(const FPTQuestDataRow& QuestData, APTBasePlayerState* RewardPlayerState) const;
     FPTQuestProgress* FindQuestProgress(APTBasePlayerState* PlayerState, FName QuestID) const;
+    void SaveQuestPlayerState(APTBasePlayerState* PlayerState, const TCHAR* SaveReason) const;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Quest")
     TObjectPtr<UDataTable> QuestDataTable;

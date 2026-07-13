@@ -38,6 +38,8 @@ public:
     UFUNCTION(BlueprintPure, Category = "Inventory")
     const TArray<FInventorySlot>& GetInventorySlots() const { return InventorySlots; }
 
+    bool RestoreInventorySlots(const TArray<FInventorySlot>& InInventorySlots);
+
     // 블루프린트나 캐릭터에서 호출할 물약 사용 함수
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool UsePotion(int32 SlotIndex);
@@ -95,6 +97,7 @@ private:
     void ExecutePotionHealing();
     void NotifyQuestItemCollected(const FItemData& ItemData, int32 Count) const;
     void BroadcastInventoryChanged();
+    void SaveOwnerPlayerState() const;
 
     // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 

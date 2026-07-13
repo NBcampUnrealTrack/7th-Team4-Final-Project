@@ -2,6 +2,9 @@
 
 #include "InteractionActor/PTLevelTrigger.h"
 #include "Components/BoxComponent.h"
+#include "Core/Subsystems/PTSaveSubsystem.h"
+#include "Engine/GameInstance.h"
+#include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 
@@ -18,25 +21,41 @@ APTLevelTrigger::APTLevelTrigger()
 
 void APTLevelTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    if (!HasAuthority()) return; // 데디케이트 서버 검증
-
-    if (ACharacter* Char = Cast<ACharacter>(OtherActor))
+    if (!HasAuthority() || bTravelRequested || TargetMapName.IsEmpty())
     {
-        if (APlayerController* PC = Cast<APlayerController>(Char->GetController()))
-        {
-            // 밟은 유저만 타겟 맵으로 즉시 이동 
-            if (!TargetMapName.IsEmpty())
-            {
-                FString TravelURL = TargetMapName;
-
-                if (!TargetActorTag.IsNone())
-                {
-                        TravelURL += FString::Printf(TEXT("?PlayerActorTag=%s"), *TargetActorTag.ToString());
-                }
-                 PC->ClientTravel(TravelURL, ETravelType::TRAVEL_Absolute);
-            }
-        }
+        return;
     }
+
+    ACharacter* Character = Cast<ACharacter>(OtherActor);
+    if (Character == nullptr || Cast<APlayerController>(Character->GetController()) == nullptr)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    bTravelRequested = true;
+
+    UGameInstance* GameInstance = World->GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+    if (SaveSubsystem == nullptr || !SaveSubsystem->SaveAllAuthorityPlayers(false))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Save] Zone travel could not save an authority player."));
+    }
+
+    FString TravelURL = TargetMapName;
+    if (!TargetActorTag.IsNone())
+    {
+        TravelURL += FString::Printf(TEXT("?PlayerActorTag=%s"), *TargetActorTag.ToString());
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[Save] Zone travel saved players before ServerTravel. Target=%s"), *TravelURL);
+    World->ServerTravel(TravelURL);
 }
 
 void APTLevelTrigger::Tick(float DeltaTime)

@@ -97,13 +97,13 @@ struct FItemData : public FTableRowBase
     FName GrantSkillID;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-    EItemCategory Item_Category;
+    EItemCategory Item_Category = EItemCategory::Equipment;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-    EItemType Item_Type;
+    EItemType Item_Type = EItemType::Weapon;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-    EItemGrade Item_Grade;
+    EItemGrade Item_Grade = EItemGrade::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     EWeaponType WeaponType = EWeaponType::Hands;
@@ -114,7 +114,7 @@ struct FItemData : public FTableRowBase
 
     // 기본 성능 (무기/장갑: STR, 갑옷/신발: DEF, 모자: HP 등으로 장비 컴포넌트에서 매칭)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
-    int32 Item_Base_Stat;
+    int32 Item_Base_Stat = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Shop",
         meta = (ClampMin = "1", UIMin = "1"))
@@ -136,7 +136,7 @@ struct FItemData : public FTableRowBase
 
     // 아이템이 생성 시, 최대 몇 개의 무작위 옵션이 붙을 수 있는지 지정 (예: 1~2개 랜덤이면 기획에 따라 처리)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Random Option")
-    int32 MaxOptionCount;
+    int32 MaxOptionCount = 0;
 
     // 서버가 주사위를 굴려 확정 지은 최종 추가 옵션 리스트 (런타임 생성 데이터)
     // 음수가 나오면 자동으로 "STR-5", 양수가 나오면 "STR+7" 형태로 저장되어 인벤토리/장비창에 동기화됩니다.

@@ -62,6 +62,19 @@ void UPTInventorySlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, c
     OutOperation = Op;
 }
 
+void UPTInventorySlotWidget::NativeOnDragCancelled(
+    const FDragDropEvent& InDragDropEvent,
+    UDragDropOperation* InOperation)
+{
+    Super::NativeOnDragCancelled(InDragDropEvent, InOperation);
+
+    if (InOperation != nullptr && InOperation->Payload == this &&
+        SlotIndex != INDEX_NONE && !IsEmpty())
+    {
+        OnFieldDropRequested.Broadcast(SlotIndex, InDragDropEvent.GetScreenSpacePosition());
+    }
+}
+
 bool UPTInventorySlotWidget::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
     Super::NativeOnDragOver(InGeometry, InDragDropEvent, InOperation);

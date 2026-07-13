@@ -4,7 +4,11 @@
 #include "PTSaveSubsystem.h"
 
 #include "Character/Player/PTBasePlayerState.h"
+#include "Character/Player/PTInventoryComponent.h"
+#include "Character/Player/PTPlayerCharacter.h"
+#include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Engine/World.h"
+#include "GameFramework/Controller.h"
 #include "GameFramework/GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Core/PTGameState.h"
@@ -19,7 +23,49 @@
 namespace
 {
 constexpr int32 PTSaveUserIndex = 0;
+constexpr int32 PTCurrentSaveVersion = 2;
 constexpr float PTAutoSaveIntervalSeconds = 60.f;
+
+int32 CountOccupiedInventorySlots(const FPTPlayerSaveData& PlayerSaveData)
+{
+    int32 OccupiedSlotCount = 0;
+    for (const FInventorySlot& InventorySlot : PlayerSaveData.InventorySlots)
+    {
+        if (!InventorySlot.IsEmpty())
+        {
+            ++OccupiedSlotCount;
+        }
+    }
+
+    return OccupiedSlotCount;
+}
+
+void CountQuestStates(
+    const FPTPlayerSaveData& PlayerSaveData,
+    int32& OutInProgressCount,
+    int32& OutCompletedCount,
+    int32& OutRewardedCount)
+{
+    OutInProgressCount = 0;
+    OutCompletedCount = 0;
+    OutRewardedCount = 0;
+
+    for (const FPTQuestProgress& QuestProgress : PlayerSaveData.AcceptedQuests)
+    {
+        switch (QuestProgress.State)
+        {
+        case EPTQuestProgressState::InProgress:
+            ++OutInProgressCount;
+            break;
+        case EPTQuestProgressState::Completed:
+            ++OutCompletedCount;
+            break;
+        case EPTQuestProgressState::Rewarded:
+            ++OutRewardedCount;
+            break;
+        }
+    }
+}
 }
 
 void UPTSaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -68,7 +114,64 @@ bool UPTSaveSubsystem::SavePlayer(const APTBasePlayerState* PlayerState)
         return false;
     }
 
-    return WriteSlotDataToSlot(MakeSaveSlotName(PlayerSaveID), CaptureFromPlayerState(PlayerState));
+    const FString SlotName = MakeSaveSlotName(PlayerSaveID);
+    FPTPlayerSaveData PlayerSaveData = CaptureFromPlayerState(PlayerState);
+
+    if (!PlayerSaveData.bHasInventoryData ||
+        !PlayerSaveData.bHasEquipmentData ||
+        !PlayerSaveData.bHasSkillData)
+    {
+        FPTPlayerSaveData ExistingSaveData;
+        if (ReadSlotDataFromSlot(SlotName, ExistingSaveData))
+        {
+            MergeCharacterDataFromExistingSave(PlayerSaveData, ExistingSaveData);
+        }
+    }
+
+    const bool bHasCharacterData = PlayerSaveData.bHasInventoryData ||
+        PlayerSaveData.bHasEquipmentData ||
+        PlayerSaveData.bHasSkillData;
+    if (bHasCharacterData)
+    {
+        PendingPlayerCharacterData.Add(PlayerSaveID, PlayerSaveData);
+    }
+
+    const bool bSaved = WriteSlotDataToSlot(SlotName, PlayerSaveData);
+    int32 InProgressQuestCount = 0;
+    int32 CompletedQuestCount = 0;
+    int32 RewardedQuestCount = 0;
+    CountQuestStates(
+        PlayerSaveData,
+        InProgressQuestCount,
+        CompletedQuestCount,
+        RewardedQuestCount);
+    if (bSaved)
+    {
+        UE_LOG(
+            LogTemp,
+            Log,
+            TEXT("[Save] Player save completed. PlayerID=%s OccupiedInventorySlots=%d TotalInventorySlots=%d Quests=%d/%d/%d"),
+            *PlayerSaveID,
+            CountOccupiedInventorySlots(PlayerSaveData),
+            PlayerSaveData.InventorySlots.Num(),
+            InProgressQuestCount,
+            CompletedQuestCount,
+            RewardedQuestCount);
+    }
+    else
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Save] Player save failed. PlayerID=%s OccupiedInventorySlots=%d TotalInventorySlots=%d Quests=%d/%d/%d"),
+            *PlayerSaveID,
+            CountOccupiedInventorySlots(PlayerSaveData),
+            PlayerSaveData.InventorySlots.Num(),
+            InProgressQuestCount,
+            CompletedQuestCount,
+            RewardedQuestCount);
+    }
+    return bSaved;
 }
 
 bool UPTSaveSubsystem::LoadPlayer(APTBasePlayerState* PlayerState)
@@ -84,13 +187,45 @@ bool UPTSaveSubsystem::LoadPlayer(APTBasePlayerState* PlayerState)
         return false;
     }
 
+    PendingPlayerCharacterData.Remove(PlayerSaveID);
+
     FPTPlayerSaveData PlayerSaveData;
     if (!ReadSlotDataFromSlot(MakeSaveSlotName(PlayerSaveID), PlayerSaveData))
     {
         return false;
     }
 
+    int32 InProgressQuestCount = 0;
+    int32 CompletedQuestCount = 0;
+    int32 RewardedQuestCount = 0;
+    CountQuestStates(
+        PlayerSaveData,
+        InProgressQuestCount,
+        CompletedQuestCount,
+        RewardedQuestCount);
+
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Save] Player save loaded. PlayerID=%s OccupiedInventorySlots=%d TotalInventorySlots=%d Quests=%d/%d/%d"),
+        *PlayerSaveID,
+        CountOccupiedInventorySlots(PlayerSaveData),
+        PlayerSaveData.InventorySlots.Num(),
+        InProgressQuestCount,
+        CompletedQuestCount,
+        RewardedQuestCount);
+
     ApplyToPlayerState(PlayerState, PlayerSaveData);
+
+    const bool bHasCharacterData = PlayerSaveData.bHasInventoryData ||
+        PlayerSaveData.bHasEquipmentData ||
+        PlayerSaveData.bHasSkillData;
+    if (bHasCharacterData)
+    {
+        PendingPlayerCharacterData.Add(PlayerSaveID, PlayerSaveData);
+        ApplyPendingPlayerCharacterData(PlayerState);
+    }
+
     return true;
 }
 
@@ -129,6 +264,7 @@ bool UPTSaveSubsystem::SaveAllAuthorityPlayers(bool bSkipBossFight)
 FPTPlayerSaveData UPTSaveSubsystem::CaptureFromPlayerState(const APTBasePlayerState* PlayerState) const
 {
     FPTPlayerSaveData PlayerSaveData;
+    PlayerSaveData.SaveVersion = PTCurrentSaveVersion;
 
     if (PlayerState == nullptr)
     {
@@ -147,6 +283,36 @@ FPTPlayerSaveData UPTSaveSubsystem::CaptureFromPlayerState(const APTBasePlayerSt
         {
             PlayerSaveData.AcceptedQuests = QuestSubsystem->GetAcceptedQuestProgresses(PlayerState);
         }
+    }
+
+    const AController* Controller = Cast<AController>(PlayerState->GetOwner());
+    const APTPlayerCharacter* PlayerCharacter =
+        Controller != nullptr ? Cast<APTPlayerCharacter>(Controller->GetPawn()) : nullptr;
+    if (PlayerCharacter == nullptr)
+    {
+        return PlayerSaveData;
+    }
+
+    const UPTInventoryComponent* InventoryComponent = PlayerCharacter->GetInventoryComponent();
+    if (InventoryComponent != nullptr)
+    {
+        PlayerSaveData.bHasInventoryData = true;
+        PlayerSaveData.InventorySlots = InventoryComponent->GetInventorySlots();
+    }
+
+    const UPTEquipmentComponent* EquipmentComponent = PlayerCharacter->GetEquipmentComponent();
+    if (EquipmentComponent != nullptr)
+    {
+        PlayerSaveData.bHasEquipmentData = true;
+        PlayerSaveData.EquipmentSlots = EquipmentComponent->GetEquipmentSlots();
+    }
+
+    const UPTPlayerSkillComponent* SkillComponent = PlayerCharacter->SkillComp;
+    if (SkillComponent != nullptr)
+    {
+        PlayerSaveData.bHasSkillData = true;
+        PlayerSaveData.LearnedSkills = SkillComponent->GetLearnedSkills();
+        PlayerSaveData.SkillSlots = SkillComponent->GetSkillSlots();
     }
 
     return PlayerSaveData;
@@ -187,6 +353,102 @@ void UPTSaveSubsystem::ApplyToPlayerState(APTBasePlayerState* PlayerState, const
         {
             QuestSubsystem->SetAcceptedQuestProgresses(PlayerState, PlayerSaveData.AcceptedQuests);
         }
+    }
+}
+
+bool UPTSaveSubsystem::ApplyPendingPlayerCharacterData(APTBasePlayerState* PlayerState)
+{
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return false;
+    }
+
+    const FString PlayerSaveID = GetPlayerSaveID(PlayerState);
+    FPTPlayerSaveData* PlayerSaveData = PendingPlayerCharacterData.Find(PlayerSaveID);
+    if (PlayerSaveData == nullptr)
+    {
+        return false;
+    }
+
+    if (!ApplyToPlayerCharacter(PlayerState, *PlayerSaveData))
+    {
+        return false;
+    }
+
+    const int32 AppliedSaveVersion = PlayerSaveData->SaveVersion;
+    PendingPlayerCharacterData.Remove(PlayerSaveID);
+    UE_LOG(
+        LogTemp,
+        Log,
+        TEXT("[Save] Restored inventory, equipment, and skills. PlayerID=%s SaveVersion=%d"),
+        *PlayerSaveID,
+        AppliedSaveVersion);
+    return true;
+}
+
+bool UPTSaveSubsystem::ApplyToPlayerCharacter(
+    APTBasePlayerState* PlayerState,
+    const FPTPlayerSaveData& PlayerSaveData) const
+{
+    AController* Controller = PlayerState != nullptr ? Cast<AController>(PlayerState->GetOwner()) : nullptr;
+    APTPlayerCharacter* PlayerCharacter =
+        Controller != nullptr ? Cast<APTPlayerCharacter>(Controller->GetPawn()) : nullptr;
+    if (PlayerCharacter == nullptr || !PlayerCharacter->HasAuthority())
+    {
+        return false;
+    }
+
+    bool bAppliedAnyData = false;
+    bool bAppliedAllData = true;
+
+    if (PlayerSaveData.bHasInventoryData)
+    {
+        UPTInventoryComponent* InventoryComponent = PlayerCharacter->GetInventoryComponent();
+        bAppliedAnyData = true;
+        bAppliedAllData &= InventoryComponent != nullptr &&
+            InventoryComponent->RestoreInventorySlots(PlayerSaveData.InventorySlots);
+    }
+
+    if (PlayerSaveData.bHasEquipmentData)
+    {
+        UPTEquipmentComponent* EquipmentComponent = PlayerCharacter->GetEquipmentComponent();
+        bAppliedAnyData = true;
+        bAppliedAllData &= EquipmentComponent != nullptr &&
+            EquipmentComponent->RestoreEquipmentSlots(PlayerSaveData.EquipmentSlots);
+    }
+
+    if (PlayerSaveData.bHasSkillData)
+    {
+        UPTPlayerSkillComponent* SkillComponent = PlayerCharacter->SkillComp;
+        bAppliedAnyData = true;
+        bAppliedAllData &= SkillComponent != nullptr &&
+            SkillComponent->RestoreSkillProgress(PlayerSaveData.LearnedSkills, PlayerSaveData.SkillSlots);
+    }
+
+    return bAppliedAnyData && bAppliedAllData;
+}
+
+void UPTSaveSubsystem::MergeCharacterDataFromExistingSave(
+    FPTPlayerSaveData& PlayerSaveData,
+    const FPTPlayerSaveData& ExistingSaveData) const
+{
+    if (!PlayerSaveData.bHasInventoryData && ExistingSaveData.bHasInventoryData)
+    {
+        PlayerSaveData.bHasInventoryData = true;
+        PlayerSaveData.InventorySlots = ExistingSaveData.InventorySlots;
+    }
+
+    if (!PlayerSaveData.bHasEquipmentData && ExistingSaveData.bHasEquipmentData)
+    {
+        PlayerSaveData.bHasEquipmentData = true;
+        PlayerSaveData.EquipmentSlots = ExistingSaveData.EquipmentSlots;
+    }
+
+    if (!PlayerSaveData.bHasSkillData && ExistingSaveData.bHasSkillData)
+    {
+        PlayerSaveData.bHasSkillData = true;
+        PlayerSaveData.LearnedSkills = ExistingSaveData.LearnedSkills;
+        PlayerSaveData.SkillSlots = ExistingSaveData.SkillSlots;
     }
 }
 

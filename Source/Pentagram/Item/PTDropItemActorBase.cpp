@@ -2,6 +2,7 @@
 #include "PTDropItemActorBase.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h" 
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -9,6 +10,7 @@ APTDropItemActorBase::APTDropItemActorBase()
 { 
 	PrimaryActorTick.bCanEverTick = false;
     bReplicates = true;
+    SetReplicateMovement(true);
 
     CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
     RootComponent = CollisionSphere;
@@ -33,7 +35,83 @@ APTDropItemActorBase::APTDropItemActorBase()
 void APTDropItemActorBase::BeginPlay()
 {
 	Super::BeginPlay();
-    InitializeItemData(); 
+    if (InstanceItemData.Item_ID.IsNone())
+    {
+        InitializeItemData();
+    }
+    else
+    {
+        ApplyItemVisual();
+    }
+}
+
+void APTDropItemActorBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(APTDropItemActorBase, InstanceItemData);
+    DOREPLIFETIME(APTDropItemActorBase, DroppedQuantity);
+}
+
+void APTDropItemActorBase::InitializeDroppedItem(const FItemData& InItemData, int32 InQuantity)
+{
+    if (!HasAuthority() || InItemData.Item_ID.IsNone() || InQuantity <= 0)
+    {
+        return;
+    }
+
+    const bool bHadTemplateItem = !InstanceItemData.Item_ID.IsNone();
+    const EItemType TemplateItemType = InstanceItemData.Item_Type;
+
+    InstanceItemData = InItemData;
+    DroppedQuantity = InQuantity;
+    bPickupClaimed = false;
+    if (InItemData.ItemMeshAsset.IsNull() && bHadTemplateItem && TemplateItemType != InItemData.Item_Type)
+    {
+        ItemMesh->SetStaticMesh(nullptr);
+    }
+    else
+    {
+        ApplyItemVisual();
+    }
+    ForceNetUpdate();
+}
+
+bool APTDropItemActorBase::TryClaimPickup()
+{
+    if (!HasAuthority() || bPickupClaimed || IsActorBeingDestroyed())
+    {
+        return false;
+    }
+
+    bPickupClaimed = true;
+    return true;
+}
+
+void APTDropItemActorBase::ReleasePickupClaim()
+{
+    if (HasAuthority() && !IsActorBeingDestroyed())
+    {
+        bPickupClaimed = false;
+    }
+}
+
+void APTDropItemActorBase::OnRep_InstanceItemData()
+{
+    ApplyItemVisual();
+}
+
+void APTDropItemActorBase::ApplyItemVisual()
+{
+    if (ItemMesh == nullptr || InstanceItemData.ItemMeshAsset.IsNull())
+    {
+        return;
+    }
+
+    if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+    {
+        ItemMesh->SetStaticMesh(StaticMesh);
+    }
 }
 
 
@@ -45,6 +123,8 @@ void APTDropItemActorBase::InitializeItemData()
         if (Data)
         {
             InstanceItemData = *Data;
+            DroppedQuantity = 1;
+            ApplyItemVisual();
             UE_LOG(LogTemp, Warning, TEXT("아이템 로드 완료: %s (등급: %d)"), *InstanceItemData.Item_Name.ToString(), (int32)InstanceItemData.Item_Grade);
         }
     }
