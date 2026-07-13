@@ -37,7 +37,9 @@ protected:
 
     UFUNCTION()
     void OnInviteClicked();
-
+    
+    UFUNCTION()
+    void OnLeaveClicked();
 protected:
     // ── 멤버 변수 ────────────────────────────────────────────────────────────
 
@@ -55,6 +57,9 @@ protected:
 
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> ReadyButton;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UButton> LeaveButton;
 
     UPROPERTY(meta = (BindWidgetOptional))
     TObjectPtr<UButton> InviteButton;
@@ -74,7 +79,6 @@ protected:
     UPROPERTY(EditAnywhere, Category = "PT|Lobby")
     TObjectPtr<UMaterialInterface> PreviewMaterial;
 private:
-    // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 
     bool bLocalReady = false;
 

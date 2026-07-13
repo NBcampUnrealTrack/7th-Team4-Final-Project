@@ -145,6 +145,8 @@ void APTPlayerController::SetupInputComponent()
         }
         if (IA_SkillWindow)  EnhancedInput->BindAction(IA_SkillWindow,  ETriggerEvent::Started,   this, &APTPlayerController::OnSkillWindowPressed);
         if (IA_CharacterSheet) EnhancedInput->BindAction(IA_CharacterSheet, ETriggerEvent::Started, this, &APTPlayerController::OnCharacterSheetPressed);
+        if (IA_CloseMenu) EnhancedInput->BindAction(IA_CloseMenu, ETriggerEvent::Started, this, &APTPlayerController::OnCloseMenuPressed);
+        // [디버그] 즉사
         // [디버그] 즉사
         if (IA_DebugKill) EnhancedInput->BindAction(IA_DebugKill, ETriggerEvent::Started,   this, &APTPlayerController::OnDebugKillPressed);
 
@@ -1215,6 +1217,19 @@ void APTPlayerController::OnCharacterSheetPressed()
         CharacterSheetClass ? *CharacterSheetClass->GetName() : TEXT("NULL!!"));
 
     UIManager->ToggleCharacterSheet(CharacterSheetClass);
+}
+
+void APTPlayerController::OnCloseMenuPressed()
+{
+    if (!IsLocalPlayerController()) return;
+
+    ULocalPlayer* LP = GetLocalPlayer();
+    if (!LP) return;
+
+    UPTUIManagerSubsystem* UI = LP->GetSubsystem<UPTUIManagerSubsystem>();
+    if (!UI || !CloseWidgetClass) return;
+
+    UI->ToggleCloseWidget(CloseWidgetClass);
 }
 
 void APTPlayerController::Server_RequestAssignSkillToSlot_Implementation(FName SkillID, int32 SlotIndex)
