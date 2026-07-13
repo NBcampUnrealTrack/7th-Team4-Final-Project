@@ -66,6 +66,12 @@ void APTGameMode::BeginPlay()
     StartAutoSaveIfAvailable();
 }
 
+void APTGameMode::FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation)
+{
+    Super::FinishRestartPlayer(NewPlayer, StartRotation);
+    ApplyPendingPlayerCharacterData(NewPlayer);
+}
+
 void APTGameMode::PostLogin(APlayerController* NewPlayer)
 {
     Super::PostLogin(NewPlayer);
@@ -414,6 +420,34 @@ void APTGameMode::HandleTravelPreloadComplete()
         return;
     }
 
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+    if (SaveSubsystem == nullptr)
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Save] Save subsystem is unavailable before server travel. TargetMap=%s"),
+            *TargetGameMapPath);
+    }
+    else if (!SaveSubsystem->SaveAllAuthorityPlayers(false))
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Save] Pre-travel save did not save any authority player. TargetMap=%s"),
+            *TargetGameMapPath);
+    }
+    else
+    {
+        UE_LOG(
+            LogTemp,
+            Log,
+            TEXT("[Save] Pre-travel save saved at least one authority player. TargetMap=%s"),
+            *TargetGameMapPath);
+    }
+
     World->ServerTravel(TargetGameMapPath);
 }
 
@@ -485,6 +519,24 @@ void APTGameMode::SavePlayerState(AController* PlayerController) const
     SaveSubsystem->SavePlayer(PlayerState);
 }
 
+void APTGameMode::ApplyPendingPlayerCharacterData(AController* PlayerController) const
+{
+    APTBasePlayerState* PlayerState =
+        PlayerController != nullptr ? PlayerController->GetPlayerState<APTBasePlayerState>() : nullptr;
+    if (PlayerState == nullptr)
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+    if (SaveSubsystem != nullptr)
+    {
+        SaveSubsystem->ApplyPendingPlayerCharacterData(PlayerState);
+    }
+}
+
 void APTGameMode::StartAutoSaveIfAvailable() const
 {
     UGameInstance* GameInstance = GetGameInstance();
@@ -514,6 +566,7 @@ void APTGameMode::PostSeamlessTravel()
 void APTGameMode::HandleSeamlessTravelPlayer(AController*& C)
 {
     Super::HandleSeamlessTravelPlayer(C);
+    ApplyPendingPlayerCharacterData(C);
     StartAutoSaveIfAvailable();
 }
 

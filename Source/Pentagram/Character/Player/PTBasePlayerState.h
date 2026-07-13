@@ -36,6 +36,7 @@ public:
 protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
+    virtual void CopyProperties(APlayerState* PlayerState) override;
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
     // ── RepNotify 함수 ───────────────────────────────────────────────────────

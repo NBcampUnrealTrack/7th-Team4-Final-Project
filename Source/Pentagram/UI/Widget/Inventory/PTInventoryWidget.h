@@ -9,6 +9,7 @@
 class UUniformGridPanel;
 class UPTInventorySlotWidget;
 class UPTInventoryComponent;
+class UPTEquipmentComponent;
 class UPTEquipPanelWidget;
 class UPTShopWidget;
 
@@ -32,6 +33,7 @@ protected:
     virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
+    virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
 
 
     // ── 일반 함수 ──
@@ -39,11 +41,17 @@ protected:
 
     UFUNCTION()
     void RefreshAllSlots();
+    void RefreshEquipmentSlots();
     void BindInventoryChanged();
     void UnbindInventoryChanged();
+    void BindEquipmentChanged();
+    void UnbindEquipmentChanged();
 
     UFUNCTION()
     void HandleInventoryChanged();
+
+    UFUNCTION()
+    void HandleEquipmentChanged();
 
     UFUNCTION()
     void HandleSlotClicked(int32 SlotIndex);
@@ -56,6 +64,9 @@ protected:
 
     UFUNCTION()
     void HandleSlotUseRequested(int32 SlotIndex);
+
+    UFUNCTION()
+    void HandleFieldDropRequested(int32 SlotIndex, FVector2D ScreenPosition);
 
     // ── 위젯 바인딩 ──
     UPROPERTY(meta = (BindWidget))
@@ -82,8 +93,10 @@ protected:
     TObjectPtr<UPTShopWidget> ShopWidgetForSell;
 
     TWeakObjectPtr<UPTInventoryComponent> BoundInventoryComponent;
+    TWeakObjectPtr<UPTEquipmentComponent> BoundEquipmentComponent;
 
 
 private:
     UPTInventoryComponent* ResolveInventoryComponent() const;
+    UPTEquipmentComponent* ResolveEquipmentComponent() const;
 };

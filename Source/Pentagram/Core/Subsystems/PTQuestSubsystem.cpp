@@ -9,6 +9,7 @@
 #include "PTEconomySubsystem.h"
 #include "PTItemSubsystem.h"
 #include "PTPlayerLevelSubsystem.h"
+#include "PTSaveSubsystem.h"
 
 void UPTQuestSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -78,6 +79,8 @@ bool UPTQuestSubsystem::AcceptQuest(APTBasePlayerState* PlayerState, FName Quest
     PlayerState->AcceptedQuests.Add(MakeQuestProgress(*QuestData));
     PlayerState->ForceNetUpdate();
     OnQuestAccepted.Broadcast(QuestID);
+    OnQuestListChanged.Broadcast();
+    SaveQuestPlayerState(PlayerState, TEXT("Accepted"));
     return true;
 }
 
@@ -155,6 +158,7 @@ bool UPTQuestSubsystem::UpdateQuestProgress(
     if (bUpdatedAnyQuest)
     {
         PlayerState->ForceNetUpdate();
+        SaveQuestPlayerState(PlayerState, TEXT("ProgressUpdated"));
     }
 
     return bUpdatedAnyQuest;
@@ -177,6 +181,8 @@ bool UPTQuestSubsystem::CompleteQuest(APTBasePlayerState* PlayerState, FName Que
     PlayerState->ForceNetUpdate();
     OnQuestCompleted.Broadcast(QuestID);
     OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
+    OnQuestListChanged.Broadcast();
+    SaveQuestPlayerState(PlayerState, TEXT("Completed"));
     return true;
 }
 
@@ -203,6 +209,7 @@ bool UPTQuestSubsystem::RewardQuest(FName QuestID, APTBasePlayerState* RewardPla
     RewardPlayerState->ForceNetUpdate();
     OnQuestProgressChanged.Broadcast(QuestID, *QuestProgress);
     OnQuestListChanged.Broadcast();
+    SaveQuestPlayerState(RewardPlayerState, TEXT("Rewarded"));
     return true;
 }
 
@@ -279,22 +286,30 @@ void UPTQuestSubsystem::SetAcceptedQuestProgresses(
     }
 
     PlayerState->AcceptedQuests.Empty();
+    TSet<FName> LoadedQuestIDs;
     for (const FPTQuestProgress& QuestProgress : InQuestProgresses)
     {
-        if (QuestProgress.QuestID.IsNone())
+        if (QuestProgress.QuestID.IsNone() || LoadedQuestIDs.Contains(QuestProgress.QuestID))
         {
             continue;
         }
 
-        if (GetQuestData(QuestProgress.QuestID) == nullptr)
+        FPTQuestProgress RestoredQuestProgress = QuestProgress;
+        for (FPTQuestConditionProgress& ConditionProgress : RestoredQuestProgress.Conditions)
         {
-            continue;
+            ConditionProgress.RequiredCount = FMath::Max(ConditionProgress.RequiredCount, 1);
+            ConditionProgress.CurrentCount = FMath::Clamp(
+                ConditionProgress.CurrentCount,
+                0,
+                ConditionProgress.RequiredCount);
         }
 
-        PlayerState->AcceptedQuests.Add(QuestProgress);
+        LoadedQuestIDs.Add(RestoredQuestProgress.QuestID);
+        PlayerState->AcceptedQuests.Add(MoveTemp(RestoredQuestProgress));
     }
 
     PlayerState->ForceNetUpdate();
+    OnQuestListChanged.Broadcast();
 }
 
 void UPTQuestSubsystem::ClearAcceptedQuestProgresses(APTBasePlayerState* PlayerState)
@@ -324,6 +339,42 @@ FPTQuestProgress* UPTQuestSubsystem::FindQuestProgress(APTBasePlayerState* Playe
         {
             return QuestProgress.QuestID == QuestID;
         });
+}
+
+void UPTQuestSubsystem::SaveQuestPlayerState(
+    APTBasePlayerState* PlayerState,
+    const TCHAR* SaveReason) const
+{
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = GetGameInstance();
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+    const bool bSaved = SaveSubsystem != nullptr && SaveSubsystem->SavePlayer(PlayerState);
+
+    if (bSaved)
+    {
+        UE_LOG(
+            LogTemp,
+            Log,
+            TEXT("[QuestSave] Saved. Reason=%s Player=%s QuestCount=%d"),
+            SaveReason,
+            *PlayerState->GetPlayerName(),
+            PlayerState->AcceptedQuests.Num());
+    }
+    else
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[QuestSave] Failed. Reason=%s Player=%s QuestCount=%d"),
+            SaveReason,
+            *PlayerState->GetPlayerName(),
+            PlayerState->AcceptedQuests.Num());
+    }
 }
 
 FPTQuestProgress UPTQuestSubsystem::MakeQuestProgress(const FPTQuestDataRow& QuestData) const

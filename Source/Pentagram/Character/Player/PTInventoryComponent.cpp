@@ -5,6 +5,8 @@
 #include "Character/PTBaseCharacter.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
+#include "Core/Subsystems/PTSaveSubsystem.h"
+#include "Engine/GameInstance.h"
 #include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
 
@@ -30,9 +32,60 @@ void UPTInventoryComponent::BeginPlay()
     AActor* Owner = GetOwner();
     if (Owner != nullptr && Owner->HasAuthority())
     {
-        // 게임 시작 시 30칸의 빈 슬롯을 미리 확보.
-        InventorySlots.Init(FInventorySlot(), MaxSlotCount);
+        // PostLogin 저장 복원이 BeginPlay보다 먼저 실행될 수 있으므로 기존 슬롯을 덮어쓰지 않는다.
+        if (InventorySlots.IsEmpty())
+        {
+            InventorySlots.Init(FInventorySlot(), MaxSlotCount);
+        }
+        else if (InventorySlots.Num() != MaxSlotCount)
+        {
+            InventorySlots.SetNum(MaxSlotCount);
+        }
     }
+}
+
+bool UPTInventoryComponent::RestoreInventorySlots(const TArray<FInventorySlot>& InInventorySlots)
+{
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority())
+    {
+        return false;
+    }
+
+    TArray<FInventorySlot> RestoredSlots;
+    RestoredSlots.Init(FInventorySlot(), MaxSlotCount);
+
+    const int32 CopyCount = FMath::Min(InInventorySlots.Num(), MaxSlotCount);
+    for (int32 Index = 0; Index < CopyCount; ++Index)
+    {
+        const FInventorySlot& SavedSlot = InInventorySlots[Index];
+        if (SavedSlot.IsEmpty())
+        {
+            continue;
+        }
+
+        FInventorySlot RestoredSlot = SavedSlot;
+        RestoredSlot.Quantity = FMath::Max(SavedSlot.Quantity, 1);
+        if (RestoredSlot.ItemIconAsset.IsNull())
+        {
+            RestoredSlot.ItemIconAsset = RestoredSlot.ItemData.Item_Icon;
+        }
+        if (RestoredSlot.ItemMeshAsset.IsNull())
+        {
+            RestoredSlot.ItemMeshAsset = RestoredSlot.ItemData.ItemMeshAsset;
+        }
+        if (RestoredSlot.ArmorChestMeshAsset.IsNull())
+        {
+            RestoredSlot.ArmorChestMeshAsset = RestoredSlot.ItemData.ArmorChestMeshAsset;
+        }
+
+        RestoredSlots[Index] = MoveTemp(RestoredSlot);
+    }
+
+    InventorySlots = MoveTemp(RestoredSlots);
+    BroadcastInventoryChanged();
+    Owner->ForceNetUpdate();
+    return true;
 }
 
 // 변수 리플리케이트 규칙 정의
@@ -68,6 +121,7 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
             BroadcastInventoryChanged();
             PrintInventoryLog();
             NotifyQuestItemCollected(NewItemData, Count);
+            SaveOwnerPlayerState();
             return true;
         }
     }
@@ -86,6 +140,7 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
         BroadcastInventoryChanged();
         PrintInventoryLog();
         NotifyQuestItemCollected(NewItemData, Count);
+        SaveOwnerPlayerState();
         return true;
     }
 
@@ -167,6 +222,7 @@ bool UPTInventoryComponent::RemoveItem(FName ItemID, int32 Count)
 
     BroadcastInventoryChanged();
     PrintInventoryLog();
+    SaveOwnerPlayerState();
     return true;
 }
 
@@ -195,6 +251,7 @@ bool UPTInventoryComponent::RemoveItemAtSlot(int32 SlotIndex, int32 Count)
 
     BroadcastInventoryChanged();
     PrintInventoryLog();
+    SaveOwnerPlayerState();
     return true;
 }
 
@@ -268,6 +325,7 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
 
     BroadcastInventoryChanged();
     PrintInventoryLog();
+    SaveOwnerPlayerState();
 
     UWorld* World = GetWorld();
     if (World == nullptr)
@@ -451,4 +509,28 @@ bool UPTInventoryComponent::Server_UseSkillBook_Validate(int32 SlotIndex)
 void UPTInventoryComponent::BroadcastInventoryChanged()
 {
     OnInventoryChanged.Broadcast();
+}
+
+void UPTInventoryComponent::SaveOwnerPlayerState() const
+{
+    const APawn* OwnerPawn = Cast<APawn>(GetOwner());
+    APTBasePlayerState* PlayerState =
+        OwnerPawn != nullptr ? OwnerPawn->GetPlayerState<APTBasePlayerState>() : nullptr;
+    if (PlayerState == nullptr || !PlayerState->HasAuthority())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+    UPTSaveSubsystem* SaveSubsystem =
+        GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+    if (SaveSubsystem != nullptr && !SaveSubsystem->SavePlayer(PlayerState))
+    {
+        UE_LOG(
+            LogTemp,
+            Warning,
+            TEXT("[Save] Failed to save after an inventory change. Player=%s"),
+            *PlayerState->GetPlayerName());
+    }
 }

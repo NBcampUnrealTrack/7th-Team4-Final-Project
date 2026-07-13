@@ -6,6 +6,34 @@
 #include "Core/PTGameMode.h"     // 로비 추가 (경로는 프로젝트에 맞게)
 #include "Core/PTGameState.h"    // 로비 추가 (경로는 프로젝트에 맞게)
 
+void APTBasePlayerState::CopyProperties(APlayerState* PlayerState)
+{
+    Super::CopyProperties(PlayerState);
+
+    APTBasePlayerState* NewPlayerState = Cast<APTBasePlayerState>(PlayerState);
+    if (NewPlayerState == nullptr)
+    {
+        return;
+    }
+
+    NewPlayerState->CurrentHP = CurrentHP;
+    NewPlayerState->MaxHP = MaxHP;
+    NewPlayerState->CurrentMP = CurrentMP;
+    NewPlayerState->MaxMP = MaxMP;
+    NewPlayerState->BaseAtk = BaseAtk;
+    NewPlayerState->BaseDef = BaseDef;
+    NewPlayerState->CriticalChance = CriticalChance;
+    NewPlayerState->CriticalATK = CriticalATK;
+    NewPlayerState->MoveSpeed = MoveSpeed;
+    NewPlayerState->CurrentGold = CurrentGold;
+    NewPlayerState->CurrentExp = CurrentExp;
+    NewPlayerState->PlayerLevel = PlayerLevel;
+    NewPlayerState->RequiredExp = RequiredExp;
+    NewPlayerState->AcceptedQuests = AcceptedQuests;
+    NewPlayerState->SavedRespawnLocation = SavedRespawnLocation;
+    NewPlayerState->bHasRespawnLocation = bHasRespawnLocation;
+}
+
 void APTBasePlayerState::OnRep_CurrentHP()
 {
     OnHealthChanged.Broadcast(CurrentHP, MaxHP);

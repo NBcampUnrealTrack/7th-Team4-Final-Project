@@ -9,7 +9,6 @@
 #include "PTEquipmentComponent.h"
 #include "PTInventoryComponent.h"
 #include "PTPlayerCharacter.h"
-#include "SAdvancedRotationInputBox.h"
 #include "UI/Widget/LayOut/PTPrimaryLayout.h"
 #include "Character/Skill/PTPlayerSkillComponent.h"
 #include "Item/PTDropItemActorBase.h"
@@ -37,12 +36,69 @@
 #include "TimerManager.h"
 #include "Character/Skill/PTSkillIndicatorActor.h"
 #include "Materials/MaterialIREmitter.h"
+#include "UObject/ConstructorHelpers.h"
 
 APTPlayerController::APTPlayerController()
 {
     PrimaryActorTick.bCanEverTick = true;
     bShowMouseCursor = true;
     DefaultMouseCursor = EMouseCursor::Default;
+
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> DropItemBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem"));
+    if (DropItemBlueprint.Succeeded())
+    {
+        InventoryDropActorClass = DropItemBlueprint.Class;
+    }
+
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> PotionDropBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem_Potion"));
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> SkillBookDropBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook"));
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> ChestDropBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem_Chest"));
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> HelmetDropBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem_Helmet"));
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> WandDropBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem_Wand"));
+    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> ShovelDropBlueprint(
+        TEXT("/Game/Pentagram/Item/BP_DropItem_Shovel"));
+
+    PotionDropActorClass = PotionDropBlueprint.Class;
+    SkillBookDropActorClass = SkillBookDropBlueprint.Class;
+    ChestDropActorClass = ChestDropBlueprint.Class;
+    HelmetDropActorClass = HelmetDropBlueprint.Class;
+    WandDropActorClass = WandDropBlueprint.Class;
+    ShovelDropActorClass = ShovelDropBlueprint.Class;
+}
+
+TSubclassOf<APTDropItemActorBase> APTPlayerController::ResolveInventoryDropActorClass(
+    const FItemData& ItemData) const
+{
+    switch (ItemData.Item_Type)
+    {
+    case EItemType::Potion:
+        return PotionDropActorClass != nullptr ? PotionDropActorClass : InventoryDropActorClass;
+    case EItemType::SkillBook:
+        return SkillBookDropActorClass != nullptr ? SkillBookDropActorClass : InventoryDropActorClass;
+    case EItemType::Chest:
+        return ChestDropActorClass != nullptr ? ChestDropActorClass : InventoryDropActorClass;
+    case EItemType::Helmet:
+        return HelmetDropActorClass != nullptr ? HelmetDropActorClass : InventoryDropActorClass;
+    case EItemType::Weapon:
+        if (ItemData.WeaponType == EWeaponType::Wand && WandDropActorClass != nullptr)
+        {
+            return WandDropActorClass;
+        }
+        if (ItemData.Item_ID.ToString().Contains(TEXT("Shovel"), ESearchCase::IgnoreCase) &&
+            ShovelDropActorClass != nullptr)
+        {
+            return ShovelDropActorClass;
+        }
+        return InventoryDropActorClass;
+    default:
+        return InventoryDropActorClass;
+    }
 }
 
 void APTPlayerController::BeginPlay()
@@ -923,26 +979,40 @@ void APTPlayerController::Server_SetActorRotation_Implementation(FRotator NewRot
 
 void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBase* TargetItem)
 {
-    if (!TargetItem) return;
+    if (!IsValid(TargetItem) || TargetItem->GetWorld() != GetWorld() || !TargetItem->HasAuthority())
+    {
+        return;
+    }
 
     APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
     if (!PlayerCharacter) return;
 
-    float Distance2D = FVector::Dist2D(PlayerCharacter->GetActorLocation(), TargetItem->GetActorLocation());
-    if (Distance2D > 250.0f)
+    const FVector PlayerLocation = PlayerCharacter->GetActorLocation();
+    const FVector ItemLocation = TargetItem->GetActorLocation();
+    const float Distance2D = FVector::Dist2D(PlayerLocation, ItemLocation);
+    if (Distance2D > 250.0f || FMath::Abs(PlayerLocation.Z - ItemLocation.Z) > 300.0f)
     {
         UE_LOG(LogTemp, Warning, TEXT("아이템이 너무 멀리 있거나, 잘못된 위치에서 획득 요청이 들어왔습니다."));
         return;
     }
 
-    if (PlayerCharacter->GetInventoryComponent() &&
-        PlayerCharacter->GetInventoryComponent()->TryAddItem(TargetItem->GetItemData(), 1))
+    if (!TargetItem->TryClaimPickup())
+    {
+        return;
+    }
+
+    UPTInventoryComponent* InventoryComponent = PlayerCharacter->GetInventoryComponent();
+    const FItemData ItemData = TargetItem->GetItemData();
+    const int32 Quantity = TargetItem->GetDroppedQuantity();
+    if (InventoryComponent != nullptr && !ItemData.Item_ID.IsNone() && Quantity > 0 &&
+        InventoryComponent->TryAddItem(ItemData, Quantity))
     {
         TargetItem->Destroy();
         UE_LOG(LogTemp, Log, TEXT("아이템을 획득하였습니다."));
     }
     else
     {
+        TargetItem->ReleasePickupClaim();
         UE_LOG(LogTemp, Warning, TEXT("[획득 실패] 인벤토리 공간 부족 또는 아이템 ID 누락"));
     }
 }
@@ -951,6 +1021,98 @@ void APTPlayerController::Server_TryPickupItem_Implementation(APTDropItemActorBa
 bool APTPlayerController::Server_TryPickupItem_Validate(APTDropItemActorBase* TargetItem)
 {
     return true;
+}
+
+void APTPlayerController::RequestDropInventoryItem(
+    int32 InventorySlotIndex,
+    FName ExpectedItemID,
+    int32 Count)
+{
+    if (!HasAuthority())
+    {
+        Server_DropInventoryItem(InventorySlotIndex, ExpectedItemID, Count);
+        return;
+    }
+
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+    UPTInventoryComponent* InventoryComponent =
+        PlayerCharacter != nullptr ? PlayerCharacter->GetInventoryComponent() : nullptr;
+    if (PlayerCharacter == nullptr || InventoryComponent == nullptr)
+    {
+        return;
+    }
+
+    const TArray<FInventorySlot>& Slots = InventoryComponent->GetInventorySlots();
+    if (!Slots.IsValidIndex(InventorySlotIndex))
+    {
+        return;
+    }
+
+    const FInventorySlot& Slot = Slots[InventorySlotIndex];
+    if (Slot.IsEmpty() || Slot.ItemData.Item_ID != ExpectedItemID || Count <= 0 || Count > Slot.Quantity)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[InventoryDrop] Rejected stale or invalid slot request. Slot=%d ItemID=%s Count=%d"),
+            InventorySlotIndex, *ExpectedItemID.ToString(), Count);
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (World == nullptr)
+    {
+        return;
+    }
+
+    const FItemData DroppedItemData = Slot.ItemData;
+    const FVector Forward = PlayerCharacter->GetActorForwardVector().GetSafeNormal2D();
+    const FVector DropSpawnLocation = PlayerCharacter->GetActorLocation() + Forward * 150.0f + FVector(0.0f, 0.0f, 30.0f);
+    const FTransform SpawnTransform(FRotator::ZeroRotator, DropSpawnLocation);
+
+    TSubclassOf<APTDropItemActorBase> DropClass = ResolveInventoryDropActorClass(DroppedItemData);
+    if (DropClass == nullptr)
+    {
+        DropClass = APTDropItemActorBase::StaticClass();
+    }
+
+    FActorSpawnParameters SpawnParameters;
+    SpawnParameters.Instigator = PlayerCharacter;
+    SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+    APTDropItemActorBase* DroppedItem = World->SpawnActor<APTDropItemActorBase>(
+        DropClass,
+        SpawnTransform,
+        SpawnParameters);
+    if (DroppedItem == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[InventoryDrop] Failed to spawn drop actor. ItemID=%s"),
+            *ExpectedItemID.ToString());
+        return;
+    }
+
+    DroppedItem->InitializeDroppedItem(DroppedItemData, Count);
+    if (!InventoryComponent->RemoveItemAtSlot(InventorySlotIndex, Count))
+    {
+        DroppedItem->Destroy();
+        return;
+    }
+
+    UE_LOG(LogTemp, Log, TEXT("[InventoryDrop] Dropped item. ItemID=%s Quantity=%d Slot=%d"),
+        *DroppedItemData.Item_ID.ToString(), Count, InventorySlotIndex);
+}
+
+void APTPlayerController::Server_DropInventoryItem_Implementation(
+    int32 InventorySlotIndex,
+    FName ExpectedItemID,
+    int32 Count)
+{
+    RequestDropInventoryItem(InventorySlotIndex, ExpectedItemID, Count);
+}
+
+bool APTPlayerController::Server_DropInventoryItem_Validate(
+    int32 InventorySlotIndex,
+    FName ExpectedItemID,
+    int32 Count)
+{
+    return InventorySlotIndex >= 0 && InventorySlotIndex < 30 &&
+        !ExpectedItemID.IsNone() && Count > 0 && Count <= 1000000;
 }
 
 void APTPlayerController::OnInventoryPressed()

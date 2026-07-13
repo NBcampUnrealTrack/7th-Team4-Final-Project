@@ -11,7 +11,9 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/GameModeBase.h"
 #include "Core/PTGameMode.h"
+#include "Core/Subsystems/PTSaveSubsystem.h"
 #include "Animation/AnimInstance.h"
+#include "Engine/GameInstance.h"
 #include "Net/UnrealNetwork.h"
 #include "PTInventoryComponent.h"
 #include "PTEquipmentComponent.h"
@@ -123,6 +125,23 @@ void APTPlayerCharacter::BeginPlay()
     ApplyWeaponAnimLayer(CurrentWeaponType);
 
     PrewarmWeaponAnimLayers();
+}
+
+void APTPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (HasAuthority())
+    {
+        APTBasePlayerState* PTPlayerState = GetPlayerState<APTBasePlayerState>();
+        UGameInstance* GameInstance = GetGameInstance();
+        UPTSaveSubsystem* SaveSubsystem =
+            GameInstance != nullptr ? GameInstance->GetSubsystem<UPTSaveSubsystem>() : nullptr;
+        if (PTPlayerState != nullptr && SaveSubsystem != nullptr)
+        {
+            SaveSubsystem->SavePlayer(PTPlayerState);
+        }
+    }
+
+    Super::EndPlay(EndPlayReason);
 }
 
 void APTPlayerCharacter::Tick(float DeltaTime)

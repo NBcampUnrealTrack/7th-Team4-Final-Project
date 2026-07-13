@@ -43,10 +43,12 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+    virtual void FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation) override;
 
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;
     void SavePlayerState(AController* PlayerController) const;
+    void ApplyPendingPlayerCharacterData(AController* PlayerController) const;
     void StartAutoSaveIfAvailable() const;
     FString ResolveGameMapPath() const;
 

@@ -18,6 +18,7 @@ class APTNPCCharacter;
 class APTQuestNPCCharacter;
 class APTShopNPCCharacter;
 class UPTShopWidget;
+struct FItemData;
 
 UCLASS()
 class PENTAGRAM_API APTPlayerController : public APlayerController
@@ -83,6 +84,12 @@ public:
     // 아이템 획득을 서버에 요청 Server RPC
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_TryPickupItem(APTDropItemActorBase* TargetItem);
+
+    UFUNCTION(BlueprintCallable, Category = "PT|Inventory|Drop")
+    void RequestDropInventoryItem(int32 InventorySlotIndex, FName ExpectedItemID, int32 Count);
+
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_DropInventoryItem(int32 InventorySlotIndex, FName ExpectedItemID, int32 Count);
 
     UFUNCTION(Server, Reliable)
     void Server_RequestAssignSkillToSlot(FName SkillID, int32 SlotIndex);
@@ -226,6 +233,28 @@ public:
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;
 
+    /** 인벤토리에서 필드로 버릴 때 사용할 기존 드랍 아이템 액터입니다. */
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> InventoryDropActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> PotionDropActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> SkillBookDropActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> ChestDropActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> HelmetDropActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> WandDropActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
+    TSubclassOf<APTDropItemActorBase> ShovelDropActorClass;
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> SkillWindowClass;
 
@@ -272,6 +301,8 @@ public:
     FName AimingSkillID = NAME_None;
 
 private:
+    TSubclassOf<APTDropItemActorBase> ResolveInventoryDropActorClass(const FItemData& ItemData) const;
+
     FVector MoveDestination = FVector::ZeroVector;
     bool bMoveToDestination = false;
     static constexpr float AcceptanceRadius = 50.f;

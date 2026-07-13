@@ -603,6 +603,52 @@ bool UPTPlayerSkillComponent::LearnSkill(FName SkillID)
     return true;
 }
 
+bool UPTPlayerSkillComponent::RestoreSkillProgress(
+    const TArray<FName>& InLearnedSkills,
+    const TArray<FName>& InSkillSlots)
+{
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority())
+    {
+        return false;
+    }
+
+    TArray<FName> RestoredLearnedSkills;
+    for (FName SkillID : InLearnedSkills)
+    {
+        if (SkillID.IsNone() || RestoredLearnedSkills.Contains(SkillID) || GetSkillData(SkillID) == nullptr)
+        {
+            continue;
+        }
+
+        RestoredLearnedSkills.Add(SkillID);
+    }
+    LearnedSkills = MoveTemp(RestoredLearnedSkills);
+
+    const int32 SlotCount = SkillSlots.IsEmpty() ? 5 : SkillSlots.Num();
+    TArray<FName> RestoredSkillSlots;
+    RestoredSkillSlots.Init(NAME_None, SlotCount);
+    const int32 CopyCount = FMath::Min(InSkillSlots.Num(), SlotCount);
+    for (int32 Index = 0; Index < CopyCount; ++Index)
+    {
+        const FName SkillID = InSkillSlots[Index];
+        if (!SkillID.IsNone() && GetSkillData(SkillID) != nullptr)
+        {
+            RestoredSkillSlots[Index] = SkillID;
+        }
+    }
+    SkillSlots = MoveTemp(RestoredSkillSlots);
+
+    OnSkillLearned.Broadcast(NAME_None);
+    for (int32 Index = 0; Index < SkillSlots.Num(); ++Index)
+    {
+        Client_NotifySkillSlotAssigned(Index, SkillSlots[Index]);
+    }
+
+    Owner->ForceNetUpdate();
+    return true;
+}
+
 bool UPTPlayerSkillComponent::CanUseSkill(const FPTSkillRow& Row, FText& OutReason) const
 {
     if (GetOwnerLevel() < Row.RequiredLevel)

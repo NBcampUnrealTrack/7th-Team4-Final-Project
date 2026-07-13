@@ -44,6 +44,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Skill")
     FName GetSkillAtSlot(int32 SlotIndex) const;
 
+    const TArray<FName>& GetSkillSlots() const { return SkillSlots; }
+
     // 슬롯의 남은 쿨다운 시간을 반환
     UFUNCTION(BlueprintCallable)
     float GetCooldownRemaining(int32 SlotIndex) const;

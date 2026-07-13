@@ -2,6 +2,33 @@
 #include "Net/UnrealNetwork.h"
 #include "PTPlayerCharacter.h"
 
+namespace
+{
+bool IsItemCompatibleWithSlot(const FItemData& ItemData, EEquipSlotType SlotType)
+{
+    if (ItemData.Item_ID.IsNone() || ItemData.Item_Category != EItemCategory::Equipment)
+    {
+        return false;
+    }
+
+    switch (SlotType)
+    {
+        case EEquipSlotType::Weapon:
+            return ItemData.Item_Type == EItemType::Weapon;
+        case EEquipSlotType::Chest:
+            return ItemData.Item_Type == EItemType::Chest;
+        case EEquipSlotType::Helmet:
+            return ItemData.Item_Type == EItemType::Helmet;
+        case EEquipSlotType::Gloves:
+            return ItemData.Item_Type == EItemType::Gloves;
+        case EEquipSlotType::Boots:
+            return ItemData.Item_Type == EItemType::Boots;
+        default:
+            return false;
+    }
+}
+}
+
 
 UPTEquipmentComponent::UPTEquipmentComponent()
 {
@@ -23,6 +50,67 @@ UPTEquipmentComponent::UPTEquipmentComponent()
 bool UPTEquipmentComponent::IsWeaponEquipped() const
 {
     return EquippedWeapon.bIsEquipped;
+}
+
+TArray<FEquipmentSlot> UPTEquipmentComponent::GetEquipmentSlots() const
+{
+    return { EquippedWeapon, EquippedChest, EquippedHelmet, EquippedGloves, EquippedBoots };
+}
+
+bool UPTEquipmentComponent::RestoreEquipmentSlots(const TArray<FEquipmentSlot>& InEquipmentSlots)
+{
+    AActor* Owner = GetOwner();
+    if (Owner == nullptr || !Owner->HasAuthority())
+    {
+        return false;
+    }
+
+    EquippedWeapon = FEquipmentSlot(EEquipSlotType::Weapon);
+    EquippedChest = FEquipmentSlot(EEquipSlotType::Chest);
+    EquippedHelmet = FEquipmentSlot(EEquipSlotType::Helmet);
+    EquippedGloves = FEquipmentSlot(EEquipSlotType::Gloves);
+    EquippedBoots = FEquipmentSlot(EEquipSlotType::Boots);
+
+    for (const FEquipmentSlot& SavedSlot : InEquipmentSlots)
+    {
+        if (!SavedSlot.bIsEquipped || !IsItemCompatibleWithSlot(SavedSlot.MountedItem, SavedSlot.EquippedSlotType))
+        {
+            continue;
+        }
+
+        FEquipmentSlot RestoredSlot = SavedSlot;
+        RestoredSlot.bIsEquipped = true;
+
+        switch (SavedSlot.EquippedSlotType)
+        {
+            case EEquipSlotType::Weapon:
+                EquippedWeapon = MoveTemp(RestoredSlot);
+                break;
+            case EEquipSlotType::Chest:
+                EquippedChest = MoveTemp(RestoredSlot);
+                break;
+            case EEquipSlotType::Helmet:
+                EquippedHelmet = MoveTemp(RestoredSlot);
+                break;
+            case EEquipSlotType::Gloves:
+                EquippedGloves = MoveTemp(RestoredSlot);
+                break;
+            case EEquipSlotType::Boots:
+                EquippedBoots = MoveTemp(RestoredSlot);
+                break;
+            default:
+                break;
+        }
+    }
+
+    UpdateTotalBonusStats();
+    OnRep_EquippedWeapon();
+    OnRep_EquippedChest();
+    OnRep_EquippedHelmet();
+    OnRep_EquippedGloves();
+    OnRep_EquippedBoots();
+    Owner->ForceNetUpdate();
+    return true;
 }
 
 void UPTEquipmentComponent::BeginPlay()
@@ -120,6 +208,7 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
     UE_LOG(LogTemp, Log, TEXT("[장비컴포넌트] 장착 완료: %s (누적 스탯 -> STR: %d, DEF: %d, HP: %d)"),
         *NewItem.Item_Name.ToString(), TotalBonusStr, TotalBonusDef, TotalBonusHp);
 
+    OnEquipmentChanged.Broadcast();
     return true;
 }
 
@@ -180,6 +269,7 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
     UE_LOG(LogTemp, Log, TEXT("[장비컴포넌트] 해제 완료: %s (누적 스탯 -> STR: %d, DEF: %d, HP: %d)"),
         *OutUnequippedItem.Item_Name.ToString(), TotalBonusStr, TotalBonusDef, TotalBonusHp);
 
+    OnEquipmentChanged.Broadcast();
     return true;
 }
 
@@ -287,6 +377,8 @@ void UPTEquipmentComponent::OnRep_EquippedWeapon()
             OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
         }
     }
+
+    OnEquipmentChanged.Broadcast();
 }
 
 void UPTEquipmentComponent::OnRep_EquippedChest()
@@ -298,16 +390,21 @@ void UPTEquipmentComponent::OnRep_EquippedChest()
         OwnerCharacter->UpdateArmorVisual(EEquipSlotType::Chest, EquippedChest.MountedItem.ArmorChestMeshAsset);
     else
         OwnerCharacter->UpdateArmorVisual(EEquipSlotType::Chest, TSoftObjectPtr<USkeletalMesh>());
+
+    OnEquipmentChanged.Broadcast();
 }
 
 void UPTEquipmentComponent::OnRep_EquippedHelmet()
 {
+    OnEquipmentChanged.Broadcast();
 }
 
 void UPTEquipmentComponent::OnRep_EquippedGloves()
 {
+    OnEquipmentChanged.Broadcast();
 }
 
 void UPTEquipmentComponent::OnRep_EquippedBoots()
 {
+    OnEquipmentChanged.Broadcast();
 }
