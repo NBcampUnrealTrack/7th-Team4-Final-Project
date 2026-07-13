@@ -28,6 +28,9 @@ void UPTUIManagerSubsystem::Deinitialize()
     RemoveWidget(CurrentUIWidget);
     CurrentUIWidget = nullptr;
 
+    RemoveWidget(CloseWidgetInstance);
+    CloseWidgetInstance = nullptr;
+
     if (CurrentNotifyWidget)
     {
         CurrentNotifyWidget->RemoveFromParent();
@@ -349,6 +352,26 @@ void UPTUIManagerSubsystem::ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestC
     {
         QuestInstance->SetupQuestJournal();
     }
+}
+
+void UPTUIManagerSubsystem::ToggleCloseWidget(TSubclassOf<UCommonActivatableWidget> CloseWidgetClass)
+{
+    if (!CloseWidgetClass)
+    {
+        return;
+    }
+
+    const bool bWasOpen = CloseWidgetInstance &&
+        (CloseWidgetInstance->IsActivated() || CloseWidgetInstance->IsInViewport());
+
+    if (bWasOpen)
+    {
+        RemoveWidget(CloseWidgetInstance);
+        CloseWidgetInstance = nullptr;
+        return;
+    }
+
+    CloseWidgetInstance = PushWidget(CloseWidgetClass, EPTUILayer::Modal);
 }
 
 void UPTUIManagerSubsystem::ToggleSkillWindow(TSubclassOf<UCommonActivatableWidget> SkillWindowClass)

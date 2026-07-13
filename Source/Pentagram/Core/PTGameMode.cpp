@@ -275,6 +275,8 @@ void APTGameMode::NotifyReadyChanged()
 }
 
 // 로비 추가
+// 로비 추가
+
 bool APTGameMode::AreAllPlayersReady() const
 {
     APTGameState* GS = GetGameState<APTGameState>();
@@ -283,7 +285,30 @@ bool APTGameMode::AreAllPlayersReady() const
         return false;
     }
 
-    int32 ValidCount = 0;
+
+    // int32 ValidCount = 0;
+    // for (APlayerState* PS : GS->PlayerArray)
+    // {
+    //     APTBasePlayerState* PTPS = Cast<APTBasePlayerState>(PS);
+    //     if (PTPS == nullptr || PTPS->IsInactive() || PTPS->IsOnlyASpectator())
+    //     {
+    //         continue;   // 집계 제외
+    //     }
+    //
+    //     if (!PTPS->IsReady())
+    //     {
+    //         return false;   // 미준비 차단
+    //     }
+    //
+    //     ++ValidCount;
+    // }
+    //
+    // return ValidCount >= MinPlayersToStart;   // 전원준비+인원
+
+
+    int32 ValidCount = 0;   // 접속중인 유효 인원
+    int32 ReadyCount = 0;   // 그 중 준비완료 인원
+
     for (APlayerState* PS : GS->PlayerArray)
     {
         APTBasePlayerState* PTPS = Cast<APTBasePlayerState>(PS);
@@ -292,17 +317,21 @@ bool APTGameMode::AreAllPlayersReady() const
             continue;   // 집계 제외
         }
 
-        if (!PTPS->IsReady())
-        {
-            return false;   // 미준비 차단
-        }
-
         ++ValidCount;
+
+        if (PTPS->IsReady())
+        {
+            ++ReadyCount;
+        }
     }
 
-    return ValidCount >= MinPlayersToStart;   // 전원준비+인원
-}
+    if (ValidCount < FMath::Max(MinPlayersToStart, 1))
+    {
+        return false;
+    }
 
+    return ReadyCount == ValidCount;
+}
 void APTGameMode::RequestTravelToGame()
 {
     TravelToGame();

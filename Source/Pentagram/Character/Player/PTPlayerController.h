@@ -50,6 +50,7 @@ public:
     void UnregisterNearbyNPC(APTNPCCharacter* NPC);
     void OnSkillWindowPressed();
     void OnCharacterSheetPressed();
+    void OnCloseMenuPressed();
 
     void RestoreGameplayInput();
     void SetGameplayInputBlockedByUI(bool bBlocked);
@@ -219,6 +220,9 @@ public:
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_DebugKill;
 
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_CloseMenu;
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;
 
@@ -227,6 +231,9 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> CharacterSheetClass;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UCommonActivatableWidget> CloseWidgetClass;
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UPTPrimaryLayout> PrimaryLayoutClass;

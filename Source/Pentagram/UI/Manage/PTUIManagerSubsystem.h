@@ -58,6 +58,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI")
     void ToggleQuest(TSubclassOf<UPTNPCDialogueWidget> QuestClass);
 
+    UFUNCTION(BlueprintCallable, Category = "PT|UI")
+    void ToggleCloseWidget(TSubclassOf<UCommonActivatableWidget> CloseWidgetClass);
+
     // 레이아웃 조회
     UPTPrimaryLayout* GetPrimaryLayout() const { return PrimaryLayout.Get(); }
 
@@ -85,6 +88,9 @@ protected:
 
     UPROPERTY(Transient)
     TObjectPtr<UPTNPCDialogueWidget> QuestInstance;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UCommonActivatableWidget> CloseWidgetInstance;
     // 현재 UI
     UPROPERTY(Transient)
     TObjectPtr<UCommonActivatableWidget> CurrentUIWidget;
