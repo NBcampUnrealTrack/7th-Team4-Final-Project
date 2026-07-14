@@ -82,6 +82,9 @@ public:
     UFUNCTION(Server, Reliable, WithValidation)
     void Server_UnequipItem(EEquipSlotType SlotType);
 
+    UFUNCTION(BlueprintPure, Category="PT|Equipment")
+    EWeaponType GetEquippedWeaponType() const;
+
     // ── Getter 함수 ──────────────────────────────────────────────────────────
 
     FORCEINLINE int32 GetTotalBonusStr() const { return TotalBonusStr; }

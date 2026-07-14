@@ -42,6 +42,8 @@ public:
 
     void OnSkill4(const FInputActionValue&) { HandleSkillPressed(3); }
 
+    void OnQuickSlot1();
+    void OnQuickSlot2();
     void OnDodge(const FInputActionValue& Value);
     void OnInventoryPressed();
     void OnShopPressed();
@@ -229,6 +231,10 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_CloseMenu;
+    TObjectPtr<UInputAction> IA_QuickSlot1;
+
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> IA_QuickSlot2;
 
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> InventoryClass;

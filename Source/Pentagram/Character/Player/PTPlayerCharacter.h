@@ -29,11 +29,17 @@ public:
     // F키 입력 시 상호작용 시도
     void TryInteract();
 
+    void AddInvincibility();
+
+    void RemoveInvincibility();
+
     // AnimNotify: 닷지 무적 구간 시작
     void OnDodgeInvincibleStart();
 
     // AnimNotify: 닷지 무적 구간 종료
     void OnDodgeInvincibleEnd();
+
+    void OnChannelSkillActivateNotify();
 
     // 체력 재생
     void RegenHP();
@@ -209,6 +215,8 @@ public:
 
     UPROPERTY(BlueprintAssignable)
     FOnPlayerDied OnPlayerDied;
+
+    int32 InvincibleRefs = 0;
 
 protected:
     // 무기 장착 스태틱 메시 컴포넌트
