@@ -146,7 +146,7 @@ void UPTAnimNotifyState_SkillProjectile::NotifyTick(USkeletalMeshComponent* Mesh
 
             Proj.HitActors.Add(TWeakObjectPtr<AActor>(HitActor));
 
-            const float FinalDamage = Owner->GetTotalAttack() * SkillData->DamageMultiplier;
+            const float FinalDamage = Owner->BaseAtk * SkillData->DamageMultiplier;
 
             FPTHitInfo HitInfo   = SkillData->MakeHitInfo(Owner);
             HitInfo.HitDirection = Proj.Direction;

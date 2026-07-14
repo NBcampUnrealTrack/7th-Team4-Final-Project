@@ -94,7 +94,42 @@ void APTPlayerProjectileActor::OnProjectileOverlap(UPrimitiveComponent* Overlapp
     APTBaseCharacter* Target = Cast<APTBaseCharacter>(OtherActor);
     const bool bIsEnemyCharacter = Target && !Cast<APTPlayerCharacter>(Target);
 
-    if (bIsEnemyCharacter && bPenetrate)
+    if (bIsEnemy)
+    {
+        if (HitActors.Contains(TWeakObjectPtr<AActor>(OtherActor))) return;
+        HitActors.Add(TWeakObjectPtr<AActor>(OtherActor));
+
+        if (bApplyDamage)
+        {
+            APTPlayerCharacter* AttackerPtr = Attacker.Get();
+            if (AttackerPtr)
+            {
+                const float FinalDamage = AttackerPtr->BaseAtk * DamageMultiplier;
+
+                FPTHitInfo HitInfo;
+                HitInfo.Attacker        = AttackerPtr;
+                HitInfo.HitDirection    = Direction;
+                HitInfo.KnockbackForce  = KnockbackForce;
+                HitInfo.KnockbackZForce = KnockbackZForce;
+                HitInfo.HitStopDuration = HitStopDuration;
+                HitInfo.StaggerDuration = StaggerDuration;
+                HitInfo.HitReactionType = HitReactionType;
+
+                Target->ApplyDamageWithHit(FinalDamage, AttackerPtr, HitInfo);
+            }
+        }
+
+        PlayHitEffects(ImpactPoint);
+
+        if (!bPenetrate)
+        {
+            ExpireProjectile();
+        }
+        return;
+    }
+
+    // 플레이어면 그냥 관통하고 날라감
+    if (Cast<APTPlayerCharacter>(OtherActor))
     {
         return;
     }
