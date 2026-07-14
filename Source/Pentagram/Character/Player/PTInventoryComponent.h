@@ -7,6 +7,7 @@
 #include "PTInventoryComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnInventoryChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnQuickSlotChanged);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTInventoryComponent : public UActorComponent
@@ -15,8 +16,6 @@ class PENTAGRAM_API UPTInventoryComponent : public UActorComponent
 
 public:
     UPTInventoryComponent();
-
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 아이템 추가 시도 함수 (성공 시 true, 가방이 가득 차면 false)
     UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -50,7 +49,6 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Inventory")
     FPTOnInventoryChanged OnInventoryChanged;
 
-    // ── RPC 함수 ─────────────────────────────────────────────────────────────
 
     // [리플리케이션] 클라이언트가 물약을 먹었을 때 서버에게 실제 데이터 처리를 요청하는 Server RPC
     UFUNCTION(Server, Reliable, WithValidation)
@@ -65,7 +63,6 @@ public:
     void Server_UseSkillBook(int32 SlotIndex);
 
 public:
-    // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void BeginPlay() override;
 
@@ -75,8 +72,6 @@ public:
     UFUNCTION()
     void OnRep_InventorySlots();
 
-    // ── 멤버 변수 (protected) ────────────────────────────────────────────────
-
     // 가방 크기 총 30칸
     const int32 MaxSlotCount = 30;
 
@@ -84,8 +79,40 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_InventorySlots, Category = "Inventory")
     TArray<FInventorySlot> InventorySlots;
 
+    // ===== QuickSlot (소모품 전용) =====
+    static constexpr int32 QuickSlotCount = 2;
+
+    // 각 퀵슬롯에 등록된 소모품의 Item_ID (인덱스 0 = 1번키, 1 = 2번키)
+    UPROPERTY(ReplicatedUsing = OnRep_QuickSlots, VisibleAnywhere, BlueprintReadOnly, Category = "QuickSlot")
+    TArray<FName> QuickSlots;
+
+    UPROPERTY(BlueprintAssignable, Category = "QuickSlot")
+    FPTOnQuickSlotChanged OnQuickSlotChanged;
+
+    // UI가 호출: 인벤토리 슬롯의 아이템을 퀵슬롯에 등록 (소모품만 허용)
+    UFUNCTION(BlueprintCallable, Category = "QuickSlot")
+    bool RegisterConsumableToQuickSlot(int32 QuickIndex, int32 InventorySlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "QuickSlot")
+    void ClearQuickSlot(int32 QuickIndex);
+
+    // 키(1/2) 입력 시 호출: 등록된 소모품 사용
+    UFUNCTION(BlueprintCallable, Category = "QuickSlot")
+    bool UseQuickSlot(int32 QuickIndex);
+
+    UFUNCTION(BlueprintPure, Category = "QuickSlot")
+    FName GetQuickSlotItemID(int32 QuickIndex) const;
+
+    UFUNCTION()
+    void OnRep_QuickSlots();
+
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_RegisterConsumableToQuickSlot(int32 QuickIndex, FName ItemID);
+
+    UFUNCTION(Server, Reliable, WithValidation)
+    void Server_ClearQuickSlot(int32 QuickIndex);
+
 private:
-    // ── 일반 멤버 함수 ───────────────────────────────────────────────────────
 
     // 소비 아이템용: 동일한 아이템 ID를 가진 슬롯의 인덱스를 반환 (없으면 INDEX_NONE)
     int32 FindSameItemSlot(const FName& ItemID) const;
@@ -99,7 +126,6 @@ private:
     void BroadcastInventoryChanged();
     void SaveOwnerPlayerState() const;
 
-    // ── 멤버 변수 (private) ──────────────────────────────────────────────────
 
     // 포션 회복 타이머 핸들
     FTimerHandle PotionTimerHandle;

@@ -211,6 +211,16 @@ void APTPlayerController::SetupInputComponent()
             UE_LOG(LogTemp, Warning, TEXT("IA_Interact Binding (F Key)"));
             EnhancedInput->BindAction(IA_Interact, ETriggerEvent::Started, this, &APTPlayerController::OnInteractPressed);
         }
+
+        if (IA_QuickSlot1)
+        {
+            EnhancedInput->BindAction(IA_QuickSlot1, ETriggerEvent::Started, this, &APTPlayerController::OnQuickSlot1);
+        }
+
+        if (IA_QuickSlot2)
+        {
+            EnhancedInput->BindAction(IA_QuickSlot2, ETriggerEvent::Started, this, &APTPlayerController::OnQuickSlot2);
+        }
     }
 
     AddUIInputMapping();
@@ -954,6 +964,22 @@ APTNPCCharacter* APTPlayerController::GetBestNearbyNPC() const
     PC->Server_UseSkill(PC->SkillComp->GetSkillAtSlot(0));
 }*/
 
+void APTPlayerController::OnQuickSlot1()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+    if (UPTInventoryComponent* Inven = PC->GetInventoryComponent())
+        Inven->UseQuickSlot(0);
+}
+
+void APTPlayerController::OnQuickSlot2()
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
+    if (!PC) return;
+    if (UPTInventoryComponent* Inven = PC->GetInventoryComponent())
+        Inven->UseQuickSlot(1);
+}
+
 void APTPlayerController::OnDodge(const FInputActionValue& Value)
 {
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
@@ -1408,19 +1434,45 @@ void APTPlayerController::Server_RequestAssignSkillToSlot_Implementation(FName S
 
 void APTPlayerController::HandleSkillPressed(int32 SlotIndex)
 {
-    if (bGameplayInputBlockedByUI || IsMouseOverGameplayUI()) return;
+    if (bGameplayInputBlockedByUI || IsMouseOverGameplayUI())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] UI에 막힘")); return;
+    }
 
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC || !PC->SkillComp) return;
+    if (!PC || !PC->SkillComp)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] PC/SkillComp 없음")); return;
+    }
 
     const FName SkillID = PC->SkillComp->GetSkillAtSlot(SlotIndex);
-    if (SkillID.IsNone()) return;
+    if (SkillID.IsNone())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 슬롯 %d 비어있음"), SlotIndex); return;
+    }
 
-    // 쿨다운/MP
-    if (PC->SkillComp->GetCooldownRemaining(SlotIndex) > 0.f) return;
+    if (PC->SkillComp->GetCooldownRemaining(SlotIndex) > 0.f)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 쿨다운 중")); return;
+    }
+
     const FPTSkillRow* Row = PC->SkillComp->GetSkillData(SkillID);
-    if (!Row) return;
-    if (PC->CurrentMP < Row->MPCost) return;
+    if (!Row)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] Row 없음")); return;
+    }
+
+    if (PC->CurrentMP < Row->MPCost)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] MP 부족 %.0f/%.0f"), PC->CurrentMP, Row->MPCost); return;
+    }
+
+    if (Row->bIsChanneled)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 채널 시작 요청 슬롯 %d, %s"), SlotIndex, *SkillID.ToString());
+        PC->SkillComp->Server_StartChannelSkill(SlotIndex, SkillID);
+        return;
+    }
 
     // 인디케이터 없거나 즉시시전 -> 기존 동작 (커서 방향 바로 발사)
     if (Row->IndicatorShape == ESkillIndicatorShape::None || Row->bQuickCast)
@@ -1444,7 +1496,23 @@ void APTPlayerController::HandleSkillPressed(int32 SlotIndex)
 
 void APTPlayerController::HandleSkillReleased(int32 SlotIndex)
 {
-    if (bIsAiming && AimingSlotIndex == SlotIndex)
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn()))
+    {
+        if (PC->SkillComp)
+        {
+            const FName SkillID = PC->SkillComp->GetSkillAtSlot(SlotIndex);
+            if (const FPTSkillRow* Row = PC->SkillComp->GetSkillData(SkillID))
+            {
+                if (Row->bIsChanneled)
+                {
+                    PC->SkillComp->Server_EndChannelSkill();
+                    return;
+                }
+            }
+        }
+    }
+
+    if (bIsAiming && AimingSlotIndex == SlotIndex)   // 기존 조준 확정
         ConfirmSkillAim();
 }
 
@@ -1474,6 +1542,10 @@ void APTPlayerController::UpdateSkillAim()
     if (!PC || !Row) return;
 
     const FVector PlayerChar = PC->GetActorLocation();
+
+    // 사거리 원 (캐릭터 중심, 고정)
+    IndicatorActor->ShowRange(PlayerChar, Row->CastRange);
+
     FVector Ground;
     if (!GetGroundPointUnderCursor(Ground)) return;
 
@@ -1481,35 +1553,40 @@ void APTPlayerController::UpdateSkillAim()
     const float Dist = To.Size();
     const FVector Dir = (Dist > 1.f) ? To / Dist : PC->GetActorForwardVector();
     const float Clamped = FMath::Min(Dist, Row->CastRange);
-    const FVector Point = PlayerChar + Dir * Clamped;   // 사거리 밖이면 원 위로 스냅
+    const FVector Point = PlayerChar + Dir * Clamped;
 
     UWorld* W = GetWorld();
     const FColor C = FColor::Cyan;
 
+    if (Row->IndicatorShape == ESkillIndicatorShape::Circle)
+    {
+        IndicatorActor->ShowRange(PlayerChar, Row->CastRange);
+    }
+    else
+    {
+        IndicatorActor->HideRange();
+    }
+
     switch (Row->IndicatorShape)
     {
     case ESkillIndicatorShape::Line:
-        DrawDebugLine(W, PlayerChar, Point, C, false, -1.f, 0, 3.f);
-        DrawDebugSphere(W, Point, Row->IndicatorWidth * 0.5f, 12, C, false, -1.f);
+        IndicatorActor->ShowLine(PlayerChar, Dir, Row->CastRange, Row->IndicatorWidth);
         break;
 
     case ESkillIndicatorShape::Circle:
-        DrawDebugCircle(W, Point, Row->SkillRadius, 48, C, false, -1.f, 0, 3.f,
-                    FVector(1,0,0), FVector(0,1,0), false);
+        IndicatorActor->ShowCircle(Point, Row->SkillRadius);
         break;
 
     case ESkillIndicatorShape::Cone:
-        DrawDebugCone(W, PlayerChar, Dir, Row->CastRange,
-                         FMath::DegreesToRadians(Row->IndicatorWidth * 0.5f),
-                         FMath::DegreesToRadians(Row->IndicatorWidth * 0.5f),
-                         24, C, false, -1.f);
+        IndicatorActor->ShowCone(PlayerChar, Dir, Row->CastRange, Row->IndicatorWidth);
         break;
 
     case ESkillIndicatorShape::SelfCircle:
-        DrawDebugCircle(W, PlayerChar, Row->SkillRadius, 48, C, false, -1.f, 0, 3.f,
-                            FVector(1,0,0), FVector(0,1,0), false);
+        IndicatorActor->ShowSelfCircle(PlayerChar, Row->SkillRadius);
         break;
-    default: break;
+
+    default:
+        break;
     }
 
     // 캐릭터가 조준 방향 바라보게 (로컬만; 서버는 확정 시)

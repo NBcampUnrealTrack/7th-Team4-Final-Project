@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "PTSkillComponent.h"
 #include "UI/Data/PTDelegates.h"
+#include "EngineUtils.h"
+#include "Character/Player/PTPlayerCharacter.h"
 #include "PTPlayerSkillComponent.generated.h"
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -30,6 +32,12 @@ public:
 
     // 단일 타겟 데미지
     void ApplyTargetedDamage(const FPTSkillRow& Row, AActor* Target);
+
+    void RefreshChannelProtection();
+
+    void EndChannel();
+
+    void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     // 쿨다운 시작을 소유 클라이언트에게 통지
     UFUNCTION(Client, Reliable)
@@ -82,6 +90,18 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_StopBasicAttack();
 
+    UFUNCTION(Server, Reliable)
+    void Server_StartChannelSkill(int32 SlotIndex, FName SkillID);
+
+    UFUNCTION(Server, Reliable)
+    void Server_EndChannelSkill();
+
+    UFUNCTION(Server, Reliable)
+    void Server_ChannelActivate();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_SetChannelActive(bool bActive,  FName SkillID);
+
     UFUNCTION(BlueprintCallable, Category = "Skill")
     void TryActivateSkillBySlot(int32 SlotIndex);
 
@@ -102,6 +122,20 @@ protected:
     // 쿨다운 종료 처리
     virtual void OnCooldownEnd(int32 SlotIndex) override;
 
+    bool  bIsChanneling   = false;
+
+    int32 ChannelSlotIndex = INDEX_NONE;
+
+    float ChannelRadius    = 0.f;
+
+    float ChannelCooldown  = 0.f;
+
+    FTimerHandle ChannelMaxTimer;
+    FTimerHandle ChannelRefreshTimer;
+
+    FName ChannelSkillID = NAME_None;
+
+    TSet<TWeakObjectPtr<APTPlayerCharacter>> ChannelProtected;
 public:
     // DT에서 조회할 닷지 스킬 ID
     UPROPERTY(EditAnywhere, Category = "Dodge")
@@ -137,6 +171,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Skill")
     FPTOnSkillLearned OnSkillLearned;
+
+    UPROPERTY()
+    UNiagaraComponent* ChannelVFX = nullptr;
 
     bool bPendingBasicAttack = false;
 

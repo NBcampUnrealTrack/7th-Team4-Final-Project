@@ -1,5 +1,6 @@
 #include "PTPlayerSkillComponent.h"
 
+#include "NiagaraFunctionLibrary.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "Character/PTBaseCharacter.h"
 #include "Character/Player/PTEquipmentComponent.h"
@@ -7,6 +8,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "NiagaraComponent.h"
 #include "Net/UnrealNetwork.h"
 
 void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& Request)
@@ -380,6 +382,77 @@ void UPTPlayerSkillComponent::ApplyTargetedDamage(const FPTSkillRow& Row, AActor
         Multicast_PlayHitSound(HitSound, Victim->GetActorLocation());
 }
 
+void UPTPlayerSkillComponent::RefreshChannelProtection()
+{
+    APTPlayerCharacter* Owner = Cast<APTPlayerCharacter>(GetOwner());
+    if (!Owner) { EndChannel(); return; }
+
+    const FVector Center = Owner->GetActorLocation();
+    const float   R2     = ChannelRadius * ChannelRadius;
+
+    // 현재 범위 내 플레이어(자신 포함) 수집
+    TSet<TWeakObjectPtr<APTPlayerCharacter>> NowInRange;
+    NowInRange.Add(Owner);
+    for (TActorIterator<APTPlayerCharacter> It(GetWorld()); It; ++It)
+    {
+        APTPlayerCharacter* P = *It;
+        if (P == Owner) continue;
+        if (FVector::DistSquared(P->GetActorLocation(), Center) <= R2)
+            NowInRange.Add(P);
+    }
+
+    // 이탈자 → 무적 회수
+    for (const TWeakObjectPtr<APTPlayerCharacter>& W : ChannelProtected)
+        if (!NowInRange.Contains(W))
+            if (APTPlayerCharacter* P = W.Get()) P->RemoveInvincibility();
+
+    // 신규 진입자 → 무적 부여
+    for (const TWeakObjectPtr<APTPlayerCharacter>& W : NowInRange)
+        if (!ChannelProtected.Contains(W))
+            if (APTPlayerCharacter* P = W.Get()) P->AddInvincibility();
+
+    ChannelProtected = NowInRange;
+}
+
+void UPTPlayerSkillComponent::EndChannel()
+{
+    if (!bIsChanneling) return;
+    bIsChanneling = false;
+
+    if (UWorld* W = GetWorld())
+    {
+        W->GetTimerManager().ClearTimer(ChannelRefreshTimer);
+        W->GetTimerManager().ClearTimer(ChannelMaxTimer);
+    }
+
+    // 이 채널이 부여한 무적 전부 회수 (누수 방지)
+    for (const TWeakObjectPtr<APTPlayerCharacter>& W : ChannelProtected)
+        if (APTPlayerCharacter* P = W.Get()) P->RemoveInvincibility();
+    ChannelProtected.Empty();
+
+    Multicast_SetChannelActive(false, ChannelSkillID);
+
+    // 종료 시점에 쿨다운 시작
+    if (ChannelCooldown > 0.f && bIsCooldown.IsValidIndex(ChannelSlotIndex))
+    {
+        bIsCooldown[ChannelSlotIndex] = true;
+        const int32 Slot = ChannelSlotIndex;
+        if (UWorld* W = GetWorld())
+            W->GetTimerManager().SetTimer(CooldownTimers[Slot],
+                [this, Slot]() { OnCooldownEnd(Slot); }, ChannelCooldown, false);
+        Client_NotifyCooldownStarted(Slot, ChannelCooldown);
+    }
+
+    ChannelSlotIndex = INDEX_NONE;
+}
+
+void UPTPlayerSkillComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (GetOwnerRole() == ROLE_Authority) EndChannel();
+
+    Super::EndPlay(EndPlayReason);
+}
+
 void UPTPlayerSkillComponent::Server_Dodge_Implementation()
 {
     const FPTSkillRow* DodgeData = GetSkillData(DodgeSkillID);
@@ -409,8 +482,14 @@ void UPTPlayerSkillComponent::Server_SetInvincible_Implementation(bool bInvincib
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
     if (!PC) return;
 
-    PC->bIsInvincible = bInvincible;
-    UE_LOG(LogTemp, Warning, TEXT("무적 상태 변경: %s"), bInvincible ? TEXT("ON") : TEXT("OFF"));
+    if (bInvincible)
+    {
+        PC->AddInvincibility();
+    }
+    else
+    {
+        PC->RemoveInvincibility();
+    }
 }
 
 void UPTPlayerSkillComponent::Multicast_PlayDodgeMontage_Implementation(UAnimMontage* Montage)
@@ -560,6 +639,134 @@ void UPTPlayerSkillComponent::Multicast_StopMovementForSkill_Implementation()
     }
 }
 
+void UPTPlayerSkillComponent::Server_StartChannelSkill_Implementation(int32 SlotIndex, FName SkillID)
+{
+if (bIsChanneling) return;
+
+    APTPlayerCharacter* Owner = Cast<APTPlayerCharacter>(GetOwner());
+    if (!Owner) return;
+
+    const FPTSkillRow* Row = GetSkillData(SkillID);
+    if (!Row)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 서버: Row 없음 %s"), *SkillID.ToString()); return;
+    }
+
+    if (bIsCooldown.IsValidIndex(SlotIndex) && bIsCooldown[SlotIndex]) return;
+
+    if (!IsSkillLearned(SkillID))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 서버: 미습득 %s"), *SkillID.ToString()); return;
+    }
+    FText Reason;
+
+    if (!CanUseSkill(*Row, Reason))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 서버: 제한 %s"), *Reason.ToString()); return;
+    }
+
+    bIsChanneling    = true;
+    ChannelSlotIndex = SlotIndex;
+    ChannelSkillID   = SkillID;
+    ChannelRadius    = Row->SkillRadius;
+    ChannelCooldown  = Row->Cooldown;
+
+    Multicast_SetChannelActive(true, SkillID);
+}
+
+void UPTPlayerSkillComponent::Server_EndChannelSkill_Implementation()
+{
+    EndChannel();
+}
+
+void UPTPlayerSkillComponent::Server_ChannelActivate_Implementation()
+{
+    if (!bIsChanneling) return;
+
+    APTPlayerCharacter* Owner = Cast<APTPlayerCharacter>(GetOwner());
+    if (!Owner) return;
+
+    UWorld* W = GetWorld();
+    if (!W) return;
+
+    // 노티파이가  한 번만 발동, 타이머 재설정 방지
+    if (W->GetTimerManager().IsTimerActive(ChannelRefreshTimer)) return;
+
+    //최대체력의 1%로 (깎기만함 회복 아님)
+    Owner->CurrentHP = FMath::Min(Owner->CurrentHP, Owner->MaxHP * 0.01f);
+    if (APTBasePlayerState* PS = Owner->GetPlayerState<APTBasePlayerState>())
+        PS->CurrentHP = Owner->CurrentHP;
+
+    // 무적 아우라 가동 + 주기 갱신(범위 진입/이탈 반영)
+    RefreshChannelProtection();
+    W->GetTimerManager().SetTimer(
+        ChannelRefreshTimer,
+        this,
+        &UPTPlayerSkillComponent::RefreshChannelProtection,
+        0.2f,
+        true
+        );
+
+    // 최대 홀드 시간은 "무적 켜진 시점"부터 카운트
+    const FPTSkillRow* Row = GetSkillData(ChannelSkillID);
+    if (Row && Row->MaxChannelTime > 0.f)
+        W->GetTimerManager().SetTimer(
+            ChannelMaxTimer,
+            [this]
+            ()
+            { EndChannel(); },
+            Row->MaxChannelTime,
+            false
+            );
+}
+
+void UPTPlayerSkillComponent::Multicast_SetChannelActive_Implementation(bool bActive, FName SkillID)
+{
+    APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
+    if (!PC) return;
+
+    const FPTSkillRow* Row = GetSkillData(SkillID);
+
+    if (bActive)
+    {
+        if (Row)
+        {
+            // 몽타주 자체를 루프로 세팅해두면 홀드 동안 유지됨
+            if (UAnimMontage* M = Row->SkillMontage.LoadSynchronous())
+                PC->PlayAnimMontage(M);
+
+            // 채널 지속 VFX (캐릭터에 부착, 끝날 때 직접 정리)
+            if (UNiagaraSystem* Fx = Row->SkillEffect.LoadSynchronous())
+                ChannelVFX = UNiagaraFunctionLibrary::SpawnSystemAttached(
+                    Fx, PC->GetRootComponent(), NAME_None,
+                    FVector::ZeroVector, FRotator::ZeroRotator,
+                    EAttachLocation::KeepRelativeOffset, false);
+        }
+    }
+    else
+    {
+        if (Row)
+        {
+            if (UAnimMontage* M = Row->SkillMontage.LoadSynchronous())
+            {
+                if (UAnimInstance* Anim = PC->GetMesh() ? PC->GetMesh()->GetAnimInstance() : nullptr)
+                {
+                    // Loop 무한반복에서 빠져나와 End 섹션 재생
+                    Anim->Montage_SetNextSection(TEXT("Loop"), TEXT("End"), M);
+                    // (섹션 이름은 몽타주에 실제로 붙인 이름으로)
+                }
+            }
+        }
+
+        if (ChannelVFX)
+        {
+            ChannelVFX->Deactivate();
+            ChannelVFX->DestroyComponent();
+            ChannelVFX = nullptr;
+        }
+    }
+}
+
 void UPTPlayerSkillComponent::TryActivateSkillBySlot(int32 SlotIndex)
 {
     if (!SkillSlots.IsValidIndex(SlotIndex)) return;
@@ -656,11 +863,20 @@ bool UPTPlayerSkillComponent::CanUseSkill(const FPTSkillRow& Row, FText& OutReas
         OutReason = FText::FromString(TEXT("레벨이 부족합니다."));
         return false;
     }
+
     if (const APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner()))
     {
-        if (!Row.IsWeaponAllowed(PC->CurrentWeaponType))
+        const UPTEquipmentComponent* Equip = PC->FindComponentByClass<UPTEquipmentComponent>();
+        if (!Equip || !Equip->IsWeaponEquipped())
         {
-            OutReason = FText::FromString(TEXT("현재 무기로는 사용할 수 없습니다."));
+            OutReason = FText::FromString(TEXT("무기를 장착해야 스킬을 사용할 수 있습니다."));
+            return false;
+        }
+
+        const EWeaponType EquippedType = Equip->GetEquippedWeaponType();
+        if (!Row.IsWeaponAllowed(EquippedType))
+        {
+            OutReason = FText::FromString(TEXT("이 스킬에 맞는 무기를 장착해야 합니다."));
             return false;
         }
     }

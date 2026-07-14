@@ -21,18 +21,42 @@ public:
 
     void HideIndicator();
 
+    void ShowRange(const FVector& Center, float CastRange);
+
+    void HideRange();
+
     virtual void BeginPlay() override;
 
 protected:
-    UPROPERTY(VisibleAnywhere) TObjectPtr<class USceneComponent>  Root;
-    UPROPERTY(VisibleAnywhere) TObjectPtr<class UDecalComponent>  Decal;
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<class USceneComponent>  Root;
 
-    // 모양별 머티리얼 (에디터에서 지정)
-    UPROPERTY(EditAnywhere, Category="Indicator") TObjectPtr<UMaterialInterface> LineMaterial; // 라인
-    UPROPERTY(EditAnywhere, Category="Indicator") TObjectPtr<UMaterialInterface> CircleMaterial; // 원
-    UPROPERTY(EditAnywhere, Category="Indicator") TObjectPtr<UMaterialInterface> ConeMaterial; // 부채꼴
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<class UDecalComponent>  Decal;
 
-    UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> LineMID;
-    UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> CircleMID;
-    UPROPERTY() TObjectPtr<UMaterialInstanceDynamic> ConeMID;
+    // 모양별 머티리얼
+    UPROPERTY(EditAnywhere, Category="Indicator")
+    TObjectPtr<UMaterialInterface> LineMaterial; // 라인
+
+    UPROPERTY(EditAnywhere, Category="Indicator")
+    TObjectPtr<UMaterialInterface> CircleMaterial; // 원
+
+    UPROPERTY(EditAnywhere, Category="Indicator")
+    TObjectPtr<UMaterialInterface> ConeMaterial; // 부채꼴
+
+    UPROPERTY()
+    TObjectPtr<UMaterialInstanceDynamic> LineMID;
+
+    UPROPERTY()
+    TObjectPtr<UMaterialInstanceDynamic> CircleMID;
+
+    UPROPERTY()
+    TObjectPtr<UMaterialInstanceDynamic> ConeMID;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<class UDecalComponent> RangeDecal;  // 사거리 원
+
+    UPROPERTY(EditAnywhere, Category="Indicator")
+    TObjectPtr<UMaterialInterface> RangeMaterial;
+
 };

@@ -285,6 +285,24 @@ void APTPlayerCharacter::TryInteract()
     }
 }
 
+void APTPlayerCharacter::AddInvincibility()
+{
+    if (!HasAuthority()) return;
+
+    ++InvincibleRefs;
+
+    bIsInvincible = (InvincibleRefs > 0);
+}
+
+void APTPlayerCharacter::RemoveInvincibility()
+{
+    if (!HasAuthority()) return;
+
+    InvincibleRefs = FMath::Max(0, InvincibleRefs - 1);
+
+    bIsInvincible = (InvincibleRefs > 0);
+}
+
 void APTPlayerCharacter::Server_TryInteract_Implementation(AActor* TargetActor)
 {
     if (!TargetActor) return;
@@ -342,20 +360,23 @@ void APTPlayerCharacter::Server_UseSkill_Implementation(FName SkillID, FVector_N
 
 void APTPlayerCharacter::OnDodgeInvincibleStart()
 {
-    // 로컬 클라이언트에서 AnimNotify 발동 → 서버로 무적 ON 전달
-    if (SkillComp)
-    {
-        SkillComp->Server_SetInvincible(true);
-    }
+    if (!IsLocallyControlled()) return;
+
+    if (SkillComp) SkillComp->Server_SetInvincible(true);
 }
 
 void APTPlayerCharacter::OnDodgeInvincibleEnd()
 {
-    // 로컬 클라이언트에서 AnimNotify 발동 → 서버로 무적 OFF 전달
-    if (SkillComp)
-    {
-        SkillComp->Server_SetInvincible(false);
-    }
+    if (!IsLocallyControlled()) return;
+
+    if (SkillComp) SkillComp->Server_SetInvincible(false);
+}
+
+void APTPlayerCharacter::OnChannelSkillActivateNotify()
+{
+    if (!IsLocallyControlled()) return;
+
+    if (SkillComp) SkillComp->Server_ChannelActivate();
 }
 
 void APTPlayerCharacter::RegenHP()
