@@ -3,6 +3,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "PTSkillEntryObject.h"
+#include "PTSkillWindowWidget.h"
 
 void UPTSkillListEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
@@ -10,7 +11,7 @@ void UPTSkillListEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
 
     UPTSkillEntryObject* Entry = Cast<UPTSkillEntryObject>(ListItemObject);
     if (!Entry) return;
-
+    UPTSkillWindowWidget* Window = Cast<UPTSkillWindowWidget>(ListItemObject);
     SkillID = Entry->SkillID;
     CachedRow = Entry->SkillRow;
 
@@ -18,7 +19,6 @@ void UPTSkillListEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
     {
         if (!CachedRow.SkillIcon.IsNull())
         {
-            // 크기는 WBP(SizeBox/Slot Alignment)에서 전적으로 제어. 코드에서 크기 개입 안 함.
             Img_Icon->SetBrushFromSoftTexture(CachedRow.SkillIcon, false);
             Img_Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
         }
@@ -29,8 +29,8 @@ void UPTSkillListEntryWidget::NativeOnListItemObjectSet(UObject* ListItemObject)
     }
 
     if (Txt_Name) Txt_Name->SetText(CachedRow.SkillName);
-    if (Txt_Type) Txt_Type->SetText(CachedRow.SkillTypeName);
-    if (Txt_Rank) Txt_Rank->SetText(FText::GetEmpty()); // 랭크 미구현
+    if (Txt_Type) Txt_Type->SetText(Window->GetTargetingModeDisplayText(CachedRow.TargetingMode));
+    if (Txt_Rank) Txt_Rank->SetText(FText::AsNumber(FMath::RoundToInt(CachedRow.MPCost)));
     if (Txt_Cost) Txt_Cost->SetText(FText::AsNumber(FMath::RoundToInt(CachedRow.MPCost)));
 }
 
@@ -39,7 +39,6 @@ FReply UPTSkillListEntryWidget::NativeOnMouseButtonDown(const FGeometry& InGeome
     if (SkillID == NAME_None) return FReply::Unhandled();
     if (!InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton)) return FReply::Unhandled();
 
-    // 드래그 감지
     return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 }
 
@@ -47,7 +46,6 @@ FReply UPTSkillListEntryWidget::NativeOnMouseButtonUp(const FGeometry& InGeometr
 {
     if (SkillID != NAME_None && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
     {
-        // 클릭 = 상세정보 표시
         OnEntryClicked.Broadcast(SkillID, CachedRow);
         return FReply::Handled();
     }
@@ -72,19 +70,32 @@ void UPTSkillListEntryWidget::NativeOnDragDetected(const FGeometry& InGeometry, 
 
 UWidget* UPTSkillListEntryWidget::CreateDragVisual() const
 {
-    // WBP 우선 (원형 마스크는 여기서 처리)
     if (DragVisualClass)
     {
-        return CreateWidget<UUserWidget>(GetOwningPlayer(), DragVisualClass);
+        UUserWidget* DragVisual = CreateWidget<UUserWidget>(GetOwningPlayer(), DragVisualClass);
+        if (DragVisual)
+        {
+            if (UImage* IconImg = Cast<UImage>(DragVisual->GetWidgetFromName(TEXT("Img_Icon_UseCircularMaskMaterialHere"))))
+            {
+                if (UMaterialInstanceDynamic* MID = IconImg->GetDynamicMaterial())
+                {
+                    UTexture2D* IconTexture = CachedRow.SkillIcon.LoadSynchronous();
+                    if (IconTexture)
+                    {
+                        MID->SetTextureParameterValue(TEXT("Icon"), IconTexture);
+                    }
+                }
+            }
+        }
+        return DragVisual;
     }
 
-    // 폴백 아이콘
     if (CachedRow.SkillIcon.IsNull()) return nullptr;
 
     UImage* Ghost = NewObject<UImage>(const_cast<UPTSkillListEntryWidget*>(this));
     if (!Ghost) return nullptr;
 
     Ghost->SetBrushFromSoftTexture(CachedRow.SkillIcon, false);
-    Ghost->Brush.ImageSize = FVector2D(64.f, 64.f);
+    Ghost->Brush.ImageSize = FVector2D(0.f, 0.f);
     return Ghost;
 }

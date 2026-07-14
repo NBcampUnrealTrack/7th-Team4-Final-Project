@@ -167,11 +167,22 @@ void UPTSkillWindowWidget::ShowSkillDetail(const FPTSkillRow& Row)
     }
 
     if (Txt_DetailName)     Txt_DetailName->SetText(Row.SkillName);
-    if (Txt_DetailType)     Txt_DetailType->SetText(Row.SkillTypeName);
-    if (Txt_DetailRank)     Txt_DetailRank->SetText(FText::GetEmpty()); // 랭크 미구현
+    if (Txt_DetailType)     Txt_DetailType->SetText(GetTargetingModeDisplayText(Row.TargetingMode));
+    if (Txt_DetailRank)     Txt_DetailRank->SetText(FText::AsNumber(Row.RequiredLevel));
     if (Txt_DetailAttack)   Txt_DetailAttack->SetText(FText::AsNumber(Row.DamageMultiplier));
     if (Txt_DetailManaCost) Txt_DetailManaCost->SetText(FText::AsNumber(FMath::RoundToInt(Row.MPCost)));
     if (Txt_DetailCooldown) Txt_DetailCooldown->SetText(FText::AsNumber(Row.Cooldown));
+}
+
+FText UPTSkillWindowWidget::GetTargetingModeDisplayText(ESkillTargetingMode Mode) const
+{
+    const UEnum* EnumPtr = StaticEnum<ESkillTargetingMode>();
+    if (!EnumPtr)
+    {
+        return FText::GetEmpty();
+    }
+
+    return EnumPtr->GetDisplayNameTextByValue(static_cast<int64>(Mode));
 }
 
 void UPTSkillWindowWidget::ClearSkillDetail()
