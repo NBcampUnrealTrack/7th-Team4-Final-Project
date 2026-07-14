@@ -25,6 +25,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|UI|Skill")
     void RefreshSkillList();
 
+    FText GetTargetingModeDisplayText(ESkillTargetingMode Mode) const;
 protected:
     // ── 오버라이드 ──
     virtual void NativeOnInitialized() override;
