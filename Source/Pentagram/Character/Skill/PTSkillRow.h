@@ -179,6 +179,13 @@ struct FPTSkillRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile")
     float ProjectileSpeed = 800.f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Channel")
+    bool bIsChanneled = false;
+
+    // 최대 홀드 시간(초). 0이면 손 뗄 때까지 무제한
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="PT|Skill|Channel")
+    float MaxChannelTime = 0.f;
+
     FPTHitInfo MakeHitInfo(AActor* InAttacker) const
     {
         FPTHitInfo HitInfo;

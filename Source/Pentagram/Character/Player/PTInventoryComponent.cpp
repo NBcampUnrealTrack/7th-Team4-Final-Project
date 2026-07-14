@@ -20,8 +20,106 @@ UPTInventoryComponent::UPTInventoryComponent()
 
 void UPTInventoryComponent::OnRep_InventorySlots()
 {
-    // 열려있는 위젯에 직접 델리게이트로 알려줌
     BroadcastInventoryChanged();
+}
+
+void UPTInventoryComponent::OnRep_QuickSlots()
+{
+    OnQuickSlotChanged.Broadcast();
+}
+
+FName UPTInventoryComponent::GetQuickSlotItemID(int32 QuickIndex) const
+{
+    return QuickSlots.IsValidIndex(QuickIndex) ? QuickSlots[QuickIndex] : NAME_None;
+}
+
+bool UPTInventoryComponent::RegisterConsumableToQuickSlot(int32 QuickIndex, int32 InventorySlotIndex)
+{
+    if (!QuickSlots.IsValidIndex(QuickIndex)) return false;
+    if (!InventorySlots.IsValidIndex(InventorySlotIndex) || InventorySlots[InventorySlotIndex].IsEmpty())
+        return false;
+
+    //소모품만 등록 허용
+    if (InventorySlots[InventorySlotIndex].ItemData.Item_Category != EItemCategory::Consumable)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[퀵슬롯] 소모품만 등록 가능합니다."));
+        return false;
+    }
+
+    const FName ItemID = InventorySlots[InventorySlotIndex].ItemData.Item_ID;
+
+    AActor* Owner = GetOwner();
+    if (!Owner) return false;
+
+    if (!Owner->HasAuthority())
+    {
+        Server_RegisterConsumableToQuickSlot(QuickIndex, ItemID);
+        return true;
+    }
+
+    QuickSlots[QuickIndex] = ItemID;
+    OnRep_QuickSlots(); // 리슨서버 자체 UI 갱신 (서버는 OnRep 자동 호출 안 됨)
+    return true;
+}
+
+void UPTInventoryComponent::ClearQuickSlot(int32 QuickIndex)
+{
+    if (!QuickSlots.IsValidIndex(QuickIndex)) return;
+
+    AActor* Owner = GetOwner();
+    if (!Owner) return;
+
+    if (!Owner->HasAuthority())
+    {
+        Server_ClearQuickSlot(QuickIndex);
+        return;
+    }
+
+    QuickSlots[QuickIndex] = NAME_None;
+    OnRep_QuickSlots();
+}
+
+bool UPTInventoryComponent::UseQuickSlot(int32 QuickIndex)
+{
+    if (!QuickSlots.IsValidIndex(QuickIndex)) return false;
+
+    const FName ItemID = QuickSlots[QuickIndex];
+    if (ItemID.IsNone()) return false;
+
+    // 등록된 소모품이 인벤토리에 실제로 있는지 (소진 시 무시)
+    const int32 SlotIndex = FindSameItemSlot(ItemID);
+    if (SlotIndex == INDEX_NONE) return false;
+
+    // UsePotion이 내부에서 클라→서버 RPC(Server_UsePotion) + 서버 차감/힐 타이머까지 처리
+    return UsePotion(SlotIndex);
+}
+
+void UPTInventoryComponent::Server_RegisterConsumableToQuickSlot_Implementation(int32 QuickIndex, FName ItemID)
+{
+    if (!QuickSlots.IsValidIndex(QuickIndex)) return;
+
+    // 서버 재검증: 인벤토리에 존재하는 소모품 ID인지 (FindSameItemSlot은 Consumable만 매칭)
+    if (!ItemID.IsNone() && FindSameItemSlot(ItemID) == INDEX_NONE) return;
+
+    QuickSlots[QuickIndex] = ItemID;
+    OnRep_QuickSlots();
+}
+
+bool UPTInventoryComponent::Server_RegisterConsumableToQuickSlot_Validate(int32 QuickIndex, FName ItemID)
+{
+    return QuickIndex >= 0 && QuickIndex < QuickSlotCount;
+}
+
+void UPTInventoryComponent::Server_ClearQuickSlot_Implementation(int32 QuickIndex)
+{
+    if (!QuickSlots.IsValidIndex(QuickIndex)) return;
+    QuickSlots[QuickIndex] = NAME_None;
+    OnRep_QuickSlots();
+}
+
+bool UPTInventoryComponent::Server_ClearQuickSlot_Validate(int32 QuickIndex)
+{
+    return QuickIndex >= 0 && QuickIndex < QuickSlotCount;
 }
 
 void UPTInventoryComponent::BeginPlay()
@@ -41,6 +139,9 @@ void UPTInventoryComponent::BeginPlay()
         {
             InventorySlots.SetNum(MaxSlotCount);
         }
+        // 게임 시작 시 30칸의 빈 슬롯을 미리 확보.
+        InventorySlots.Init(FInventorySlot(), MaxSlotCount);
+        QuickSlots.Init(NAME_None, QuickSlotCount);
     }
 }
 
@@ -95,6 +196,8 @@ void UPTInventoryComponent::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 
     // InventorySlots 배열이 서버에서 바뀌면 연결된 모든 클라이언트에게 자동 동기화.
     DOREPLIFETIME(UPTInventoryComponent, InventorySlots);
+
+    DOREPLIFETIME(UPTInventoryComponent, QuickSlots);
 }
 
 bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count)

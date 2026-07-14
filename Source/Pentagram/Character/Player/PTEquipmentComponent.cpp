@@ -273,6 +273,15 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
     return true;
 }
 
+EWeaponType UPTEquipmentComponent::GetEquippedWeaponType() const
+{
+    if (EquippedWeapon.bIsEquipped)
+    {
+        return EquippedWeapon.MountedItem.WeaponType;
+    }
+    return EWeaponType::None;
+}
+
 // 장착 Server RPC 구현부
 void UPTEquipmentComponent::Server_EquipItem_Implementation(const FItemData& NewItem)
 {

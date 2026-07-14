@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "NiagaraFunctionLibrary.h"
+#include "Character/Monsters/Projectile/PTBossProjectile.h"
 #include "Components/SphereComponent.h"
 
 APTPlayerProjectileActor::APTPlayerProjectileActor()
@@ -21,8 +22,15 @@ APTPlayerProjectileActor::APTPlayerProjectileActor()
     CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComp"));
     CollisionComp->SetupAttachment(Root);
     CollisionComp->InitSphereRadius(50.f);
-    CollisionComp->SetCollisionProfileName(TEXT("OverlapAll"));
+
+    CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    CollisionComp->SetCollisionObjectType(ECC_WorldDynamic);
+    CollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+    CollisionComp->SetCollisionResponseToChannel(ECC_Pawn,         ECR_Overlap);
+    CollisionComp->SetCollisionResponseToChannel(ECC_WorldStatic,  ECR_Overlap);
+    CollisionComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
     CollisionComp->SetGenerateOverlapEvents(true);
+
     CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &APTPlayerProjectileActor::OnProjectileOverlap);
 
     TrailComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("TrailComponent"));
@@ -85,14 +93,12 @@ void APTPlayerProjectileActor::InitProjectile(
     SetLifeSpan(SafetyLifeSpan);
 }
 
-void APTPlayerProjectileActor::OnProjectileOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+void APTPlayerProjectileActor::OnProjectileOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
     if (bExpired) return;
     if (!OtherActor || OtherActor == this || OtherActor == Attacker.Get()) return;
 
-    APTBaseCharacter* Target = Cast<APTBaseCharacter>(OtherActor);
-    const bool bIsEnemyCharacter = Target && !Cast<APTPlayerCharacter>(Target);
+    if (Cast<APTPlayerProjectileActor>(OtherActor)) return;
 
     if (bIsEnemy)
     {
@@ -134,9 +140,8 @@ void APTPlayerProjectileActor::OnProjectileOverlap(UPrimitiveComponent* Overlapp
         return;
     }
 
-    const FVector ImpactPoint = SweepResult.ImpactPoint;
-    PlayHitEffects(ImpactPoint.IsZero() ? GetActorLocation() : ImpactPoint);
-
+    // 관통 여부 상관x 벽에 닿으면 터짐
+    PlayHitEffects(ImpactPoint);
     ExpireProjectile();
 }
 
@@ -148,11 +153,10 @@ void APTPlayerProjectileActor::BeginPlay()
 void APTPlayerProjectileActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-
     if (bExpired) return;
 
     const FVector NewLocation = GetActorLocation() + Direction * Speed * DeltaTime;
-    SetActorLocation(NewLocation);
+    SetActorLocation(NewLocation, true);
 
     if (FVector::Dist(StartLocation, NewLocation) > MaxRange)
     {
@@ -167,68 +171,6 @@ void APTPlayerProjectileActor::Tick(float DeltaTime)
     }
 #endif
 
-    // 데미지 판정은 서버에서만
-    if (!bApplyDamage) return;
-
-    APTPlayerCharacter* AttackerPtr = Attacker.Get();
-    if (!AttackerPtr) return;
-
-    TArray<AActor*> OverlapActors;
-    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
-    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_Pawn));
-
-    UKismetSystemLibrary::SphereOverlapActors(
-        GetWorld(),
-        NewLocation,
-        HitRadius,
-        ObjectTypes,
-        nullptr,
-        TArray<AActor*>{ AttackerPtr, this },
-        OverlapActors
-    );
-
-    for (AActor* HitActor : OverlapActors)
-    {
-        if (HitActors.Contains(TWeakObjectPtr<AActor>(HitActor))) continue;
-
-        APTBaseCharacter* Target = Cast<APTBaseCharacter>(HitActor);
-        if (!Target || Cast<APTPlayerCharacter>(Target)) continue;
-
-        HitActors.Add(TWeakObjectPtr<AActor>(HitActor));
-
-        const float FinalDamage = AttackerPtr->GetTotalAttack() * DamageMultiplier;
-
-        FPTHitInfo HitInfo;
-        HitInfo.Attacker        = AttackerPtr;
-        HitInfo.HitDirection    = Direction;
-        HitInfo.KnockbackForce  = KnockbackForce;
-        HitInfo.KnockbackZForce = KnockbackZForce;
-        HitInfo.HitStopDuration = HitStopDuration;
-        HitInfo.StaggerDuration = StaggerDuration;
-        HitInfo.HitReactionType = HitReactionType;
-
-        Target->ApplyDamageWithHit(FinalDamage, AttackerPtr, HitInfo);
-
-        UE_LOG(LogTemp, Log, TEXT("Projectile %s 명중 / 데미지 %.1f"),
-            *Target->GetName(), FinalDamage);
-
-        if (!bPenetrate)
-        {
-            ExpireProjectile();
-            break;
-        }
-
-        if (HitSound && AttackerPtr->SkillComp)
-        {
-            AttackerPtr->SkillComp->Multicast_PlayHitSound(HitSound, Target->GetActorLocation());
-        }
-
-        if (!bPenetrate)
-        {
-            ExpireProjectile();
-            break;
-        }
-    }
 }
 
 void APTPlayerProjectileActor::PlayHitEffects(const FVector& Location)
@@ -248,11 +190,6 @@ void APTPlayerProjectileActor::ExpireProjectile()
 {
     if (bExpired) return;
     bExpired = true;
-
-    SetActorTickEnabled(false);
-    SetActorHiddenInGame(true);
-    SetActorEnableCollision(false);
-
 
     if (TrailComponent)
     {
