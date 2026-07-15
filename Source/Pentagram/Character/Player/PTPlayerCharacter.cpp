@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/GameModeBase.h"
@@ -56,6 +57,11 @@ APTPlayerCharacter::APTPlayerCharacter()
     // 공격 판정은AnimNotify에서 처리하므로 무기 자체의 물리 충돌은 꺼둠
     WeaponMeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
     WeaponMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+    HelmetMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HelmetMeshComp"));
+    HelmetMeshComp->SetupAttachment(GetMesh(), TEXT("headSocket"));
+    HelmetMeshComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+    HelmetMeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
     GetCharacterMovement()->bOrientRotationToMovement    = true;
     GetCharacterMovement()->bUseControllerDesiredRotation = false;
@@ -568,6 +574,33 @@ void APTPlayerCharacter::UpdateArmorVisual(EEquipSlotType SlotType, TSoftObjectP
     USkeletalMesh* Loaded = ArmorMesh.LoadSynchronous();
     TargetComp->SetSkeletalMesh(Loaded);
     TargetComp->SetLeaderPoseComponent(GetMesh());
+}
+
+void APTPlayerCharacter::UpdateHelmetVisual(const TSoftObjectPtr<UStaticMesh>& HelmetMeshAsset)
+{
+    if (!HelmetMeshComp)
+    {
+        return;
+    }
+
+    if (HelmetMeshAsset.IsNull())
+    {
+        HelmetMeshComp->SetStaticMesh(nullptr);
+        return;
+    }
+
+    UStaticMesh* LoadedMesh = HelmetMeshAsset.LoadSynchronous();
+    if (!LoadedMesh)
+    {
+        HelmetMeshComp->SetStaticMesh(nullptr);
+        return;
+    }
+
+    HelmetMeshComp->AttachToComponent(
+        GetMesh(),
+        FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+        TEXT("headSocket"));
+    HelmetMeshComp->SetStaticMesh(LoadedMesh);
 }
 
 void APTPlayerCharacter::ApplyBuff(float BonusMultiplier, float Duration)

@@ -192,8 +192,15 @@ bool UPTEquipmentComponent::EquipItem(const FItemData& NewItem, FItemData& OutOl
             OwnerCharacter->UpdateWeaponVisual(NewItem.ItemMeshAsset, NewItem);
         }
     }
+    else if (NewItem.Item_Type == EItemType::Helmet)
+    {
+        APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+        if (OwnerCharacter)
+        {
+            OwnerCharacter->UpdateHelmetVisual(NewItem.ItemMeshAsset);
+        }
+    }
     else if (NewItem.Item_Type == EItemType::Chest
-      || NewItem.Item_Type == EItemType::Helmet
       || NewItem.Item_Type == EItemType::Gloves
       || NewItem.Item_Type == EItemType::Boots)
     {
@@ -263,6 +270,15 @@ bool UPTEquipmentComponent::UnequipItem(EEquipSlotType SlotType, FItemData& OutU
         if (OwnerCharacter)
         {
             OwnerCharacter->UpdateArmorVisual(SlotType, TSoftObjectPtr<USkeletalMesh>());
+        }
+    }
+
+    if (SlotType == EEquipSlotType::Helmet)
+    {
+        APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+        if (OwnerCharacter)
+        {
+            OwnerCharacter->UpdateHelmetVisual(TSoftObjectPtr<UStaticMesh>());
         }
     }
 
@@ -405,6 +421,14 @@ void UPTEquipmentComponent::OnRep_EquippedChest()
 
 void UPTEquipmentComponent::OnRep_EquippedHelmet()
 {
+    APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
+    if (!OwnerCharacter) return;
+
+    if (EquippedHelmet.bIsEquipped)
+        OwnerCharacter->UpdateHelmetVisual(EquippedHelmet.MountedItem.ItemMeshAsset);
+    else
+        OwnerCharacter->UpdateHelmetVisual(TSoftObjectPtr<UStaticMesh>());
+
     OnEquipmentChanged.Broadcast();
 }
 

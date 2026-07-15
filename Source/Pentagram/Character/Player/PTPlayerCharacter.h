@@ -79,6 +79,8 @@ public:
 
     void UpdateArmorVisual(EEquipSlotType SlotType, TSoftObjectPtr<USkeletalMesh> ArmorMesh);
 
+    void UpdateHelmetVisual(const TSoftObjectPtr<UStaticMesh>& HelmetMeshAsset);
+
     void ApplyBuff(float BonusMultiplier, float Duration);
 
     void OnAtkBuffExpired();
@@ -222,6 +224,9 @@ protected:
     // 무기 장착 스태틱 메시 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
     TObjectPtr<UStaticMeshComponent> WeaponMeshComp;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
+    TObjectPtr<UStaticMeshComponent> HelmetMeshComp;
     // 갑옷 장착 스태틱 메시 컴포넌트(추후)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment | Visual")
     TObjectPtr<UStaticMeshComponent> ChestMeshComp;
