@@ -33,7 +33,6 @@ protected:
     virtual void NativeOnActivated() override;
     virtual void NativeOnDeactivated() override;
     virtual bool NativeOnHandleBackAction() override;
-    virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
 
 
     // ── 일반 함수 ──
@@ -68,6 +67,8 @@ protected:
     UFUNCTION()
     void HandleFieldDropRequested(int32 SlotIndex, FVector2D ScreenPosition);
 
+    UFUNCTION()
+    void HandleCloseButtonClicked();
     // ── 위젯 바인딩 ──
     UPROPERTY(meta = (BindWidget))
     UUniformGridPanel* InventoryGrid;

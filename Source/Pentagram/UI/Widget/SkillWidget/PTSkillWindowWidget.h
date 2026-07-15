@@ -40,6 +40,9 @@ protected:
     void HandleEntryWidgetGenerated(UUserWidget& EntryWidget);
 
     UFUNCTION()
+    void HandleCloseButtonClicked();
+
+    UFUNCTION()
     void HandleSkillEntryClicked(FName SkillID, FPTSkillRow SkillRow);
 
     UFUNCTION()
