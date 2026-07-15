@@ -8,6 +8,8 @@ class UNiagaraComponent;
 class UNiagaraSystem;
 class USceneComponent;
 class UStaticMeshComponent;
+class UAudioComponent;
+class USoundBase;
 
 UCLASS()
 class PENTAGRAM_API APTAreaWarning : public AActor
@@ -23,6 +25,7 @@ public:
 
 protected:
     virtual void Tick(float DeltaTime) override;
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
     void OnLanded();
@@ -38,6 +41,15 @@ private:
 
     UPROPERTY(VisibleAnywhere)
     TObjectPtr<UStaticMeshComponent> BorderMesh;
+
+    UPROPERTY(VisibleAnywhere, Category = "PT|Sound")
+    TObjectPtr<UAudioComponent> BuildupAudioComp;
+
+    UPROPERTY(EditAnywhere, Category = "PT|Sound")
+    TSoftObjectPtr<USoundBase> BuildupSound;
+
+    UPROPERTY(EditAnywhere, Category = "PT|Sound")
+    TSoftObjectPtr<USoundBase> ExplosionSound;
 
     FVector StartLocation;
     FVector TargetLocation;

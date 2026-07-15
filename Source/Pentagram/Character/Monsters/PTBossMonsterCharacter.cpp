@@ -4,6 +4,11 @@
 #include "Character/Skill/PTMonsterSkillComponent.h"
 #include "Character/Player/PTPlayerCharacter.h"
 #include "Character/Monsters/Skill/PTBossRoomCenter.h"
+#include "Character/Monsters/Skill/PTBossShield.h"
+#include "AIController.h"
+#include "BrainComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 APTBossMonsterCharacter::APTBossMonsterCharacter()
 {
@@ -77,6 +82,14 @@ UAnimMontage* APTBossMonsterCharacter::GetAttackMontageForPhase(int32 Phase) con
     return AttackMontage;
 }
 
+void APTBossMonsterCharacter::OnShieldDestroyed()
+{
+    GetWorldTimerManager().ClearTimer(ShieldTimerHandle);
+    ActiveShield = nullptr;
+
+    UnfreezeAfterShieldPhase();
+}
+
 void APTBossMonsterCharacter::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
@@ -91,6 +104,27 @@ void APTBossMonsterCharacter::PostInitializeComponents()
 void APTBossMonsterCharacter::BeginPlay()
 {
     Super::BeginPlay();
+
+    OnPhaseChanged.AddUniqueDynamic(this, &APTBossMonsterCharacter::TryEnterShieldPhase);
+}
+
+void APTBossMonsterCharacter::OnDeath()
+{
+    if (IsValid(BossPatternComponent))
+    {
+        BossPatternComponent->ClearProjectileTimers();
+        BossPatternComponent->StopLaser();
+    }
+
+    GetWorldTimerManager().ClearTimer(ShieldTimerHandle);
+    if (IsValid(ActiveShield))
+    {
+        ActiveShield->SuppressDestroyNotify();
+        ActiveShield->Destroy();
+        ActiveShield = nullptr;
+    }
+
+    Super::OnDeath();
 }
 
 void APTBossMonsterCharacter::PerformAttack()
@@ -161,6 +195,45 @@ void APTBossMonsterCharacter::PerformAttack()
     }
 }
 
+void APTBossMonsterCharacter::SetMeleeAttackData(float Damage, const FPTHitInfo& HitInfo)
+{
+    CurrentMeleeDamage = Damage;
+    CurrentMeleeHitInfo = HitInfo;
+    HitActorsThisSwing.Empty();
+}
+
+void APTBossMonsterCharacter::ClearMeleeAttackData()
+{
+    CurrentMeleeDamage = 0.f;
+    CurrentMeleeHitInfo = FPTHitInfo();
+    HitActorsThisSwing.Empty();
+}
+
+bool APTBossMonsterCharacter::IsAlreadyHit(TWeakObjectPtr<AActor> Target) const
+{
+    return HitActorsThisSwing.Contains(Target);
+}
+
+void APTBossMonsterCharacter::AddHitActor(TWeakObjectPtr<AActor> Target)
+{
+    HitActorsThisSwing.Add(Target);
+}
+
+void APTBossMonsterCharacter::ClearHitActors()
+{
+    HitActorsThisSwing.Empty();
+}
+
+void APTBossMonsterCharacter::MulticastPlayHitSound_Implementation(FVector Location, USoundBase* Sound)
+{
+    if (!IsValid(Sound))
+    {
+        return;
+    }
+
+    UGameplayStatics::SpawnSoundAtLocation(GetWorld(), Sound, Location);
+}
+
 float APTBossMonsterCharacter::StartAttack()
 {
     HitActors.Empty();
@@ -204,6 +277,12 @@ void APTBossMonsterCharacter::StopAttack()
 {
     RestoreAttackMovementLock();
 
+    if (IsValid(BossPatternComponent))
+    {
+        BossPatternComponent->ClearProjectileTimers();
+        BossPatternComponent->StopLaser();
+    }
+
     USkeletalMeshComponent* MeshComp = GetMesh();
     if (!IsValid(MeshComp))
     {
@@ -233,4 +312,108 @@ void APTBossMonsterCharacter::StopAttack()
 float APTBossMonsterCharacter::GetAttackDamage() const
 {
     return BaseAtk * GetDamageMultiplierForPhase(GetCurrentPhase());
+}
+
+void APTBossMonsterCharacter::TryEnterShieldPhase(int32 NewPhase)
+{
+    if (!bHasShieldPhase || bShieldPhaseTriggered || NewPhase < 1 || !HasAuthority())
+    {
+        return;
+    }
+
+    bShieldPhaseTriggered = true;
+    SpawnShield();
+}
+
+void APTBossMonsterCharacter::SpawnShield()
+{
+    if (!IsValid(ShieldClass))
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    FActorSpawnParameters Params;
+    Params.Owner      = this;
+    Params.Instigator = GetInstigator();
+
+    ActiveShield = World->SpawnActor<APTBossShield>(
+        ShieldClass, GetActorLocation(), FRotator::ZeroRotator, Params
+    );
+
+    if (!IsValid(ActiveShield))
+    {
+        return;
+    }
+
+    ActiveShield->InitShield(this, ShieldMaxHP, ShieldRadius, ShieldPushForce);
+
+    FreezeForShieldPhase();
+
+    GetWorldTimerManager().SetTimer(ShieldTimerHandle, this, &APTBossMonsterCharacter::OnShieldTimerExpired, ShieldDuration, false);
+}
+
+void APTBossMonsterCharacter::OnShieldTimerExpired()
+{
+    if (!HasAuthority() || !IsValid(ActiveShield))
+    {
+        return;
+    }
+
+    const float Recovered = FMath::Min(ActiveShield->GetCurrentShieldHP(), MaxHP - CurrentHP);
+    if (Recovered > 0.f)
+    {
+        CurrentHP += Recovered;
+        OnHPChanged.Broadcast(CurrentHP, MaxHP);
+    }
+
+    ActiveShield->SuppressDestroyNotify();
+    ActiveShield->Destroy();
+    ActiveShield = nullptr;
+
+    UnfreezeAfterShieldPhase();
+}
+
+void APTBossMonsterCharacter::FreezeForShieldPhase()
+{
+    if (IsValid(BossPatternComponent))
+    {
+        BossPatternComponent->ClearProjectileTimers();
+        BossPatternComponent->StopLaser();
+    }
+
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        MoveComp->StopMovementImmediately();
+        MoveComp->SetMovementMode(MOVE_None);
+    }
+    
+    AAIController* AIC = Cast<AAIController>(GetController());
+    if (IsValid(AIC))
+    {
+        AIC->StopMovement();
+        if (IsValid(AIC->BrainComponent))
+        {
+            AIC->BrainComponent->PauseLogic(TEXT("ShieldPhase"));
+        }
+    }
+}
+
+void APTBossMonsterCharacter::UnfreezeAfterShieldPhase()
+{
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        MoveComp->SetMovementMode(MOVE_Walking);
+    }
+
+    AAIController* AIC = Cast<AAIController>(GetController());
+    if (IsValid(AIC) && IsValid(AIC->BrainComponent))
+    {
+        AIC->BrainComponent->ResumeLogic(TEXT("ShieldPhase"));
+    }
 }

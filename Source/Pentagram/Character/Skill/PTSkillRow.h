@@ -7,6 +7,8 @@
 #include "Item/PTItemTypes.h"
 #include "PTSkillRow.generated.h"
 
+class APTBossProjectile;
+
 UENUM(BlueprintType)
 enum class ESkillType : uint8
 {
@@ -205,7 +207,8 @@ enum class EBossSkillType : uint8
     Melee      UMETA(DisplayName = "Melee"),
     Projectile UMETA(DisplayName = "Projectile"),
     Area       UMETA(DisplayName = "Area"),
-    Summon     UMETA(DisplayName = "Summon")
+    Summon     UMETA(DisplayName = "Summon"),
+    Laser      UMETA(DisplayName = "Laser")
 };
 
 USTRUCT(BlueprintType)
@@ -284,4 +287,31 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill")
     bool bRequiresCenterMove = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile")
+    int32 ProjectileCount = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile", meta = (ClampMin = "0.0"))
+    float ProjectileInterval = 0.3f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+    float HomingStrength = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Projectile")
+    TSubclassOf<APTBossProjectile> OverrideProjectileClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
+    float LaserDuration = 3.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser", meta = (ClampMin = "100.0"))
+    float LaserRange = 1500.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser", meta = (ClampMin = "0.05"))
+    float LaserTickInterval = 0.1f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
+    TSoftObjectPtr<UNiagaraSystem> LaserEffect;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
+    FName LaserSocketName = NAME_None;
 };
