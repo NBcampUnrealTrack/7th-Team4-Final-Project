@@ -2,7 +2,9 @@
 #include "PTDropItemActorBase.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h" 
+#include "Components/WidgetComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "UI/Widget/Item/PTDropItemNameWidget.h"
 
 
 // Sets default values
@@ -15,26 +17,34 @@ APTDropItemActorBase::APTDropItemActorBase()
     CollisionSphere = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionSphere"));
     RootComponent = CollisionSphere;
     CollisionSphere->SetSphereRadius(100.0f);
-    CollisionSphere->SetCollisionProfileName(TEXT("Trigger"));
 
     // 메시 컴포넌트 구축
     ItemMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ItemMesh"));
     ItemMesh->SetupAttachment(RootComponent);
 
-    // 마우스 클릭(Query)은 작동, 물리 연산(Physics)은 안함.
-    ItemMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+    ItemNameWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("ItemNameWidgetComponent"));
+    ItemNameWidgetComponent->SetupAttachment(RootComponent);
+    ItemNameWidgetComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 100.0f));
+    ItemNameWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+    ItemNameWidgetComponent->SetDrawAtDesiredSize(true);
+    ItemNameWidgetComponent->SetPivot(FVector2D(0.5f, 1.0f));
+    ItemNameWidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    ItemNameWidgetComponent->SetGenerateOverlapEvents(false);
+    ItemNameWidgetComponent->SetWindowFocusable(false);
+    ItemNameWidgetComponent->SetWindowVisibility(EWindowVisibility::SelfHitTestInvisible);
+    ItemNameWidgetComponent->SetWidgetClass(UPTDropItemNameWidget::StaticClass());
+    ItemNameWidgetComponent->SetVisibility(false);
 
-    // 캐릭터나 다른 동적 액터가 지나갈 땐 스무스하게 통과되도록 무시
-    ItemMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
-
-    // [중요] 마우스 레이트레이싱 채널만 Block으로 설정
-    ItemMesh->SetCollisionResponseToChannel(ECC_Visibility, ECollisionResponse::ECR_Block);
+    ConfigureInteractionCollision();
 }
 
 
 void APTDropItemActorBase::BeginPlay()
 {
 	Super::BeginPlay();
+    // 파생 BP에서 컴포넌트 충돌 설정을 덮어썼더라도 클릭 프록시 규칙을 보장합니다.
+    ConfigureInteractionCollision();
+
     if (InstanceItemData.Item_ID.IsNone())
     {
         InitializeItemData();
@@ -70,10 +80,7 @@ void APTDropItemActorBase::InitializeDroppedItem(const FItemData& InItemData, in
     {
         ItemMesh->SetStaticMesh(nullptr);
     }
-    else
-    {
-        ApplyItemVisual();
-    }
+    ApplyItemVisual();
     ForceNetUpdate();
 }
 
@@ -103,14 +110,57 @@ void APTDropItemActorBase::OnRep_InstanceItemData()
 
 void APTDropItemActorBase::ApplyItemVisual()
 {
-    if (ItemMesh == nullptr || InstanceItemData.ItemMeshAsset.IsNull())
+    if (ItemMesh != nullptr && !InstanceItemData.ItemMeshAsset.IsNull())
+    {
+        if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+        {
+            ItemMesh->SetStaticMesh(StaticMesh);
+        }
+    }
+
+    RefreshItemNameWidget();
+}
+
+void APTDropItemActorBase::RefreshItemNameWidget()
+{
+    if (ItemNameWidgetComponent == nullptr)
     {
         return;
     }
 
-    if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+    const bool bHasItemName = !InstanceItemData.Item_Name.IsEmpty();
+    ItemNameWidgetComponent->SetVisibility(bHasItemName);
+    if (!bHasItemName)
     {
-        ItemMesh->SetStaticMesh(StaticMesh);
+        return;
+    }
+
+    ItemNameWidgetComponent->InitWidget();
+    UPTDropItemNameWidget* ItemNameWidget =
+        Cast<UPTDropItemNameWidget>(ItemNameWidgetComponent->GetUserWidgetObject());
+    if (ItemNameWidget != nullptr)
+    {
+        ItemNameWidget->SetItemName(InstanceItemData.Item_Name);
+    }
+}
+
+void APTDropItemActorBase::ConfigureInteractionCollision()
+{
+    if (CollisionSphere != nullptr)
+    {
+        // 메시의 Simple Collision 유무와 무관하게 구형 클릭 프록시가 선택됩니다.
+        CollisionSphere->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+        CollisionSphere->SetCollisionObjectType(ECC_WorldDynamic);
+        CollisionSphere->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+        CollisionSphere->SetCollisionResponseToChannel(ECC_Visibility, ECollisionResponse::ECR_Block);
+        CollisionSphere->SetGenerateOverlapEvents(false);
+    }
+
+    if (ItemMesh != nullptr)
+    {
+        ItemMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        ItemMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+        ItemMesh->SetGenerateOverlapEvents(false);
     }
 }
 

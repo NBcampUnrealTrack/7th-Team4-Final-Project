@@ -10,6 +10,7 @@
 
 class USphereComponent;
 class UStaticMeshComponent; 
+class UWidgetComponent;
 
 UCLASS() 
 class PENTAGRAM_API APTDropItemActorBase : public AActor
@@ -45,6 +46,10 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UStaticMeshComponent* ItemMesh; 
 
+    /** 드랍 아이템의 이름을 월드 위치에 표시합니다. */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Components")
+    TObjectPtr<UWidgetComponent> ItemNameWidgetComponent;
+
     // 데이터 테이블에서 가져올 아이템 Row 이름 (에디터 배치용)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Data")
     FDataTableRowHandle ItemRowHandle; 
@@ -63,6 +68,8 @@ protected:
     void OnRep_InstanceItemData();
 
     void ApplyItemVisual();
+    void RefreshItemNameWidget();
+    void ConfigureInteractionCollision();
 
 private:
     bool bPickupClaimed = false;
