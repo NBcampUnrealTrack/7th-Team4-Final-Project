@@ -1,15 +1,19 @@
 #include "Character/Monsters/AI/Tasks/PTBTTask_Attack.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/Monsters/PTBossMonsterCharacter.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "Character/Monsters/PTMonsterState.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "AIController.h"
+#include "Animation/AnimInstance.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 UPTBTTask_Attack::UPTBTTask_Attack()
 {
     NodeName = TEXT("Attack");
+    bNotifyTick = true;
 }
 
 EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -64,6 +68,8 @@ EBTNodeResult::Type UPTBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerC
         return EBTNodeResult::Failed;
     }
 
+    Memory->bMontageDetected = false;
+
     TWeakObjectPtr<UPTBTTask_Attack> WeakThis(this);
     TWeakObjectPtr<UBehaviorTreeComponent> WeakOwnerComp(&OwnerComp);
     TWeakObjectPtr<UBlackboardComponent> WeakBlackboard(BB);
@@ -108,6 +114,11 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
     {
         if (APTMonsterCharacter* Monster = Cast<APTMonsterCharacter>(AIC->GetPawn()))
         {
+            if (APTBossMonsterCharacter* BossChar = Cast<APTBossMonsterCharacter>(Monster))
+            {
+                BossChar->ClearMeleeAttackData();
+            }
+
             Monster->StopAttack();
             Monster->SetMonsterState(EMonsterState::Idle);
         }
@@ -124,4 +135,63 @@ EBTNodeResult::Type UPTBTTask_Attack::AbortTask(UBehaviorTreeComponent& OwnerCom
 uint16 UPTBTTask_Attack::GetInstanceMemorySize() const
 {
     return sizeof(FPTAttackTaskMemory);
+}
+
+void UPTBTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+{
+    AAIController* AIC = OwnerComp.GetAIOwner();
+    if (!IsValid(AIC))
+    {
+        return;
+    }
+
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(AIC->GetPawn());
+    if (!IsValid(Boss))
+    {
+        return;
+    }
+
+    USkeletalMeshComponent* Mesh = Boss->GetMesh();
+    if (!IsValid(Mesh))
+    {
+        return;
+    }
+
+    UAnimInstance* AnimInstance = Mesh->GetAnimInstance();
+    if (!IsValid(AnimInstance))
+    {
+        return;
+    }
+
+    FPTAttackTaskMemory* Memory = CastInstanceNodeMemory<FPTAttackTaskMemory>(NodeMemory);
+
+    const bool bCurrentlyPlaying = (AnimInstance->GetCurrentActiveMontage() != nullptr);
+
+    if (!Memory->bMontageDetected)
+    {
+        if (bCurrentlyPlaying)
+        {
+            Memory->bMontageDetected = true;
+        }
+
+        return;
+    }
+    
+    if (!bCurrentlyPlaying && Memory->CooldownTimer.IsValid())
+    {
+        if (UWorld* World = OwnerComp.GetWorld())
+        {
+            World->GetTimerManager().ClearTimer(Memory->CooldownTimer);
+        }
+
+        Boss->ClearMeleeAttackData();
+
+        if (UBlackboardComponent* BB = OwnerComp.GetBlackboardComponent())
+        {
+            BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+        }
+
+        Boss->SetMonsterState(EMonsterState::Idle);
+        FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+    }
 }
