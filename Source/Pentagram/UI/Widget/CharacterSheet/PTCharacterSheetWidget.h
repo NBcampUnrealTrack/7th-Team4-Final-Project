@@ -90,6 +90,9 @@ private:
     UFUNCTION()
     void HandleLevelChanged(int32 NewLevel);
 
+    UFUNCTION()
+    void HandleCloseButtonClicked();
+
     void RefreshPlayerName();
 
 

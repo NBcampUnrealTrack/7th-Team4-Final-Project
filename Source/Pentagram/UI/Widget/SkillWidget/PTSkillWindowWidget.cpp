@@ -13,6 +13,7 @@ void UPTSkillWindowWidget::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
+    SetIsFocusable(true);
     if (SkillListView)
     {
         SkillListView->OnEntryWidgetGenerated().AddUObject(this, &UPTSkillWindowWidget::HandleEntryWidgetGenerated);
@@ -29,6 +30,12 @@ void UPTSkillWindowWidget::NativeOnInitialized()
 void UPTSkillWindowWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
+
+    SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    if (UWidget* RootWidget = GetRootWidget())
+    {
+        RootWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    }
 
     RefreshSkillList();
     ClearSkillDetail();
@@ -127,6 +134,11 @@ void UPTSkillWindowWidget::HandleEntryWidgetGenerated(UUserWidget& EntryWidget)
     {
         SkillEntry->OnEntryClicked.AddUniqueDynamic(this, &UPTSkillWindowWidget::HandleSkillEntryClicked);
     }
+}
+
+void UPTSkillWindowWidget::HandleCloseButtonClicked()
+{
+    DeactivateWidget();
 }
 
 void UPTSkillWindowWidget::HandleSkillEntryClicked(FName SkillID, FPTSkillRow SkillRow)

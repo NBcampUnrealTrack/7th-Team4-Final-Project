@@ -12,6 +12,7 @@ void UPTCharacterSheetWidget::NativeConstruct()
     Super::NativeConstruct();
 
     TryBindFromOwningPlayerState();
+    SetIsFocusable(true);
 }
 
 void UPTCharacterSheetWidget::NativeDestruct()
@@ -25,19 +26,22 @@ void UPTCharacterSheetWidget::NativeOnActivated()
 {
     Super::NativeOnActivated();
 
-    // 아직 못 묶었으면 재시도 (PlayerState가 늦게 준비되는 경우 대비)
+    SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    if (UWidget* RootWidget = GetRootWidget())
+    {
+        RootWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    }
+
     if (!BoundPlayerState.IsValid())
     {
         TryBindFromOwningPlayerState();
     }
 
-    // 창을 열 때마다 최신값으로 전부 리프레시 (HP/MP/공격력/방어력/치명타/이동속도/레벨)
     if (APTBasePlayerState* PS = BoundPlayerState.Get())
     {
         PS->BroadcastAllStats();
     }
 
-    // 이름은 델리게이트가 없어 매번 직접 읽음
     RefreshPlayerName();
 }
 
@@ -178,6 +182,11 @@ void UPTCharacterSheetWidget::HandleLevelChanged(int32 NewLevel)
     {
         Txt_Level->SetText(FText::AsNumber(NewLevel));
     }
+}
+
+void UPTCharacterSheetWidget::HandleCloseButtonClicked()
+{
+    DeactivateWidget();
 }
 
 void UPTCharacterSheetWidget::RefreshPlayerName()

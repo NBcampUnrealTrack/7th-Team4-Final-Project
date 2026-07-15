@@ -97,11 +97,6 @@ bool UPTInventoryWidget::NativeOnHandleBackAction()
     return true;
 }
 
-TOptional<FUIInputConfig> UPTInventoryWidget::GetDesiredInputConfig() const
-{
-    // 게임 단축키는 유지하되 첫 마우스 입력이 뷰포트 캡처 해제에 소비되지 않도록 합니다.
-    return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture);
-}
 
 void UPTInventoryWidget::BuildSlots()
 {
@@ -337,4 +332,9 @@ void UPTInventoryWidget::HandleFieldDropRequested(int32 SlotIndex, FVector2D Scr
         SlotIndex,
         InventorySlot.ItemData.Item_ID,
         InventorySlot.Quantity);
+}
+
+void UPTInventoryWidget::HandleCloseButtonClicked()
+{
+    DeactivateWidget();
 }
