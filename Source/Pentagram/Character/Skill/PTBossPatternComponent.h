@@ -10,6 +10,8 @@ class UPTMonsterSkillComponent;
 class APTBossProjectile;
 class APTAreaWarning;
 class UNiagaraSystem;
+class UNiagaraComponent;
+class UAudioComponent;
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class PENTAGRAM_API UPTBossPatternComponent : public UActorComponent
@@ -40,6 +42,10 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "PT|Boss|Pattern")
     void SetSkillComponent(UPTMonsterSkillComponent* InSkillComponent);
+
+    void ClearProjectileTimers();
+
+    void StopLaser();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Boss|Pattern")
 	TObjectPtr<UDataTable> BossSkillDataTable;
@@ -76,6 +82,32 @@ protected:
     void SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot);
 
 private:
+    void SpawnLaser(const FPTBossSkillRow& RowSnapshot);
+
+    void StopLaserFXLocal();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastPauseMontage();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastResumeMontage();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastStartLaserFX(FVector FireDirection, float InitialDist, UNiagaraSystem* LaserFX, FName SocketName, USoundBase* LaserSound);
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastUpdateLaserFX(float EffectiveDist);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastStopLaserFX();
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastPlayLaunchSound(FVector Location, USoundBase* Sound);
+
+    void ClearLaserTimers();
+
+    void SpawnMeleeAttack(const FPTBossSkillRow& RowSnapshot);
+
     TPair<FName, FPTBossSkillRow*> PickNextSkill(int32 Phase);
     AActor* GetTargetActor() const;
 
@@ -89,4 +121,23 @@ private:
     bool bSkillAssetsLoaded = false;
 
     bool bAreaAttackInProgress = false;
+
+    TArray<FTimerHandle> ProjectileTimers;
+
+    bool bIsLaserActive = false;
+
+    FTimerHandle LaserTickTimerHandle;
+    FTimerHandle LaserEndTimerHandle;
+
+    FVector LaserFireDirection = FVector::ForwardVector;
+    // 근접 보스 Niagara는 "User.BeamEnd"(월드좌표), 원거리는 "beamEnd"(로컬오프셋) — 소켓 유무로 구분
+    bool bUseMeleeBeamVar = false;
+
+    UPROPERTY()
+    TObjectPtr<UNiagaraComponent> ActiveLaserComponent;
+
+    UPROPERTY()
+    TObjectPtr<UAudioComponent> ActiveLaserAudioComp;
+
+    float SavedMaxWalkSpeed = 500.f;
 };

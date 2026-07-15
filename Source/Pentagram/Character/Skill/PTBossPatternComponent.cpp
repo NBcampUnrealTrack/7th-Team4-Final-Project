@@ -7,13 +7,16 @@
 #include "Character/Skill/PTSkillComponent.h"
 #include "Character/PTBaseCharacter.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/AudioComponent.h" 
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/DataTable.h"
+#include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "Character/Monsters/Skill/PTAreaWarning.h"
 #include "DrawDebugHelpers.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 
 UPTBossPatternComponent::UPTBossPatternComponent()
@@ -29,6 +32,12 @@ void UPTBossPatternComponent::BeginPlay()
 
 void UPTBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    if (IsValid(ActiveLaserAudioComp))
+    {
+        ActiveLaserAudioComp->Stop();
+        ActiveLaserAudioComp = nullptr;
+    }
+
     UWorld* World = GetWorld();
     if (IsValid(World))
     {
@@ -46,6 +55,8 @@ void UPTBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     }
 
     bAreaAttackInProgress = false;
+
+    ClearProjectileTimers();
 
     Super::EndPlay(EndPlayReason);
 }
@@ -74,26 +85,27 @@ void UPTBossPatternComponent::PreloadAllSkills()
     int32 FailCount = 0;
 
     auto LoadRow = [&FailCount](FPTBossSkillRow* Row, const FName& RowName)
-    {
-        if (!Row)
         {
+            if (!Row)
+            {
 #if !UE_BUILD_SHIPPING
-            UE_LOG(LogTemp, Warning, TEXT("[BossPattern] Preload 실패 — [%s] RowName 또는 RowStruct 확인"), *RowName.ToString());
+                UE_LOG(LogTemp, Warning, TEXT("[BossPattern] Preload 실패 — [%s] RowName 또는 RowStruct 확인"), *RowName.ToString());
 #endif
-            ++FailCount;
-            return;
-        }
+                ++FailCount;
+                return;
+            }
 
-        Row->SkillMontage.LoadSynchronous();
-        Row->OverrideMontage.LoadSynchronous();
-        Row->SkillEffect.LoadSynchronous();
-        Row->SkillSound.LoadSynchronous();
-        Row->SkillHitSound.LoadSynchronous();
-        Row->AreaFallEffect.LoadSynchronous();
-        Row->AreaCastEffect.LoadSynchronous();
-        Row->AreaImpactEffect.LoadSynchronous();
-        Row->SafeZoneEffect.LoadSynchronous();
-    };
+            Row->SkillMontage.LoadSynchronous();
+            Row->OverrideMontage.LoadSynchronous();
+            Row->SkillEffect.LoadSynchronous();
+            Row->SkillSound.LoadSynchronous();
+            Row->SkillHitSound.LoadSynchronous();
+            Row->AreaFallEffect.LoadSynchronous();
+            Row->AreaCastEffect.LoadSynchronous();
+            Row->AreaImpactEffect.LoadSynchronous();
+            Row->SafeZoneEffect.LoadSynchronous();
+            Row->LaserEffect.LoadSynchronous();
+        };
 
     for (const FName& RowName : Phase0SkillRowNames)
     {
@@ -141,6 +153,16 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
         return 0.f;
     }
 
+    if (bIsLaserActive)
+    {
+        return 0.f;
+    }
+
+    if (bHasPendingSkill)
+    {
+        return 0.f;
+    }
+
     bHasPendingSkill = false;
 
     auto [RowName, Row] = PickNextSkill(Phase);
@@ -154,8 +176,8 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 #endif
 
     FPTSkillActivationRequest Request;
-    Request.SkillRowName    = RowName;
-    Request.SkillDataTable  = BossSkillDataTable;
+    Request.SkillRowName = RowName;
+    Request.SkillDataTable = BossSkillDataTable;
     Request.OverrideMontage = Row->OverrideMontage;
 
     const bool bActivated = SkillComponent->TryActivateSkillChecked(Request);
@@ -165,7 +187,7 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
     }
 
     PendingSkillSnapshot = *Row;
-    bHasPendingSkill     = true;
+    bHasPendingSkill = true;
 #if !UE_BUILD_SHIPPING
     UE_LOG(LogTemp, Log, TEXT("[BossPattern] Pending Skill Set: %s"), *RowName.ToString());
 #endif
@@ -206,6 +228,11 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
         PlayedMontage = Row->SkillMontage.LoadSynchronous();
     }
 
+    if (Row->SkillType == EBossSkillType::Laser)
+    {
+        return Row->LaserDuration;
+    }
+
     if (Row->SkillType == EBossSkillType::Area && Row->bHoldMontageUntilDelay)
     {
         return IsValid(PlayedMontage)
@@ -218,6 +245,11 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 
 void UPTBossPatternComponent::ExecutePendingSkill()
 {
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return;
+    }
+
     if (!bHasPendingSkill)
     {
 #if !UE_BUILD_SHIPPING
@@ -238,6 +270,14 @@ void UPTBossPatternComponent::ExecutePendingSkill()
         SpawnAreaAttack(PendingSkillSnapshot);
         break;
 
+    case EBossSkillType::Laser:
+        SpawnLaser(PendingSkillSnapshot);
+        break;
+
+    case EBossSkillType::Melee:
+        SpawnMeleeAttack(PendingSkillSnapshot);
+        break;
+
     default:
         break;
     }
@@ -246,6 +286,62 @@ void UPTBossPatternComponent::ExecutePendingSkill()
 void UPTBossPatternComponent::SetSkillComponent(UPTMonsterSkillComponent* InSkillComponent)
 {
     SkillComponent = InSkillComponent;
+}
+
+void UPTBossPatternComponent::ClearProjectileTimers()
+{
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    for (FTimerHandle& Handle : ProjectileTimers)
+    {
+        World->GetTimerManager().ClearTimer(Handle);
+    }
+
+    ProjectileTimers.Empty();
+}
+
+void UPTBossPatternComponent::StopLaser()
+{
+    if (!bIsLaserActive)
+    {
+        StopLaserFXLocal();
+        return;
+    }
+
+    bIsLaserActive = false;
+    ClearLaserTimers();
+
+    if (IsValid(ActiveLaserAudioComp))
+    {
+        ActiveLaserAudioComp->Stop();
+        ActiveLaserAudioComp = nullptr;
+    }
+
+    if (APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner()))
+    {
+        if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
+        {
+            MoveComp->MaxWalkSpeed = SavedMaxWalkSpeed;
+            MoveComp->bOrientRotationToMovement = true;
+            MoveComp->bUseControllerDesiredRotation = true;
+        }
+
+    }
+
+    MulticastResumeMontage();
+
+    if (GetOwner() && GetOwner()->HasAuthority())
+    {
+        MulticastStopLaserFX();
+    }
+    else
+    {
+        StopLaserFXLocal();
+    }
 }
 
 void UPTBossPatternComponent::MulticastSpawnAreaWarningBatch_Implementation(const TArray<FVector>& DropLocations, float BaseDelay, float Interval, UNiagaraSystem* FallEffect, UNiagaraSystem* ImpactEffect, float StartHeight, TSubclassOf<APTAreaWarning> WarningClass, float MaxRadius, bool bGroundMode)
@@ -307,21 +403,60 @@ void UPTBossPatternComponent::MulticastSpawnAreaFX_Implementation(FVector CastLo
             FTimerHandle& SafeZoneTimer = AreaAttackTimers.AddDefaulted_GetRef();
             World->GetTimerManager().SetTimer(
                 SafeZoneTimer, FTimerDelegate::CreateWeakLambda(this, [SafeZoneComp]()
-                {
-                    if (IsValid(SafeZoneComp))
                     {
-                        SafeZoneComp->Deactivate();
-                        SafeZoneComp->DestroyComponent();
-                    }
-                }),
+                        if (IsValid(SafeZoneComp))
+                        {
+                            SafeZoneComp->Deactivate();
+                            SafeZoneComp->DestroyComponent();
+                        }
+                    }),
                 AreaAttackDelay, false);
-        } 
+        }
     }
+}
+
+void UPTBossPatternComponent::MulticastPlayLaunchSound_Implementation(FVector Location, USoundBase* Sound)
+{
+    if (IsValid(Sound))
+    {
+        UGameplayStatics::SpawnSoundAtLocation(GetWorld(), Sound, Location);
+    }
+}
+
+void UPTBossPatternComponent::ClearLaserTimers()
+{
+    UWorld* World = GetWorld();
+    if (IsValid(World))
+    {
+        World->GetTimerManager().ClearTimer(LaserTickTimerHandle);
+        World->GetTimerManager().ClearTimer(LaserEndTimerHandle);
+    }
+}
+
+void UPTBossPatternComponent::SpawnMeleeAttack(const FPTBossSkillRow& RowSnapshot)
+{
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    if (!IsValid(Boss) || !Boss->HasAuthority())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[SpawnMeleeAttack] Boss 무효 또는 권한 없음"));
+        return;
+    }
+
+    const float FinalDamage = Boss->GetBaseAtk()
+        * RowSnapshot.DamageMultiplier
+        * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
+
+    Boss->SetMeleeAttackData(FinalDamage, RowSnapshot.MakeHitInfo(Boss));
 }
 
 TPair<FName, FPTBossSkillRow*> UPTBossPatternComponent::PickNextSkill(int32 Phase)
 {
     if (!IsValid(BossSkillDataTable))
+    {
+        return { NAME_None, nullptr };
+    }
+
+    if (bIsLaserActive)
     {
         return { NAME_None, nullptr };
     }
@@ -397,7 +532,7 @@ TPair<FName, FPTBossSkillRow*> UPTBossPatternComponent::PickNextSkill(int32 Phas
     }
 
     float Rand = FMath::FRandRange(0.f, TotalWeight);
-    float Acc  = 0.f;
+    float Acc = 0.f;
     for (auto& [RowName, Row] : Candidates)
     {
         Acc += Row->Weight;
@@ -419,6 +554,7 @@ void UPTBossPatternComponent::SpawnProjectile(const FPTBossSkillRow& RowSnapshot
 {
     if (!IsValid(ProjectileClass))
     {
+        UE_LOG(LogTemp, Warning, TEXT("[SpawnProjectile] ProjectileClass 미설정 — BP에서 확인"));
         return;
     }
 
@@ -434,39 +570,87 @@ void UPTBossPatternComponent::SpawnProjectile(const FPTBossSkillRow& RowSnapshot
         return;
     }
 
-    USkeletalMeshComponent* Mesh = Boss->GetMesh();
-    if (!IsValid(Mesh))
+    ClearProjectileTimers();
+
+    const int32 Count = FMath::Max(1, RowSnapshot.ProjectileCount);
+    const float Interval = FMath::Max(0.f, RowSnapshot.ProjectileInterval);
+
+    const float FinalDamage = Boss->GetBaseAtk()
+        * RowSnapshot.DamageMultiplier
+        * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase())
+        / static_cast<float>(Count);
+
+    auto FireProjectile = [this, Boss, RowSnapshot, World, FinalDamage]()
+        {
+            if (!IsValid(Boss) || !IsValid(World))
+            {
+                return;
+            }
+
+            USkeletalMeshComponent* Mesh = Boss->GetMesh();
+            if (!IsValid(Mesh))
+            {
+                return;
+            }
+
+            const bool bUseSocket = ProjectileSpawnSocket != NAME_None && Mesh->DoesSocketExist(ProjectileSpawnSocket);
+            const FVector SpawnLocation = bUseSocket
+                ? Mesh->GetSocketLocation(ProjectileSpawnSocket)
+                : Boss->GetActorLocation()
+                + Boss->GetActorForwardVector() * ProjectileSpawnForwardOffset
+                + FVector(0.f, 0.f, ProjectileSpawnHeightOffset);
+            const FRotator SpawnRotation = Boss->GetActorRotation();
+            FActorSpawnParameters SpawnParams;
+            SpawnParams.Owner = Boss;
+            SpawnParams.Instigator = Boss;
+
+            TSubclassOf<APTBossProjectile> SpawnClass = RowSnapshot.OverrideProjectileClass
+                ? RowSnapshot.OverrideProjectileClass
+                : ProjectileClass;
+            if (!IsValid(SpawnClass))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[SpawnProjectile] SpawnClass 무효 — OverrideProjectileClass/ProjectileClass 확인"));
+                return;
+            }
+
+            APTBossProjectile* Projectile = World->SpawnActor<APTBossProjectile>(SpawnClass, SpawnLocation, SpawnRotation, SpawnParams);
+            if (!IsValid(Projectile))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("[SpawnProjectile] SpawnActor 실패 — SpawnClass: %s"), *SpawnClass->GetName());
+                return;
+            }
+
+            Projectile->IgnoreActor(Boss);
+
+            AActor* Target = GetTargetActor();
+            const FVector Direction = IsValid(Target) ? (Target->GetActorLocation() - SpawnLocation).GetSafeNormal() : Boss->GetActorForwardVector();
+
+            FPTHitInfo HitInfo = RowSnapshot.MakeHitInfo(Boss);
+
+            Projectile->Launch(Direction, FinalDamage, RowSnapshot.ProjectileSpeed, HitInfo, RowSnapshot.HomingStrength, Target);
+
+            if (USoundBase* LaunchSound = RowSnapshot.SkillSound.Get())
+            {
+                MulticastPlayLaunchSound(SpawnLocation, LaunchSound);
+            }
+        };
+
+    FireProjectile();
+
+    if (Count > 1)
     {
-        return;
+        ProjectileTimers.SetNum(Count - 1);
+
+        for (int32 i = 1; i < Count; ++i)
+        {
+            const float Delay = Interval * i;
+
+            World->GetTimerManager().SetTimer(
+                ProjectileTimers[i - 1],
+                FTimerDelegate::CreateWeakLambda(this, FireProjectile),
+                Delay, false);
+        }
     }
-
-    const bool bUseSocket = ProjectileSpawnSocket != NAME_None && Mesh->DoesSocketExist(ProjectileSpawnSocket);
-    const FVector SpawnLocation = bUseSocket
-        ? Mesh->GetSocketLocation(ProjectileSpawnSocket)
-        : Boss->GetActorLocation()
-            + Boss->GetActorForwardVector() * ProjectileSpawnForwardOffset
-            + FVector(0.f, 0.f, ProjectileSpawnHeightOffset);
-    const FRotator SpawnRotation = Boss->GetActorRotation();
-
-
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Owner      = Boss;
-    SpawnParams.Instigator = Boss;
-
-    APTBossProjectile* Projectile = World->SpawnActor<APTBossProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
-    if (!IsValid(Projectile))
-    {
-        return;
-    }
-
-    AActor* Target = GetTargetActor();
-    FVector Direction = IsValid(Target) ? (Target->GetActorLocation() - SpawnLocation).GetSafeNormal() : Boss->GetActorForwardVector();
-
-    const float FinalDamage = Boss->GetBaseAtk() * RowSnapshot.DamageMultiplier * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
-
-    FPTHitInfo HitInfo   = RowSnapshot.MakeHitInfo(Boss);
-
-    Projectile->Launch(Direction, FinalDamage, RowSnapshot.ProjectileSpeed, HitInfo);
 }
 
 void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot)
@@ -507,7 +691,7 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
         }
     }
 
-    const FVector BossLocation   = Boss->GetActorLocation();
+    const FVector BossLocation = Boss->GetActorLocation();
     const FVector TargetLocation = Target->GetActorLocation();
 
     const FVector BaseDropLocation = RowSnapshot.bHasDirectionalSafeZone ? BossLocation : TargetLocation;
@@ -523,7 +707,7 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
         if (RowSnapshot.AreaAttackSpreadRadius > 0.f)
         {
             const float Angle = FMath::FRandRange(0.f, 360.f);
-            const float Dist  = FMath::FRandRange(0.f, RowSnapshot.AreaAttackSpreadRadius);
+            const float Dist = FMath::FRandRange(0.f, RowSnapshot.AreaAttackSpreadRadius);
             DropPos.X += FMath::Cos(FMath::DegreesToRadians(Angle)) * Dist;
             DropPos.Y += FMath::Sin(FMath::DegreesToRadians(Angle)) * Dist;
         }
@@ -536,13 +720,13 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
     if (RowSnapshot.bHasDirectionalSafeZone)
     {
         const FVector Cardinals[] = {
-            FVector( 1.f,  0.f, 0.f), // N
+            FVector(1.f,  0.f, 0.f), // N
             FVector(-1.f,  0.f, 0.f), // S
-            FVector( 0.f,  1.f, 0.f), // E
-            FVector( 0.f, -1.f, 0.f), // W
+            FVector(0.f,  1.f, 0.f), // E
+            FVector(0.f, -1.f, 0.f), // W
         };
 
-        const int32 SafeIndex       = FMath::RandRange(0, 3);
+        const int32 SafeIndex = FMath::RandRange(0, 3);
         const FVector SafeDirection = Cardinals[SafeIndex];
 
         SafeZoneCenter = BossLocation + SafeDirection * RowSnapshot.SafeZoneDistance;
@@ -602,7 +786,7 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
     {
         const float Delay = Snapshot.AreaAttackDelay + Snapshot.AreaAttackInterval * i;
         const bool bIsFirst = (i == 0);
-        const bool bIsLast  = (i == Count - 1);
+        const bool bIsLast = (i == Count - 1);
 
         World->GetTimerManager().SetTimer(
             AreaAttackTimers[i],
@@ -663,6 +847,243 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
                 }),
             Delay, false);
     }
+}
+
+void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
+{
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    if (!IsValid(Boss) || !Boss->HasAuthority())
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    ClearLaserTimers();
+    StopLaserFXLocal();
+
+    bIsLaserActive = true;
+
+    if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
+    {
+        if (MoveComp->MaxWalkSpeed > 0.f)
+        {
+            SavedMaxWalkSpeed = MoveComp->MaxWalkSpeed;
+        }
+
+        MoveComp->MaxWalkSpeed = 0.f;
+        MoveComp->bOrientRotationToMovement = false;
+        MoveComp->bUseControllerDesiredRotation = false;
+    }
+
+    if (AAIController* AIC = Cast<AAIController>(Boss->GetController()))
+    {
+        AIC->StopMovement();
+    }
+
+    MulticastPauseMontage();
+
+    AActor* Target = GetTargetActor();
+    const FVector LaserStart = Boss->GetActorLocation()
+        + Boss->GetActorForwardVector() * 120.f
+        + FVector(0.f, 0.f, 50.f);
+
+    LaserFireDirection = Boss->GetActorForwardVector();
+
+    UNiagaraSystem* LaserFX = RowSnapshot.LaserEffect.Get();
+
+    const float TotalTicks = FMath::Max(1.f, RowSnapshot.LaserDuration / FMath::Max(0.05f, RowSnapshot.LaserTickInterval));
+    const float BaseDamage = Boss->GetBaseAtk() * RowSnapshot.DamageMultiplier * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
+    const float DamagePerTick = BaseDamage / TotalTicks;
+    const FPTBossSkillRow Snapshot = RowSnapshot;
+    const FVector InitialMaxEnd = LaserStart + LaserFireDirection * Snapshot.LaserRange;
+
+    FHitResult InitialWallHit;
+    FCollisionQueryParams InitialParams;
+    InitialParams.AddIgnoredActor(Boss);
+    const bool bInitialWallHit = World->LineTraceSingleByChannel(
+        InitialWallHit, LaserStart, InitialMaxEnd, ECC_Visibility, InitialParams);
+    const FVector InitialEnd = bInitialWallHit ? InitialWallHit.ImpactPoint : InitialMaxEnd;
+    const float InitialDist = FVector::Dist(LaserStart, InitialEnd);
+    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.SkillSound.Get());
+
+    World->GetTimerManager().SetTimer(
+        LaserTickTimerHandle,
+        FTimerDelegate::CreateWeakLambda(this, [this, Boss, Snapshot, DamagePerTick]()
+            {
+                UWorld* InnerWorld = GetWorld();
+                if (!IsValid(InnerWorld) || !IsValid(Boss))
+                {
+                    return;
+                }
+
+                const FVector Start = Boss->GetActorLocation()
+                    + Boss->GetActorForwardVector() * 120.f
+                    + FVector(0.f, 0.f, 50.f);
+                const FVector End = Start + LaserFireDirection * Snapshot.LaserRange;
+                FCollisionQueryParams Params;
+                Params.AddIgnoredActor(Boss);
+
+                FHitResult WallHit;
+                const bool bWallHit = InnerWorld->LineTraceSingleByChannel(
+                    WallHit, Start, End, ECC_Visibility, Params);
+                const FVector EffectiveEnd = bWallHit ? WallHit.ImpactPoint : End;
+
+                TArray<FHitResult> PawnHits;
+                InnerWorld->LineTraceMultiByChannel(PawnHits, Start,
+                    EffectiveEnd, ECC_Pawn, Params);
+
+                TSet<APTBaseCharacter*> DamagedThisTick;
+
+                for (const FHitResult& Hit : PawnHits)
+                {
+                    APTBaseCharacter* TargetChar = Cast<APTBaseCharacter>(Hit.GetActor());
+                    if (!IsValid(TargetChar))
+                    {
+                        continue;
+                    }
+
+                    if (DamagedThisTick.Contains(TargetChar))
+                    {
+                        continue;
+                    }
+
+                    DamagedThisTick.Add(TargetChar);
+
+                    FPTHitInfo HitInfo = Snapshot.MakeHitInfo(Boss);
+                    HitInfo.HitDirection = LaserFireDirection;
+                    TargetChar->ApplyDamageWithHit(DamagePerTick, Boss, HitInfo);
+                }
+
+                const float EffectiveDist = FVector::Dist(Start, EffectiveEnd);
+                MulticastUpdateLaserFX(EffectiveDist);
+            }),
+        Snapshot.LaserTickInterval, /*bLooping=*/true);
+
+    World->GetTimerManager().SetTimer(
+        LaserEndTimerHandle,
+        FTimerDelegate::CreateWeakLambda(this, [this]()
+            {
+                StopLaser();
+            }),
+        Snapshot.LaserDuration, /*bLooping=*/false);
+}
+
+void UPTBossPatternComponent::MulticastPauseMontage_Implementation()
+{
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    if (!IsValid(Boss))
+    {
+        return;
+    }
+
+    if (USkeletalMeshComponent* BossMesh = Boss->GetMesh())
+    {
+        if (UAnimInstance* AnimInstance = BossMesh->GetAnimInstance())
+        {
+            AnimInstance->Montage_Pause(nullptr);
+        }
+    }
+}
+
+void UPTBossPatternComponent::MulticastResumeMontage_Implementation()
+{
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    if (!IsValid(Boss))
+    {
+        return;
+    }
+
+    if (USkeletalMeshComponent* BossMesh = Boss->GetMesh())
+    {
+        if (UAnimInstance* AnimInstance = BossMesh->GetAnimInstance())
+        {
+            AnimInstance->Montage_Resume(nullptr);
+        }
+    }
+}
+
+void UPTBossPatternComponent::StopLaserFXLocal()
+{
+    if (IsValid(ActiveLaserComponent))
+    {
+        ActiveLaserComponent->Deactivate();
+        ActiveLaserComponent->DestroyComponent();
+        ActiveLaserComponent = nullptr;
+    }
+}
+
+void UPTBossPatternComponent::MulticastStartLaserFX_Implementation(FVector FireDirection, float InitialDist, UNiagaraSystem* LaserFX, FName SocketName, USoundBase* LaserSound)
+{
+    StopLaserFXLocal();
+
+    if (!IsValid(LaserFX))
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        return;
+    }
+
+    LaserFireDirection = FireDirection;
+    bUseMeleeBeamVar = !SocketName.IsNone();
+
+    FVector Start;
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    USkeletalMeshComponent* BossMesh = IsValid(Boss) ? Boss->GetMesh() : nullptr;
+
+    if (!SocketName.IsNone() && IsValid(BossMesh) && BossMesh->DoesSocketExist(SocketName))
+    {
+        Start = BossMesh->GetSocketLocation(SocketName);
+    }
+    else
+    {
+        Start = IsValid(Boss) ? Boss->GetActorLocation() + Boss->GetActorForwardVector() * 120.f + FVector(0.f, 0.f, 50.f) : FVector::ZeroVector;
+    }
+
+    const FRotator SpawnRot = SocketName.IsNone() ? FRotator::ZeroRotator : FireDirection.Rotation();
+
+    ActiveLaserComponent = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+        World, LaserFX, Start, SpawnRot,
+        FVector::OneVector, false, true);
+
+    if (IsValid(ActiveLaserComponent) && SocketName.IsNone())
+    {
+        ActiveLaserComponent->SetNiagaraVariableVec3(TEXT("beamEnd"), FireDirection * InitialDist);
+    }
+
+    if (IsValid(Boss) && IsValid(LaserSound))
+    {
+        ActiveLaserAudioComp = UGameplayStatics::SpawnSoundAttached(
+            LaserSound, Boss->GetRootComponent(), NAME_None,
+            FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true
+        );
+    }
+}
+
+void UPTBossPatternComponent::MulticastUpdateLaserFX_Implementation(float EffectiveDist)
+{
+    if (!IsValid(ActiveLaserComponent))
+    {
+        return;
+    }
+
+    if (!bUseMeleeBeamVar)
+    {
+        ActiveLaserComponent->SetNiagaraVariableVec3(TEXT("beamEnd"), LaserFireDirection * EffectiveDist);
+    }
+}
+
+void UPTBossPatternComponent::MulticastStopLaserFX_Implementation()
+{
+    StopLaserFXLocal();
 }
 
 AActor* UPTBossPatternComponent::GetTargetActor() const

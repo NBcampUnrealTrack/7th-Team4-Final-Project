@@ -4,19 +4,13 @@
 
 void UPTAnimNotify_BossFireSkill::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
-    if (!IsValid(MeshComp))
-    {
-        return;
-    }
+    if (!IsValid(MeshComp)) return;
 
     APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(MeshComp->GetOwner());
-    if (!IsValid(Boss))
-    {
-        return;
-    }
+    if (!IsValid(Boss) || !Boss->HasAuthority()) return;
 
-    if (UPTBossPatternComponent* PatternComp = Boss->GetBossPatternComponent())
-    {
-        PatternComp->ExecutePendingSkill();
-    }
+    UPTBossPatternComponent* PatternComp = Boss->GetBossPatternComponent();
+    if (!IsValid(PatternComp)) return;
+
+    PatternComp->ExecutePendingSkill();
 }

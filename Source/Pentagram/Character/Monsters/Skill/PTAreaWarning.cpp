@@ -1,6 +1,8 @@
 #include "Character/Monsters/Skill/PTAreaWarning.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/AudioComponent.h"  
+#include "Kismet/GameplayStatics.h"      
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 
@@ -72,6 +74,14 @@ void APTAreaWarning::Launch(const FVector& GroundLocation, float InFallDuration,
         BorderMesh->SetVisibility(true);
     }
 
+    if (USoundBase* Sound = BuildupSound.LoadSynchronous())
+    {
+        BuildupAudioComp = UGameplayStatics::SpawnSoundAttached(
+            Sound, GetRootComponent(), NAME_None,
+            FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true
+        );
+    }
+
     SetActorTickEnabled(true);
 }
 
@@ -110,10 +120,27 @@ void APTAreaWarning::Tick(float DeltaTime)
     }
 }
 
+void APTAreaWarning::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (IsValid(BuildupAudioComp))
+    {
+        BuildupAudioComp->Stop();
+        BuildupAudioComp = nullptr;
+    }
+
+    Super::EndPlay(EndPlayReason);
+}
+
 void APTAreaWarning::OnLanded()
 {
     bLanded = true;
     SetActorTickEnabled(false);
+
+    if (IsValid(BuildupAudioComp))
+    {
+        BuildupAudioComp->Stop();
+        BuildupAudioComp = nullptr;
+    }
 
     if (IsValid(FallEffectComp))
     {
@@ -144,4 +171,7 @@ void APTAreaWarning::OnLanded()
     }
 
     SetLifeSpan(3.f);
+
+    if (USoundBase* Sound = ExplosionSound.LoadSynchronous())
+        UGameplayStatics::SpawnSoundAtLocation(GetWorld(), Sound, TargetLocation);
 }
