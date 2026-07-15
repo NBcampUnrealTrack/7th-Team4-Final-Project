@@ -51,10 +51,22 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     // [데미지 계산 공식] 기존 DamageAmount 대신 장비 스탯이 합산된 FinalDamageAmount를 사용
     float FinalDamage = FMath::Max(FinalDamageAmount - BaseDef, 1.f);
 
-    if (APawn* AttackerPawn = Cast<APawn>(Attacker))
+#if !UE_BUILD_SHIPPING
+    UE_LOG(LogTemp, Warning, TEXT("[ApplyDamage] Input=%.1f BaseDef=%.1f Final=%.1f"),
+        FinalDamageAmount, BaseDef, FinalDamage);
+#endif
+
+    if (APTPlayerCharacter* HitPlayer = Cast<APTPlayerCharacter>(this))
     {
-        if (APTPlayerController* AttackerPC =
-                Cast<APTPlayerController>(AttackerPawn->GetController()))
+        if (APTPlayerController* HitPC = Cast<APTPlayerController>(HitPlayer->GetController()))
+        {
+            FVector HitDisplayLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
+            HitPC->Client_ShowDamageNumber(HitDisplayLocation, FinalDamage, bIsCritical);
+        }
+    }
+    else if (APTPlayerCharacter* AttackerPlayer = Cast<APTPlayerCharacter>(Attacker))
+    {
+        if (APTPlayerController* AttackerPC = Cast<APTPlayerController>(AttackerPlayer->GetController()))
         {
             FVector HitDisplayLocation = GetActorLocation() + FVector(0.f, 0.f, 100.f);
             AttackerPC->Client_ShowDamageNumber(HitDisplayLocation, FinalDamage, bIsCritical);
