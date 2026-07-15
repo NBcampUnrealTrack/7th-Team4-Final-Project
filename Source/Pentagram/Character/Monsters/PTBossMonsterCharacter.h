@@ -6,6 +6,8 @@
 
 class UPTBossPatternComponent;
 class APTBossRoomCenter;
+class APTBossShield;
+class USoundBase;
 
 UCLASS()
 class PENTAGRAM_API APTBossMonsterCharacter : public APTMonsterCharacter
@@ -16,6 +18,16 @@ public:
     APTBossMonsterCharacter();
 
     virtual void PerformAttack() override;
+
+    void SetMeleeAttackData(float Damage, const FPTHitInfo& HitInfo);
+    void ClearMeleeAttackData();
+
+    bool IsAlreadyHit(TWeakObjectPtr<AActor> Target) const;
+    void AddHitActor(TWeakObjectPtr<AActor> Target);
+    void ClearHitActors();
+
+    UFUNCTION(NetMulticast, Unreliable)
+    void MulticastPlayHitSound(FVector Location, USoundBase* Sound);
 
     UFUNCTION(BlueprintPure, Category = "PT|Boss|Phase")
     int32 GetCurrentPhase() const;
@@ -31,6 +43,11 @@ public:
 
     UPTBossPatternComponent* GetBossPatternComponent() const { return BossPatternComponent; }
 
+    float GetCurrentMeleeDamage() const { return CurrentMeleeDamage; }
+    const FPTHitInfo& GetCurrentMeleeHitInfo() const { return CurrentMeleeHitInfo; }
+
+    void OnShieldDestroyed();
+
     UPROPERTY(BlueprintAssignable, Category = "PT|Boss|UI")
     FPTOnBossPhaseChanged OnPhaseChanged;
 
@@ -43,11 +60,48 @@ public:
 protected:
     virtual void PostInitializeComponents() override;
     virtual void BeginPlay() override;
+    virtual void OnDeath() override;
     virtual float StartAttack() override;
     virtual void StopAttack() override;
     virtual float GetAttackDamage() const override;
 
 private:
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    bool bHasShieldPhase = false;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    TSubclassOf<APTBossShield> ShieldClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    float ShieldMaxHP = 1500.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    float ShieldRadius = 500.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    float ShieldDuration = 20.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    float ShieldPushForce = 1000.f;
+
+    UPROPERTY()
+    TObjectPtr<APTBossShield> ActiveShield;
+
+    FTimerHandle ShieldTimerHandle;
+
+    bool bShieldPhaseTriggered = false;
+
+    UFUNCTION()
+    void TryEnterShieldPhase(int32 NewPhase);
+
+    void SpawnShield();
+    
+    UFUNCTION()
+    void OnShieldTimerExpired();
+
+    void FreezeForShieldPhase();
+    void UnfreezeAfterShieldPhase();
+
     UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Animation")
     TObjectPtr<UAnimMontage> EnragedAttackMontage;
 
@@ -65,4 +119,11 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Phase")
     float Phase2HPThreshold = 0.1f;
+
+    float CurrentMeleeDamage = 0.f;
+
+    FPTHitInfo CurrentMeleeHitInfo;
+
+    UPROPERTY()
+    TSet<TWeakObjectPtr<AActor>> HitActorsThisSwing;
 };
