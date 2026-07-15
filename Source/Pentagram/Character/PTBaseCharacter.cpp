@@ -82,6 +82,8 @@ float APTBaseCharacter::ApplyDamage(float DamageAmount, AActor* Attacker)
     {
         PS->CurrentHP = CurrentHP;
         PS->MaxHP = MaxHP;
+
+        PS->OnHealthChanged.Broadcast(PS->CurrentHP, PS->MaxHP);
     }
 
     // 죽음

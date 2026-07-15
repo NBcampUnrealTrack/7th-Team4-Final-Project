@@ -5,6 +5,7 @@
 #include "PTMonsterHealthBarWidget.generated.h"
 
 class APTMonsterCharacter;
+class UTextBlock;
 
 UCLASS()
 class PENTAGRAM_API UPTMonsterHealthBarWidget : public UPTStatBarWidget
@@ -40,10 +41,17 @@ protected:
     UFUNCTION()
     void HandleHealthChanged(float Current, float Max);
 
+    // 이름 표시
+    void UpdateMonsterName(APTMonsterCharacter* Monster);
+
 protected:
     // 숨김 지연
     UPROPERTY(EditAnywhere, Category = "PT|UI|Monster")
     float HideDelay = 5.f;
+
+    // 몬스터 이름 텍스트
+    UPROPERTY(meta = (BindWidgetOptional))
+    TObjectPtr<UTextBlock> Txt_Name;
 
 private:
     UPROPERTY(Transient)
