@@ -17,9 +17,10 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     FVector BoxCenter = OwnerPlayer->GetActorLocation()
                       + OwnerPlayer->GetActorForwardVector() * 60.f
                       + FVector(0.f, 0.f, 50.f);
-    FRotator BoxRotation = OwnerPlayer->GetActorRotation();
 
-    DrawDebugBox(
+    // 디버그 표시선 콜리전 박스
+    /*FRotator BoxRotation = OwnerPlayer->GetActorRotation();
+     DrawDebugBox(
         OwnerPlayer->GetWorld(),
         BoxCenter,
         BoxExtent,
@@ -27,7 +28,7 @@ void UPTAnimNotify_AttackHit::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
         FColor::Red,
         false,
         0.5f
-    );
+    );*/
 
     TArray<AActor*> HitActors;
     TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;

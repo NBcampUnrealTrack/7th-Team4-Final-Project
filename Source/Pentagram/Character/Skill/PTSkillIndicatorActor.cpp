@@ -24,9 +24,12 @@ APTSkillIndicatorActor::APTSkillIndicatorActor()
 void APTSkillIndicatorActor::ShowLine(const FVector& Origin, const FVector& Dir, float Range, float Width)
 {
     if (LineMID) Decal->SetDecalMaterial(LineMID);
-    const FRotator Yaw = Dir.Rotation();
+
+    FRotator Aim = Dir.Rotation();
+    FQuat Q = FQuat(Aim) * FQuat(FRotator(-90.f, 0.f, 0.f));
+
     Decal->SetWorldLocation(Origin + Dir * (Range * 0.5f));
-    Decal->SetWorldRotation(FRotator(-90.f, Yaw.Yaw, 0.f));
+    Decal->SetWorldRotation(Q);
     Decal->DecalSize = FVector(256.f, Width * 0.5f, Range * 0.5f);
     Decal->SetVisibility(true);
 }

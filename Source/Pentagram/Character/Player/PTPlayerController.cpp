@@ -138,6 +138,15 @@ void APTPlayerController::BeginPlay()
     }
 }
 
+bool APTPlayerController::CanMove(APTPlayerCharacter* PC) const
+{
+    if (!PC) return false;
+    return !PC->bIsTransitioningToCombat
+        && !PC->bIsStaggered
+        && !PC->bIsDodging;
+    // 공격 중 이동 취소를 허용하려면 bIsAttacking은 뺀다
+}
+
 void APTPlayerController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -148,6 +157,16 @@ void APTPlayerController::Tick(float DeltaTime)
 
     ACharacter* MyCharacter = Cast<ACharacter>(GetPawn());
     if (!MyCharacter) return;
+
+    if (APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(MyCharacter))
+    {
+        if (PC->bIsTransitioningToCombat)
+        {
+            bMoveToDestination = false;
+            MyCharacter->GetCharacterMovement()->StopMovementImmediately();
+            return;
+        }
+    }
 
     FVector Direction = MoveDestination - MyCharacter->GetActorLocation();
     Direction.Z = 0.f;
@@ -794,8 +813,11 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
     }
 
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!PC) return;
+    if (PC && !CanMove(PC)) return;
+
     if (PC->bIsDodging) return;
+
+    if (PC->bIsTransitioningToCombat) return;
 
     if (PC->SkillComp->bIsAttacking)
     {

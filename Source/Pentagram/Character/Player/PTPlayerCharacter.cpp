@@ -396,6 +396,8 @@ void APTPlayerCharacter::RegenHP()
     if (PS)
     {
         PS->CurrentHP = CurrentHP;
+
+        PS->OnHealthChanged.Broadcast(PS->CurrentHP, PS->MaxHP);
     }
 }
 
