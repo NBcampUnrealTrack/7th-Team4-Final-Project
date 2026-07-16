@@ -86,6 +86,9 @@ public:
     UPROPERTY(ReplicatedUsing = OnRep_QuickSlots, VisibleAnywhere, BlueprintReadOnly, Category = "QuickSlot")
     TArray<FName> QuickSlots;
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool UseFirstPotion();
+
     UPROPERTY(BlueprintAssignable, Category = "QuickSlot")
     FPTOnQuickSlotChanged OnQuickSlotChanged;
 

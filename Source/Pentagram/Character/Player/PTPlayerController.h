@@ -231,6 +231,8 @@ public:
 
     UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_CloseMenu;
+
+    UPROPERTY(EditAnywhere, Category = "Input")
     TObjectPtr<UInputAction> IA_QuickSlot1;
 
     UPROPERTY(EditAnywhere, Category = "Input")
