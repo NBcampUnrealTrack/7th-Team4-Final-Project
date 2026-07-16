@@ -52,6 +52,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "PT|Online|Session")
     void DestroySteamSession();
 
+    /** 맵 이동 뒤 로컬 플레이어가 처음 표시해야 할 UI 레벨을 한 번만 반환한다. */
+    FName ConsumePendingLocalUILevelName();
+
 private:
     void OnSteamLoginComplete(
         int32 LocalUserNum,
@@ -79,6 +82,9 @@ private:
     FDelegateHandle SessionUserInviteAcceptedDelegateHandle;
 
     FName PendingLobbyLevelName = NAME_None;
+    FName PendingHostLevelName = NAME_None;
+    FName PendingJoinLobbyLevelName = NAME_None;
+    FName PendingLocalUILevelName = NAME_None;
     bool bPendingInviteUIAfterCreate = false;
     bool bPendingCreateSessionAfterDestroy = false;
     int32 PendingMaxPlayers = 4;

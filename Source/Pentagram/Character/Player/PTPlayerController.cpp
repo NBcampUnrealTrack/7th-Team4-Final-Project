@@ -23,6 +23,7 @@
 #include "Core/PTGameMode.h"
 #include "Core/Subsystems/PTEconomySubsystem.h"
 #include "Core/Subsystems/PTItemSubsystem.h"
+#include "Core/Subsystems/PTOnlineSubsystem.h"
 #include "Core/Subsystems/PTQuestSubsystem.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Input/PTControlSettingsSubsystem.h"
@@ -129,9 +130,22 @@ void APTPlayerController::BeginPlay()
                 {
                     UIMgr->RegisterPrimaryLayout(PrimaryLayout);
 
-                    // 현재 레벨에 맞는 UI
-                    const FString MapName = UGameplayStatics::GetCurrentLevelName(this, true);
-                    UIMgr->OpenUILevel(FName(*MapName));
+                    // 기본값은 현재 맵 UI다. 온라인 로비 이동 직후에는 실제 맵(L_Intro)과
+                    // 표시할 스트리밍 UI(L_Lobby)가 다르므로 서브시스템의 예약값을 우선한다.
+                    FName UILevelName(*UGameplayStatics::GetCurrentLevelName(this, true));
+                    UGameInstance* CurrentGameInstance = GetGameInstance();
+                    if (UPTOnlineSubsystem* OnlineSubsystem = CurrentGameInstance != nullptr
+                        ? CurrentGameInstance->GetSubsystem<UPTOnlineSubsystem>()
+                        : nullptr)
+                    {
+                        const FName PendingUILevelName = OnlineSubsystem->ConsumePendingLocalUILevelName();
+                        if (!PendingUILevelName.IsNone())
+                        {
+                            UILevelName = PendingUILevelName;
+                        }
+                    }
+
+                    UIMgr->OpenUILevel(UILevelName);
                 }
             }
         }
