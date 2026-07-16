@@ -1327,46 +1327,45 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
 {
     UWorld* World = GetWorld();
     APTGameMode* GM = World != nullptr ? Cast<APTGameMode>(World->GetAuthGameMode()) : nullptr;
+    if (!GM) return;
 
-    // 사망 검증
-    APawn* DeadPawn = GetPawn();
-    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(DeadPawn);
-    if (!PlayerCharacter)
+    APTPlayerCharacter* PlayerCharacter = Cast<APTPlayerCharacter>(GetPawn());
+
+    // 이미 캐릭터가 없거나 죽은 상태일 때만 처리
+    if (!PlayerCharacter || PlayerCharacter->CurrentHP <= 0.f)
     {
-        if (GM)
+        // [핵심] 캐릭터를 파괴하기 전에 PlayerState에서 세이브포인트 정보를 먼저 안전하게 읽어옵니다.
+        FVector TargetRespawnLocation = FVector::ZeroVector;
+        bool bHasSavedLocation = false;
+
+        if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
+        {
+            if (PS->HasRespawnLocation())
+            {
+                TargetRespawnLocation = PS->GetSavedRespawnLocation();
+                bHasSavedLocation = true;
+            }
+        }
+
+        // 이제 기존 캐릭터를 안전하게 파괴합니다.
+        if (PlayerCharacter)
+        {
+            PlayerCharacter->Destroy();
+        }
+
+        // 세이브포인트가 있다면 위치를 명시해서 게임모드에 리스폰을 요청하고, 
+        // 없다면 일반 리스폰(Default 플레이어 스타트)을 요청합니다.
+        if (bHasSavedLocation)
+        {
+            // 게임모드에 구현된 세이브포인트 전용 리스폰 함수를 호출합니다.
+            // (태그 이동이나 특정 위치 스폰을 보장하는 오버로딩 함수)
+            GM->RespawnPlayer(this, TargetRespawnLocation, true);
+        }
+        else
         {
             GM->RespawnPlayer(this);
         }
-        return;
     }
-
-    if (PlayerCharacter->CurrentHP > 0.f)
-    {
-        return;
-    }
-
-    FVector RespawnLocation = PlayerCharacter->GetActorLocation();
-    bool bHasRespawnLocation = false;
-
-    if (APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>())
-    {
-        if (PS->HasRespawnLocation())
-        {
-            RespawnLocation = PS->GetSavedRespawnLocation();
-            bHasRespawnLocation = true;
-        }
-    }
-
-    if (!bHasRespawnLocation && GM != nullptr)
-    {
-        if (AActor* RespawnStartSpot = GM->FindPlayerStart(this))
-        {
-            RespawnLocation = RespawnStartSpot->GetActorLocation();
-            bHasRespawnLocation = true;
-        }
-    }
-
-    PlayerCharacter->RespawnAtLocation(RespawnLocation);
 }
 
 // [디버그] 즉사 입력

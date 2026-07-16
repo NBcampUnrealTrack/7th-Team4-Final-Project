@@ -5,6 +5,7 @@
 #include "PTGameTypes.h"
 #include "PTGameMode.generated.h"
 
+class APlayerController;
 class APTBasePlayerState;
 class UDataTable;
 
@@ -21,6 +22,8 @@ public:
     virtual void RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform) override;
     virtual void PostSeamlessTravel() override;
     virtual void HandleSeamlessTravelPlayer(AController*& C) override;
+
+    virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override; // [레벨트리거] 태그 기반 스폰 위치 선택 
 
     void SetGamePhase(EGamePhase NewPhase);
     void StartGame();
@@ -44,6 +47,7 @@ public:
 protected:
     virtual void BeginPlay() override;
     virtual void FinishRestartPlayer(AController* NewPlayer, const FRotator& StartRotation) override;
+    virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options, const FString& Portal) override;
 
 private:
     void InitializePlayerState(APTBasePlayerState* PlayerState) const;

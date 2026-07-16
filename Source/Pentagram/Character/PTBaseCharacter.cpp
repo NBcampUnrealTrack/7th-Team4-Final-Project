@@ -212,6 +212,18 @@ void APTBaseCharacter::BeginPlay()
     SyncCombatStatsToPlayerState();
 }
 
+// 캐릭터가 파괴되거나 레벨 이동(Seamless Travel) 등으로 사라질 때 타이머 안전하게 종료
+void APTBaseCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(StaggerTimer);
+        World->GetTimerManager().ClearTimer(HitStopTimer);
+    }
+
+    Super::EndPlay(EndPlayReason);
+}
+
 void APTBaseCharacter::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -283,10 +295,19 @@ void APTBaseCharacter::ApplyHit(const FPTHitInfo& HitInfo)
             StaggerTimer,
             [this]()
             {
-                bIsStaggered = false;
-                if (UCharacterMovementComponent* M = GetCharacterMovement())
+                // 컴파일러 캐시나 레벨 전환 등으로 캐릭터 객체 자체가 이미 소멸했다면 즉시 탈출 
+                if (!IsValid(this))
                 {
-                    M->MaxWalkSpeed              = CachedWalkSpeed;
+                    return;
+                }
+
+                bIsStaggered = false;
+
+                UCharacterMovementComponent* M = GetCharacterMovement();
+                // 캐릭터 무브먼트 컴포넌트 또한 완전히 유효한 상태인지 확인 
+                if (IsValid(M))
+                {
+                    M->MaxWalkSpeed = CachedWalkSpeed;
                     M->bOrientRotationToMovement = bCachedOrientRotation;
                 }
             },
