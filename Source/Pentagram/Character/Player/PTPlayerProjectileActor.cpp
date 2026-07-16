@@ -100,6 +100,8 @@ void APTPlayerProjectileActor::OnProjectileOverlap(UPrimitiveComponent* Overlapp
 
     if (Cast<APTPlayerProjectileActor>(OtherActor)) return;
 
+    if (Cast<APTBossProjectile>(OtherActor)) return;
+
     const FVector ImpactPoint = SweepResult.ImpactPoint.IsZero() ? GetActorLocation() : FVector(SweepResult.ImpactPoint);
 
     APTBaseCharacter* Target = Cast<APTBaseCharacter>(OtherActor);
