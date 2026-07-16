@@ -966,10 +966,11 @@ APTNPCCharacter* APTPlayerController::GetBestNearbyNPC() const
 
 void APTPlayerController::OnQuickSlot1()
 {
+    //포션 사용
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
     if (!PC) return;
     if (UPTInventoryComponent* Inven = PC->GetInventoryComponent())
-        Inven->UseQuickSlot(0);
+        Inven->UseFirstPotion();
 }
 
 void APTPlayerController::OnQuickSlot2()

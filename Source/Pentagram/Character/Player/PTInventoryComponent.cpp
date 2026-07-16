@@ -33,6 +33,21 @@ FName UPTInventoryComponent::GetQuickSlotItemID(int32 QuickIndex) const
     return QuickSlots.IsValidIndex(QuickIndex) ? QuickSlots[QuickIndex] : NAME_None;
 }
 
+bool UPTInventoryComponent::UseFirstPotion()
+{
+    // 인벤에서 첫 번째 포션 슬롯을 찾아 바로 사용
+    for (int32 i = 0; i < InventorySlots.Num(); ++i)
+    {
+        if (!InventorySlots[i].IsEmpty() &&
+            InventorySlots[i].ItemData.Item_Category == EItemCategory::Consumable)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[UseFirstPotion] slot %d 사용"), i);
+            return UsePotion(i);
+        }
+    }
+    UE_LOG(LogTemp, Warning, TEXT("[UseFirstPotion] 소모품 없음"));
+    return false;
+}
 bool UPTInventoryComponent::RegisterConsumableToQuickSlot(int32 QuickIndex, int32 InventorySlotIndex)
 {
     if (!QuickSlots.IsValidIndex(QuickIndex)) return false;
