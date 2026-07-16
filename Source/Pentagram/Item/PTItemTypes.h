@@ -47,7 +47,9 @@ enum class EItemGrade : uint8
 {
     None         UMETA(DisplayName = "None"),
     Common       UMETA(DisplayName = "Common"),
-    Rare         UMETA(DisplayName = "Rare")
+    Rare         UMETA(DisplayName = "Rare"),
+    Legend       UMETA(DisplayName = "Legend"),
+    Mystic       UMETA(DisplayName = "Mystic"),
 };
 
 
