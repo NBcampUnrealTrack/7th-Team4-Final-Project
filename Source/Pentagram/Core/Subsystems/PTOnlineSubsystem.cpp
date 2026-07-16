@@ -13,6 +13,7 @@
 namespace
 {
     constexpr int32 LocalUserNumber = 0;
+    const FName LobbyUILevelSettingName(TEXT("PT_LOBBY_UI_LEVEL"));
 }
 
 void UPTOnlineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -218,7 +219,20 @@ void UPTOnlineSubsystem::HostSteamSession(FName LobbyLevelName, int32 MaxPlayers
         return;
     }
 
+    UWorld* World = GetWorld();
+    const FString HostLevelName = World != nullptr
+        ? UGameplayStatics::GetCurrentLevelName(World, true)
+        : FString();
+    if (HostLevelName.IsEmpty())
+    {
+        const FString ErrorMessage(TEXT("Current host level is unavailable."));
+        UE_LOG(LogTemp, Warning, TEXT("[Online] HostSteamSession failed. %s"), *ErrorMessage);
+        OnHostSessionCompleted.Broadcast(false, ErrorMessage);
+        return;
+    }
+
     PendingLobbyLevelName = LobbyLevelName;
+    PendingHostLevelName = FName(*HostLevelName);
     PendingMaxPlayers = FMath::Max(MaxPlayers, 1);
     bPendingInviteUIAfterCreate = bShowInviteUIAfterCreate;
 
@@ -260,6 +274,10 @@ void UPTOnlineSubsystem::HostSteamSession(FName LobbyLevelName, int32 MaxPlayers
     SessionSettings.bUseLobbiesIfAvailable = true;
     SessionSettings.Set(
         SETTING_MAPNAME,
+        PendingHostLevelName.ToString(),
+        EOnlineDataAdvertisementType::ViaOnlineService);
+    SessionSettings.Set(
+        LobbyUILevelSettingName,
         LobbyLevelName.ToString(),
         EOnlineDataAdvertisementType::ViaOnlineService);
 
@@ -271,8 +289,8 @@ void UPTOnlineSubsystem::HostSteamSession(FName LobbyLevelName, int32 MaxPlayers
     CreateSessionCompleteDelegateHandle = SessionInterface->AddOnCreateSessionCompleteDelegate_Handle(
         FOnCreateSessionCompleteDelegate::CreateUObject(this, &UPTOnlineSubsystem::OnCreateSessionComplete));
 
-    UE_LOG(LogTemp, Log, TEXT("[Online] Creating Steam session. Lobby=%s MaxPlayers=%d"),
-        *LobbyLevelName.ToString(), PendingMaxPlayers);
+    UE_LOG(LogTemp, Log, TEXT("[Online] Creating Steam session. HostLevel=%s LobbyUI=%s MaxPlayers=%d"),
+        *PendingHostLevelName.ToString(), *LobbyLevelName.ToString(), PendingMaxPlayers);
 
     if (!SessionInterface->CreateSession(LocalUserNumber, NAME_GameSession, SessionSettings))
     {
@@ -428,6 +446,7 @@ void UPTOnlineSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSession
 
     if (Result != EOnJoinSessionCompleteResult::Success)
     {
+        PendingJoinLobbyLevelName = NAME_None;
         const FString ErrorMessage = FString::Printf(TEXT("JoinSession failed. Result=%d"), static_cast<int32>(Result));
         UE_LOG(LogTemp, Warning, TEXT("[Online] %s"), *ErrorMessage);
         OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
@@ -437,6 +456,7 @@ void UPTOnlineSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSession
     FString ConnectInfo;
     if (!SessionInterface.IsValid() || !SessionInterface->GetResolvedConnectString(SessionName, ConnectInfo))
     {
+        PendingJoinLobbyLevelName = NAME_None;
         const FString ErrorMessage(TEXT("Failed to resolve session connect string."));
         UE_LOG(LogTemp, Warning, TEXT("[Online] %s Session=%s"), *ErrorMessage, *SessionName.ToString());
         OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
@@ -448,6 +468,7 @@ void UPTOnlineSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSession
         GameInstance != nullptr ? GameInstance->GetFirstLocalPlayerController() : nullptr;
     if (PlayerController == nullptr)
     {
+        PendingJoinLobbyLevelName = NAME_None;
         const FString ErrorMessage(TEXT("Local PlayerController is unavailable."));
         UE_LOG(LogTemp, Warning, TEXT("[Online] %s ConnectInfo=%s"), *ErrorMessage, *ConnectInfo);
         OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
@@ -455,6 +476,8 @@ void UPTOnlineSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSession
     }
 
     UE_LOG(LogTemp, Log, TEXT("[Online] Joining Steam session. ConnectInfo=%s"), *ConnectInfo);
+    PendingLocalUILevelName = PendingJoinLobbyLevelName;
+    PendingJoinLobbyLevelName = NAME_None;
     PlayerController->ClientTravel(ConnectInfo, ETravelType::TRAVEL_Absolute);
     OnJoinSessionCompleted.Broadcast(true, FString());
 }
@@ -485,9 +508,10 @@ IOnlineSessionPtr UPTOnlineSubsystem::GetSessionInterface() const
 
 void UPTOnlineSubsystem::OpenPendingLobbyAsListenServer()
 {
-    if (PendingLobbyLevelName.IsNone())
+    if (PendingLobbyLevelName.IsNone() || PendingHostLevelName.IsNone())
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Online] Cannot open listen lobby. PendingLobbyLevelName is None."));
+        UE_LOG(LogTemp, Warning, TEXT("[Online] Cannot open listen lobby. HostLevel=%s LobbyUI=%s"),
+            *PendingHostLevelName.ToString(), *PendingLobbyLevelName.ToString());
         return;
     }
 
@@ -498,8 +522,11 @@ void UPTOnlineSubsystem::OpenPendingLobbyAsListenServer()
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[Online] Opening listen lobby. Level=%s"), *PendingLobbyLevelName.ToString());
-    UGameplayStatics::OpenLevel(World, PendingLobbyLevelName, true, TEXT("listen"));
+    PendingLocalUILevelName = PendingLobbyLevelName;
+
+    UE_LOG(LogTemp, Log, TEXT("[Online] Opening listen server. HostLevel=%s LobbyUI=%s"),
+        *PendingHostLevelName.ToString(), *PendingLobbyLevelName.ToString());
+    UGameplayStatics::OpenLevel(World, PendingHostLevelName, true, TEXT("listen"));
 }
 
 void UPTOnlineSubsystem::JoinSteamSession(const FOnlineSessionSearchResult& SearchResult)
@@ -510,6 +537,16 @@ void UPTOnlineSubsystem::JoinSteamSession(const FOnlineSessionSearchResult& Sear
         OnJoinSessionCompleted.Broadcast(false, TEXT("Session interface is unavailable."));
         return;
     }
+
+    FString LobbyUILevelName;
+    if (!SearchResult.Session.SessionSettings.Get(LobbyUILevelSettingName, LobbyUILevelName))
+    {
+        // 구버전 세션은 SETTING_MAPNAME에 L_Lobby를 저장했으므로 호환용으로 사용한다.
+        SearchResult.Session.SessionSettings.Get(SETTING_MAPNAME, LobbyUILevelName);
+    }
+    PendingJoinLobbyLevelName = LobbyUILevelName.IsEmpty()
+        ? FName(TEXT("L_Lobby"))
+        : FName(*LobbyUILevelName);
 
     if (JoinSessionCompleteDelegateHandle.IsValid())
     {
@@ -523,6 +560,21 @@ void UPTOnlineSubsystem::JoinSteamSession(const FOnlineSessionSearchResult& Sear
     {
         SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
         JoinSessionCompleteDelegateHandle.Reset();
+        PendingJoinLobbyLevelName = NAME_None;
         OnJoinSessionCompleted.Broadcast(false, TEXT("JoinSession request failed."));
     }
+}
+
+FName UPTOnlineSubsystem::ConsumePendingLocalUILevelName()
+{
+    const FName UILevelName = PendingLocalUILevelName;
+    PendingLocalUILevelName = NAME_None;
+
+    if (!UILevelName.IsNone())
+    {
+        UE_LOG(LogTemp, Log, TEXT("[Online] Consuming pending local UI level. Level=%s"),
+            *UILevelName.ToString());
+    }
+
+    return UILevelName;
 }
