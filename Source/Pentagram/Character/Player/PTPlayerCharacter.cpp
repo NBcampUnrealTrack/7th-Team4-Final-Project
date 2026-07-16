@@ -409,6 +409,8 @@ void APTPlayerCharacter::RegenMP()
     if (PS)
     {
         PS->CurrentMP = CurrentMP;
+
+        PS->OnManaChanged.Broadcast(PS->CurrentMP, PS->MaxMP);
     }
 }
 

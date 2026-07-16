@@ -1,5 +1,6 @@
 ﻿#include "PTMonsterHealthBarWidget.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Components/TextBlock.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -37,6 +38,9 @@ void UPTMonsterHealthBarWidget::ActivateForMonster(APTMonsterCharacter* InMonste
 
     BoundMonster = InMonster;
     BindToMonster(InMonster);
+
+    // 이름 표시
+    UpdateMonsterName(InMonster);
 
     // 현재 HP 즉시 반영 후 표시
     SetValueInstant(InMonster->CurrentHP, InMonster->MaxHP);
@@ -88,7 +92,7 @@ void UPTMonsterHealthBarWidget::StartHideTimer()
     // 공격마다 리셋
     World->GetTimerManager().SetTimer(
         HideTimerHandle, this, &UPTMonsterHealthBarWidget::HandleHideTimeout, HideDelay, false);
-    
+
 }
 
 void UPTMonsterHealthBarWidget::ClearHideTimer()
@@ -117,4 +121,14 @@ void UPTMonsterHealthBarWidget::HandleHealthChanged(float Current, float Max)
     {
         ClearTarget();
     }
+}
+
+void UPTMonsterHealthBarWidget::UpdateMonsterName(APTMonsterCharacter* Monster)
+{
+    if (!Txt_Name || !Monster)
+    {
+        return;
+    }
+
+    Txt_Name->SetText(Monster->GetMonsterDisplayName());
 }

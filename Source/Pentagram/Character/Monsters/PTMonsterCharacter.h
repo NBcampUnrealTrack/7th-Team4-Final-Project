@@ -22,6 +22,9 @@ class PENTAGRAM_API APTMonsterCharacter : public APTBaseCharacter
 public:
     APTMonsterCharacter();
 
+    UFUNCTION(BlueprintPure, Category = "PT|Monster")
+    FText GetMonsterDisplayName() const { return MonsterDisplayName; }
+
     virtual float ApplyDamage(float DamageAmount, AActor* Attacker) override;
 
     virtual float ApplyDamageWithHit(float DamageAmount, AActor* Attacker, const FPTHitInfo& HitInfo) override;
@@ -130,6 +133,9 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
     float ProjectileSpeed = 1200.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "PT|Monster|Name", meta = (AllowPrivateAccess = "true"))
+    FText MonsterDisplayName;
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Monster|AI", meta = (AllowPrivateAccess = "true"))
