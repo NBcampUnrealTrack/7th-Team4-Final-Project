@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
+#include "PTPlayerCharacter.h"
 #include "UI/Data/PTDelegates.h"
 #include "UI/Widget/Widget/Player/PTDamageNumberWidget.h"
 #include "PTPlayerController.generated.h"
@@ -30,6 +31,7 @@ public:
     APTPlayerController();
 
     virtual void BeginPlay() override;
+    bool CanMove(APTPlayerCharacter* PC) const;
     virtual void Tick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
     virtual void AcknowledgePossession(class APawn* P) override;
