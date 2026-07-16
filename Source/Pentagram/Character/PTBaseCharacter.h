@@ -48,6 +48,10 @@ protected:
     // ── 오버라이드 함수 ──────────────────────────────────────────────────────
 
     virtual void BeginPlay() override;
+
+    // 레벨 이동 및 캐릭터 파괴 시 타이머를 정리 
+    virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override; 
+
     virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
     virtual void PossessedBy(AController* NewController) override;
 

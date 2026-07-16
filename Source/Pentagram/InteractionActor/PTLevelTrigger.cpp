@@ -27,7 +27,13 @@ void APTLevelTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor
     }
 
     ACharacter* Character = Cast<ACharacter>(OtherActor);
-    if (Character == nullptr || Cast<APlayerController>(Character->GetController()) == nullptr)
+    if (Character == nullptr)
+    {
+        return;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(Character->GetController());
+    if (PC == nullptr)
     {
         return;
     }
@@ -54,12 +60,12 @@ void APTLevelTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor
         TravelURL += FString::Printf(TEXT("?PlayerActorTag=%s"), *TargetActorTag.ToString());
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[Save] Zone travel saved players before ServerTravel. Target=%s"), *TravelURL);
-    World->ServerTravel(TravelURL);
+    UE_LOG(LogTemp, Log, TEXT("[Save] Zone travel routing via ClientTravel. Target=%s"), *TravelURL);
+
+    PC->ClientTravel(TravelURL, TRAVEL_Relative, false);
 }
 
 void APTLevelTrigger::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 }
-

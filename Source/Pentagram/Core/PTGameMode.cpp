@@ -2,6 +2,7 @@
 
 #include "PTGameMode.h"
 
+#include "GameFramework/PlayerController.h"
 #include "Character/Player/PTBasePlayerState.h"
 #include "PTGameState.h"
 #include "Subsystems/PTPlayerLevelSubsystem.h"
@@ -12,9 +13,14 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
+// [레벨트리거] 태그 검색 및 옵션 추출을 위함 
+#include "EngineUtils.h"
+#include "GameFramework/PlayerStart.h"
+#include "Kismet/GameplayStatics.h"
+
 namespace
 {
-const FString LegacyMissingGameMapPath = TEXT("/Game/Pentagram/Level/Field_1");
+    const FString LegacyMissingGameMapPath = TEXT("/Game/Pentagram/Level/Field_1");
 }
 
 APTGameMode::APTGameMode()
@@ -266,10 +272,9 @@ AActor* APTGameMode::SpawnDropItemByChance(TSubclassOf<AActor> DropItemClass, co
     return SpawnDropItem(DropItemClass, DropLocation);
 }
 
-// 로비 추가
 void APTGameMode::NotifyReadyChanged()
 {
-    if (!HasAuthority() || bIsTraveling)    // 서버만 / 이동중 차단
+    if (!HasAuthority() || bIsTraveling)
     {
         return;
     }
@@ -280,9 +285,6 @@ void APTGameMode::NotifyReadyChanged()
     }
 }
 
-// 로비 추가
-// 로비 추가
-
 bool APTGameMode::AreAllPlayersReady() const
 {
     APTGameState* GS = GetGameState<APTGameState>();
@@ -291,36 +293,15 @@ bool APTGameMode::AreAllPlayersReady() const
         return false;
     }
 
-
-    // int32 ValidCount = 0;
-    // for (APlayerState* PS : GS->PlayerArray)
-    // {
-    //     APTBasePlayerState* PTPS = Cast<APTBasePlayerState>(PS);
-    //     if (PTPS == nullptr || PTPS->IsInactive() || PTPS->IsOnlyASpectator())
-    //     {
-    //         continue;   // 집계 제외
-    //     }
-    //
-    //     if (!PTPS->IsReady())
-    //     {
-    //         return false;   // 미준비 차단
-    //     }
-    //
-    //     ++ValidCount;
-    // }
-    //
-    // return ValidCount >= MinPlayersToStart;   // 전원준비+인원
-
-
-    int32 ValidCount = 0;   // 접속중인 유효 인원
-    int32 ReadyCount = 0;   // 그 중 준비완료 인원
+    int32 ValidCount = 0;
+    int32 ReadyCount = 0;
 
     for (APlayerState* PS : GS->PlayerArray)
     {
         APTBasePlayerState* PTPS = Cast<APTBasePlayerState>(PS);
         if (PTPS == nullptr || PTPS->IsInactive() || PTPS->IsOnlyASpectator())
         {
-            continue;   // 집계 제외
+            continue;
         }
 
         ++ValidCount;
@@ -338,6 +319,7 @@ bool APTGameMode::AreAllPlayersReady() const
 
     return ReadyCount == ValidCount;
 }
+
 void APTGameMode::RequestTravelToGame()
 {
     TravelToGame();
@@ -345,7 +327,7 @@ void APTGameMode::RequestTravelToGame()
 
 void APTGameMode::TravelToGame()
 {
-    if (bIsTraveling)    // 중복 차단
+    if (bIsTraveling)
     {
         return;
     }
@@ -570,6 +552,55 @@ void APTGameMode::HandleSeamlessTravelPlayer(AController*& C)
     StartAutoSaveIfAvailable();
 }
 
+// [레벨트리거] 태그 기반 스폰 위치 선택
+AActor* APTGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+    APlayerController* PC = Cast<APlayerController>(Player);
+    FString IncomingTag;
+
+    if (PC)
+    {
+        if (PC->PendingSwapConnection)
+        {
+            FString CombinedOptions = FString::Join(PC->PendingSwapConnection->URL.Op, TEXT(" "));
+            IncomingTag = UGameplayStatics::ParseOption(CombinedOptions, TEXT("PlayerActorTag"));
+        }
+
+        if (IncomingTag.IsEmpty() && PC->NetConnection)
+        {
+            FString CombinedOptions = FString::Join(PC->NetConnection->URL.Op, TEXT(" "));
+            IncomingTag = UGameplayStatics::ParseOption(CombinedOptions, TEXT("PlayerActorTag"));
+        }
+
+        if (IncomingTag.IsEmpty() && GetWorld())
+        {
+            IncomingTag = UGameplayStatics::ParseOption(GetWorld()->GetAddressURL(), TEXT("PlayerActorTag"));
+        }
+    }
+
+    if (IncomingTag.IsEmpty() || IncomingTag.Equals(TEXT("None"), ESearchCase::IgnoreCase))
+    {
+        IncomingTag = TEXT("Default");
+    }
+
+    if (GetWorld())
+    {
+        for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+        {
+            APlayerStart* StartActor = *It;
+            if (StartActor && StartActor->PlayerStartTag.ToString() == IncomingTag)
+            {
+                UE_LOG(LogTemp, Log, TEXT("[PTGameMode] Found matching PlayerStart with Tag: %s"), *IncomingTag);
+                return StartActor;
+            }
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("[PTGameMode] Requested PlayerActorTag '%s' was not found in this level. Falling back to default spawn."), *IncomingTag);
+    }
+
+    return Super::ChoosePlayerStart_Implementation(Player);
+}
+
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)
 {
     if (PlayerController == nullptr)
@@ -578,13 +609,86 @@ void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const 
     }
 
     FTransform FinalSpawnTransform = SpawnTransform;
-
     APTBasePlayerState* PlayerState = PlayerController->GetPlayerState<APTBasePlayerState>();
+
+    if (PlayerState)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[PTDebug] HasRespawnLocation: %s"), PlayerState->HasRespawnLocation() ? TEXT("TRUE") : TEXT("FALSE"));
+        if (PlayerState->HasRespawnLocation())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[PTDebug] Saved Location: %s"), *PlayerState->GetSavedRespawnLocation().ToString());
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("[PTDebug] PlayerState is NULL at RestartPlayerAtTransform!"));
+    }
+    UE_LOG(LogTemp, Warning, TEXT("[PTDebug] SpawnTransform Location: %s"), *SpawnTransform.GetLocation().ToString());
+
     if (PlayerState != nullptr && PlayerState->HasRespawnLocation())
     {
-        FVector RespawnLocation = PlayerState->GetSavedRespawnLocation();
-        FinalSpawnTransform.SetLocation(RespawnLocation);
+        bool bIsSpawnedAtTaggedStart = false;
+
+        if (GetWorld())
+        {
+            for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+            {
+                APlayerStart* StartActor = *It;
+                if (StartActor)
+                {
+                    FVector StartLoc = StartActor->GetActorLocation();
+                    FVector SpawnLoc = SpawnTransform.GetLocation();
+
+                    float DistanceXY = FVector::DistXY(StartLoc, SpawnLoc);
+                    float DistanceZ = FMath::Abs(StartLoc.Z - SpawnLoc.Z);
+
+                    if (DistanceXY < 50.0f && DistanceZ < 100.0f &&
+                        !StartActor->PlayerStartTag.IsNone() &&
+                        StartActor->PlayerStartTag.ToString() != TEXT("Default"))
+                    {
+                        bIsSpawnedAtTaggedStart = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!bIsSpawnedAtTaggedStart)
+        {
+            FVector RespawnLocation = PlayerState->GetSavedRespawnLocation();
+            FinalSpawnTransform.SetLocation(RespawnLocation);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("[PTGameMode] Tagged Portal travel detected (%s). Bypassing saved checkpoint location."),
+                *SpawnTransform.GetLocation().ToString());
+        }
     }
 
     Super::RestartPlayerAtTransform(PlayerController, FinalSpawnTransform);
+}
+
+// [★새롭게 추가된 핵심 차단 프로세스] ClientTravel 주소창 파싱 통로
+FString APTGameMode::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId, const FString& Options, const FString& Portal)
+{
+    // 1. 부모 클래스의 원래 기능을 먼저 안전하게 실행합니다.
+    FString ErrorMessage = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
+
+    // 2. ClientTravel로 들어온 Options 주소창 데이터를 월드 URL 세팅에 강제로 반영합니다.
+    if (GetWorld() && UGameplayStatics::HasOption(Options, TEXT("PlayerActorTag")))
+    {
+        // 빈칸이나 ? 기호 기준으로 옵션을 쪼개서 FURL::Op 배열에 넣어줍니다.
+        TArray<FString> SplitOptions;
+        Options.ParseIntoArray(SplitOptions, TEXT("?"), true);
+
+        for (const FString& Option : SplitOptions)
+        {
+            if (!Option.IsEmpty())
+            {
+                GetWorld()->URL.Op.AddUnique(Option);
+            }
+        }
+    }
+
+    return ErrorMessage;
 }
