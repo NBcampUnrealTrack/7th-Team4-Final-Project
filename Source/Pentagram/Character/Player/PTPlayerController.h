@@ -15,6 +15,7 @@ class UPTNPCDialogueWidget;
 class APTDropItemActorBase;
 class APTMonsterCharacter;
 class APTNPCCharacter;
+class APTInteractionActor;
 class APTQuestNPCCharacter;
 class APTShopNPCCharacter;
 class UPTShopWidget;
@@ -51,6 +52,8 @@ public:
     void OnSettingsPressed();
     void RegisterNearbyNPC(APTNPCCharacter* NPC);
     void UnregisterNearbyNPC(APTNPCCharacter* NPC);
+    void RegisterNearbyInteractionActor(APTInteractionActor* InteractionActor);
+    void UnregisterNearbyInteractionActor(APTInteractionActor* InteractionActor);
     void OnSkillWindowPressed();
     void OnCharacterSheetPressed();
     void OnCloseMenuPressed();
@@ -169,6 +172,7 @@ private:
     void OnLeftClick(const FInputActionValue& Value);
     void OnInteractPressed();
     APTNPCCharacter* GetBestNearbyNPC() const;
+    APTInteractionActor* GetBestNearbyInteractionActor() const;
     void AddUIInputMapping();
     void RemoveUIInputMapping();
 
@@ -326,4 +330,7 @@ private:
 
     UPROPERTY()
     TArray<TObjectPtr<APTNPCCharacter>> NearbyNPCs;
+
+    UPROPERTY()
+    TArray<TObjectPtr<APTInteractionActor>> NearbyInteractionActors;
 };

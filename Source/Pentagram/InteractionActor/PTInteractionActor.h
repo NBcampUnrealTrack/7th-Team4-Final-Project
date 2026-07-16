@@ -6,6 +6,9 @@
 #include "Interface/PTInteractableInterface.h"
 #include "PTInteractionActor.generated.h"
 
+class USphereComponent;
+class UUserWidget;
+class UWidgetComponent;
 
 UENUM(BlueprintType)
 enum class EInteractType : uint8
@@ -26,8 +29,40 @@ public:
 	APTInteractionActor();
 
 protected: 
+    virtual void BeginPlay() override;
+
+    UFUNCTION()
+    void OnInteractionRangeBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+        UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+    UFUNCTION()
+    void OnInteractionRangeEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+        UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     TObjectPtr<UStaticMeshComponent> ActorMesh;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Interaction")
+    TObjectPtr<USphereComponent> InteractionRangeSphere;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Interaction")
+    TObjectPtr<UWidgetComponent> RespawnSavedWidgetComponent;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Interaction")
+    TObjectPtr<UWidgetComponent> InteractionPromptWidgetComponent;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Interaction",
+        meta = (ClampMin = "1.0", UIMin = "1.0"))
+    float InteractionRadius = 200.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Interaction")
+    FVector RespawnSavedWidgetRelativeLocation = FVector(0.f, 0.f, 150.f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Interaction")
+    FVector InteractionPromptRelativeLocation = FVector(0.f, 0.f, 150.f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Interaction")
+    TSubclassOf<UUserWidget> InteractionPromptWidgetClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
     EInteractType InteractionType;
@@ -52,4 +87,9 @@ protected:
 public:	
     virtual void Interact_Implementation(AActor* InteractorCharacter) override;
 
+private:
+    void ShowInteractionPrompt();
+    void HideInteractionPrompt();
+    void ShowRespawnSavedLabel();
+    void HideRespawnSavedLabel();
 };
