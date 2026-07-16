@@ -31,7 +31,6 @@ APTDropItemActorBase::APTDropItemActorBase()
     ItemNameWidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     ItemNameWidgetComponent->SetGenerateOverlapEvents(false);
     ItemNameWidgetComponent->SetWindowFocusable(false);
-    ItemNameWidgetComponent->SetWindowVisibility(EWindowVisibility::SelfHitTestInvisible);
     ItemNameWidgetComponent->SetWidgetClass(UPTDropItemNameWidget::StaticClass());
     ItemNameWidgetComponent->SetVisibility(false);
 
