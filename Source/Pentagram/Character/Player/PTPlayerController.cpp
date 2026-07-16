@@ -16,6 +16,7 @@
 #include "Character/NPC/PTNPCCharacter.h"
 #include "Character/NPC/PTQuestNPCCharacter.h"
 #include "Character/NPC/PTShopNPCCharacter.h"
+#include "InteractionActor/PTInteractionActor.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -878,6 +879,14 @@ void APTPlayerController::OnInteractPressed()
             return;
         }
 
+        if (APTInteractionActor* NearbyInteractionActor = GetBestNearbyInteractionActor())
+        {
+            PlayerCharacter->Server_TryInteract(NearbyInteractionActor);
+            UE_LOG(LogTemp, Log, TEXT("Controller: F input -> interact with nearby actor %s"),
+                *NearbyInteractionActor->GetName());
+            return;
+        }
+
         PlayerCharacter->TryInteract();
         UE_LOG(LogTemp, Log, TEXT("컨트롤러: F키 입력 감지 -> 캐릭터에게 상호작용 명령 전달"));
     }
@@ -936,6 +945,61 @@ APTNPCCharacter* APTPlayerController::GetBestNearbyNPC() const
     }
 
     return BestNPC;
+}
+
+void APTPlayerController::RegisterNearbyInteractionActor(APTInteractionActor* InteractionActor)
+{
+    if (InteractionActor == nullptr)
+    {
+        return;
+    }
+
+    NearbyInteractionActors.RemoveAll(
+        [](const TObjectPtr<APTInteractionActor>& NearbyActor)
+        {
+            return !IsValid(NearbyActor);
+        });
+
+    NearbyInteractionActors.AddUnique(InteractionActor);
+}
+
+void APTPlayerController::UnregisterNearbyInteractionActor(APTInteractionActor* InteractionActor)
+{
+    NearbyInteractionActors.RemoveAll(
+        [InteractionActor](const TObjectPtr<APTInteractionActor>& NearbyActor)
+        {
+            return !IsValid(NearbyActor) || NearbyActor == InteractionActor;
+        });
+}
+
+APTInteractionActor* APTPlayerController::GetBestNearbyInteractionActor() const
+{
+    const APawn* ControlledPawn = GetPawn();
+    if (ControlledPawn == nullptr)
+    {
+        return nullptr;
+    }
+
+    APTInteractionActor* BestInteractionActor = nullptr;
+    float BestDistanceSquared = TNumericLimits<float>::Max();
+    const FVector PawnLocation = ControlledPawn->GetActorLocation();
+
+    for (const TObjectPtr<APTInteractionActor>& NearbyActor : NearbyInteractionActors)
+    {
+        if (!IsValid(NearbyActor))
+        {
+            continue;
+        }
+
+        const float DistanceSquared = FVector::DistSquared(PawnLocation, NearbyActor->GetActorLocation());
+        if (DistanceSquared < BestDistanceSquared)
+        {
+            BestDistanceSquared = DistanceSquared;
+            BestInteractionActor = NearbyActor.Get();
+        }
+    }
+
+    return BestInteractionActor;
 }
 
 /*void APTPlayerController::OnSkill1(const FInputActionValue& Value)
