@@ -24,6 +24,11 @@ void UPTMainMenuWidget::NativeConstruct()
     {
         Btn_Quit->OnClicked.AddDynamic(this, &UPTMainMenuWidget::HandleQuitClicked);
     }
+
+    if (Btn_Join)
+    {
+        Btn_Join->OnClicked.AddDynamic(this, &UPTMainMenuWidget::HandleJoinClicked);
+    }
 }
 
 void UPTMainMenuWidget::NativeDestruct()
@@ -36,6 +41,11 @@ void UPTMainMenuWidget::NativeDestruct()
     if (Btn_Quit)
     {
         Btn_Quit->OnClicked.RemoveDynamic(this, &UPTMainMenuWidget::HandleQuitClicked);
+    }
+
+    if (Btn_Join)
+    {
+        Btn_Join->OnClicked.RemoveDynamic(this, &UPTMainMenuWidget::HandleJoinClicked);
     }
 
     if (MediaPlayer)
@@ -75,4 +85,13 @@ void UPTMainMenuWidget::HandleGameStartClicked()
 void UPTMainMenuWidget::HandleQuitClicked()
 {
     UKismetSystemLibrary::QuitGame(this, GetOwningPlayer(), EQuitPreference::Quit, false);
+}
+
+void UPTMainMenuWidget::HandleJoinClicked()
+{
+    APlayerController* PC = GetOwningPlayer();
+    if (PC)
+    {
+        PC->ClientTravel(TEXT("pentagram.r-e.kr"), ETravelType::TRAVEL_Absolute);
+    }
 }

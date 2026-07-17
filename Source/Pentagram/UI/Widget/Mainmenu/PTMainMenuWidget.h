@@ -25,6 +25,8 @@ protected:
     UFUNCTION()
     void HandleQuitClicked();
 
+    UFUNCTION()
+    void HandleJoinClicked();
 protected:
     // 시작 버튼
     UPROPERTY(meta = (BindWidget))
@@ -33,6 +35,9 @@ protected:
     // 종료 버튼
     UPROPERTY(meta = (BindWidget))
     TObjectPtr<UButton> Btn_Quit;
+
+    UPROPERTY(meta = (BindWidget))
+    TObjectPtr<UButton> Btn_Join;
 
     // 미디어 플레이어
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MainMenu")
