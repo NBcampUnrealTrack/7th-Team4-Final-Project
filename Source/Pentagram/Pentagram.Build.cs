@@ -37,14 +37,12 @@ public class Pentagram : ModuleRules
 
 		});
 
-        PrivateDependencyModuleNames.AddRange(new string[]
+		PrivateDependencyModuleNames.AddRange(new string[]
         {
             "CoreOnline",
             "OnlineSubsystem",
             "OnlineSubsystemUtils"
         });
-
-		DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
 
 		PublicIncludePaths.AddRange(new string[] {
 			"Pentagram",

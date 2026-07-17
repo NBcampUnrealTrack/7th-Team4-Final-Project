@@ -14,8 +14,6 @@ namespace
 {
     constexpr int32 LocalUserNumber = 0;
     const FName LobbyUILevelSettingName(TEXT("PT_LOBBY_UI_LEVEL"));
-    const FName FrontendWorldLevelName(TEXT("L_Intro"));
-    const FName DefaultMainMenuUILevelName(TEXT("L_MainMenu"));
 }
 
 void UPTOnlineSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -240,9 +238,26 @@ void UPTOnlineSubsystem::HostSteamSession(FName LobbyLevelName, int32 MaxPlayers
 
     if (SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
     {
-        PendingSessionAction = EPendingSessionAction::CreateSession;
-        PendingInviteResult.Reset();
-        DestroySteamSession();
+        bPendingCreateSessionAfterDestroy = true;
+
+        if (DestroySessionCompleteDelegateHandle.IsValid())
+        {
+            SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+        }
+
+        DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
+            FOnDestroySessionCompleteDelegate::CreateUObject(this, &UPTOnlineSubsystem::OnDestroySessionComplete));
+
+        if (!SessionInterface->DestroySession(NAME_GameSession))
+        {
+            SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
+            DestroySessionCompleteDelegateHandle.Reset();
+            bPendingCreateSessionAfterDestroy = false;
+
+            const FString ErrorMessage(TEXT("Failed to destroy existing session."));
+            UE_LOG(LogTemp, Warning, TEXT("[Online] HostSteamSession failed. %s"), *ErrorMessage);
+            OnHostSessionCompleted.Broadcast(false, ErrorMessage);
+        }
         return;
     }
 
@@ -250,7 +265,6 @@ void UPTOnlineSubsystem::HostSteamSession(FName LobbyLevelName, int32 MaxPlayers
     SessionSettings.NumPublicConnections = PendingMaxPlayers;
     SessionSettings.NumPrivateConnections = 0;
     SessionSettings.bIsLANMatch = false;
-    SessionSettings.bIsDedicated = false;
     SessionSettings.bShouldAdvertise = true;
     SessionSettings.bAllowJoinInProgress = true;
     SessionSettings.bAllowInvites = true;
@@ -298,13 +312,6 @@ void UPTOnlineSubsystem::ShowSteamInviteUI()
         return;
     }
 
-    IOnlineSessionPtr SessionInterface = GetSessionInterface();
-    if (!SessionInterface.IsValid() || SessionInterface->GetNamedSession(NAME_GameSession) == nullptr)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[Online] ShowSteamInviteUI failed. Game session does not exist."));
-        return;
-    }
-
     IOnlineExternalUIPtr ExternalUIInterface = OnlineSubsystem->GetExternalUIInterface();
     if (!ExternalUIInterface.IsValid())
     {
@@ -321,16 +328,8 @@ void UPTOnlineSubsystem::ShowSteamInviteUI()
 void UPTOnlineSubsystem::DestroySteamSession()
 {
     IOnlineSessionPtr SessionInterface = GetSessionInterface();
-    if (!SessionInterface.IsValid())
+    if (!SessionInterface.IsValid() || SessionInterface->GetNamedSession(NAME_GameSession) == nullptr)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[Online] DestroySession failed. Session interface is unavailable."));
-        HandleDestroySessionFinished(false, NAME_GameSession);
-        return;
-    }
-
-    if (SessionInterface->GetNamedSession(NAME_GameSession) == nullptr)
-    {
-        HandleDestroySessionFinished(true, NAME_GameSession);
         return;
     }
 
@@ -341,29 +340,7 @@ void UPTOnlineSubsystem::DestroySteamSession()
 
     DestroySessionCompleteDelegateHandle = SessionInterface->AddOnDestroySessionCompleteDelegate_Handle(
         FOnDestroySessionCompleteDelegate::CreateUObject(this, &UPTOnlineSubsystem::OnDestroySessionComplete));
-
-    UE_LOG(LogTemp, Log, TEXT("[Online] Destroying Steam session."));
-    if (!SessionInterface->DestroySession(NAME_GameSession))
-    {
-        SessionInterface->ClearOnDestroySessionCompleteDelegate_Handle(DestroySessionCompleteDelegateHandle);
-        DestroySessionCompleteDelegateHandle.Reset();
-        UE_LOG(LogTemp, Warning, TEXT("[Online] DestroySession request failed."));
-        HandleDestroySessionFinished(false, NAME_GameSession);
-    }
-}
-
-void UPTOnlineSubsystem::LeaveSteamSession(FName MainMenuUILevelName)
-{
-    PendingReturnUILevelName = MainMenuUILevelName.IsNone()
-        ? DefaultMainMenuUILevelName
-        : MainMenuUILevelName;
-    PendingSessionAction = EPendingSessionAction::ReturnToMainMenu;
-    PendingInviteResult.Reset();
-    PendingJoinLobbyLevelName = NAME_None;
-    PendingSessionConnectString.Reset();
-    PendingSessionConnectLobbyLevelName = NAME_None;
-
-    DestroySteamSession();
+    SessionInterface->DestroySession(NAME_GameSession);
 }
 
 void UPTOnlineSubsystem::OnSteamLoginComplete(
@@ -442,59 +419,19 @@ void UPTOnlineSubsystem::OnDestroySessionComplete(FName SessionName, bool bWasSu
     }
     DestroySessionCompleteDelegateHandle.Reset();
 
-    HandleDestroySessionFinished(bWasSuccessful, SessionName);
-}
-
-void UPTOnlineSubsystem::HandleDestroySessionFinished(bool bWasSuccessful, FName SessionName)
-{
-    const EPendingSessionAction CompletedAction = PendingSessionAction;
-    PendingSessionAction = EPendingSessionAction::None;
-
-    if (bWasSuccessful)
+    if (bPendingCreateSessionAfterDestroy)
     {
-        UE_LOG(LogTemp, Log, TEXT("[Online] DestroySession finished. Session=%s Action=%d"),
-            *SessionName.ToString(), static_cast<int32>(CompletedAction));
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[Online] DestroySession failed. Session=%s Action=%d"),
-            *SessionName.ToString(), static_cast<int32>(CompletedAction));
-    }
+        bPendingCreateSessionAfterDestroy = false;
 
-    switch (CompletedAction)
-    {
-    case EPendingSessionAction::CreateSession:
-        if (bWasSuccessful)
+        if (!bWasSuccessful)
         {
-            HostSteamSession(PendingLobbyLevelName, PendingMaxPlayers, bPendingInviteUIAfterCreate);
+            const FString ErrorMessage(TEXT("DestroySession completed with failure."));
+            UE_LOG(LogTemp, Warning, TEXT("[Online] %s Session=%s"), *ErrorMessage, *SessionName.ToString());
+            OnHostSessionCompleted.Broadcast(false, ErrorMessage);
+            return;
         }
-        else
-        {
-            OnHostSessionCompleted.Broadcast(false, TEXT("Failed to destroy the existing session."));
-        }
-        break;
 
-    case EPendingSessionAction::JoinInvite:
-        if (bWasSuccessful && PendingInviteResult.IsValid())
-        {
-            const FOnlineSessionSearchResult InviteResult = *PendingInviteResult;
-            PendingInviteResult.Reset();
-            JoinSteamSession(InviteResult);
-        }
-        else
-        {
-            PendingInviteResult.Reset();
-            OnJoinSessionCompleted.Broadcast(false, TEXT("Failed to leave the existing session before joining the invite."));
-        }
-        break;
-
-    case EPendingSessionAction::ReturnToMainMenu:
-        ReturnToMainMenu();
-        break;
-
-    case EPendingSessionAction::None:
-    default:
-        break;
+        HostSteamSession(PendingLobbyLevelName, PendingMaxPlayers, bPendingInviteUIAfterCreate);
     }
 }
 
@@ -510,8 +447,6 @@ void UPTOnlineSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSession
     if (Result != EOnJoinSessionCompleteResult::Success)
     {
         PendingJoinLobbyLevelName = NAME_None;
-        PendingSessionConnectString.Reset();
-        PendingSessionConnectLobbyLevelName = NAME_None;
         const FString ErrorMessage = FString::Printf(TEXT("JoinSession failed. Result=%d"), static_cast<int32>(Result));
         UE_LOG(LogTemp, Warning, TEXT("[Online] %s"), *ErrorMessage);
         OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
@@ -522,35 +457,28 @@ void UPTOnlineSubsystem::OnJoinSessionComplete(FName SessionName, EOnJoinSession
     if (!SessionInterface.IsValid() || !SessionInterface->GetResolvedConnectString(SessionName, ConnectInfo))
     {
         PendingJoinLobbyLevelName = NAME_None;
-        PendingSessionConnectString.Reset();
-        PendingSessionConnectLobbyLevelName = NAME_None;
         const FString ErrorMessage(TEXT("Failed to resolve session connect string."));
         UE_LOG(LogTemp, Warning, TEXT("[Online] %s Session=%s"), *ErrorMessage, *SessionName.ToString());
         OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
         return;
     }
 
-    const FName LobbyUILevelName = PendingJoinLobbyLevelName.IsNone()
-        ? FName(TEXT("L_Lobby"))
-        : PendingJoinLobbyLevelName;
-    PendingJoinLobbyLevelName = NAME_None;
-
-    UE_LOG(LogTemp, Log, TEXT("[Online] Session address resolved. Session=%s ConnectInfo=%s LobbyUI=%s"),
-        *SessionName.ToString(), *ConnectInfo, *LobbyUILevelName.ToString());
-
     UGameInstance* GameInstance = GetGameInstance();
     APlayerController* PlayerController =
         GameInstance != nullptr ? GameInstance->GetFirstLocalPlayerController() : nullptr;
     if (PlayerController == nullptr)
     {
-        PendingSessionConnectString = MoveTemp(ConnectInfo);
-        PendingSessionConnectLobbyLevelName = LobbyUILevelName;
-        UE_LOG(LogTemp, Log, TEXT("[Online] PlayerController is not ready. Session travel was deferred."));
-        OnJoinSessionCompleted.Broadcast(true, FString());
+        PendingJoinLobbyLevelName = NAME_None;
+        const FString ErrorMessage(TEXT("Local PlayerController is unavailable."));
+        UE_LOG(LogTemp, Warning, TEXT("[Online] %s ConnectInfo=%s"), *ErrorMessage, *ConnectInfo);
+        OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
         return;
     }
 
-    TravelToResolvedSession(PlayerController, ConnectInfo, LobbyUILevelName);
+    UE_LOG(LogTemp, Log, TEXT("[Online] Joining Steam session. ConnectInfo=%s"), *ConnectInfo);
+    PendingLocalUILevelName = PendingJoinLobbyLevelName;
+    PendingJoinLobbyLevelName = NAME_None;
+    PlayerController->ClientTravel(ConnectInfo, ETravelType::TRAVEL_Absolute);
     OnJoinSessionCompleted.Broadcast(true, FString());
 }
 
@@ -563,25 +491,9 @@ void UPTOnlineSubsystem::OnSessionUserInviteAccepted(
     UE_LOG(LogTemp, Log, TEXT("[Online] Steam invite accepted. Success=%d ControllerId=%d"),
         bWasSuccessful ? 1 : 0, ControllerId);
 
-    if (!bWasSuccessful || !InviteResult.IsValid())
+    if (!bWasSuccessful)
     {
         OnJoinSessionCompleted.Broadcast(false, TEXT("Steam invite accept failed."));
-        return;
-    }
-
-    IOnlineSessionPtr SessionInterface = GetSessionInterface();
-    if (!SessionInterface.IsValid())
-    {
-        OnJoinSessionCompleted.Broadcast(false, TEXT("Session interface is unavailable."));
-        return;
-    }
-
-    if (SessionInterface->GetNamedSession(NAME_GameSession) != nullptr)
-    {
-        PendingInviteResult = MakeShared<FOnlineSessionSearchResult>(InviteResult);
-        PendingSessionAction = EPendingSessionAction::JoinInvite;
-        UE_LOG(LogTemp, Log, TEXT("[Online] Existing session found. Leaving it before joining the invite."));
-        DestroySteamSession();
         return;
     }
 
@@ -644,16 +556,12 @@ void UPTOnlineSubsystem::JoinSteamSession(const FOnlineSessionSearchResult& Sear
     JoinSessionCompleteDelegateHandle = SessionInterface->AddOnJoinSessionCompleteDelegate_Handle(
         FOnJoinSessionCompleteDelegate::CreateUObject(this, &UPTOnlineSubsystem::OnJoinSessionComplete));
 
-    UE_LOG(LogTemp, Log, TEXT("[Online] Requesting JoinSession. LobbyUI=%s"),
-        *PendingJoinLobbyLevelName.ToString());
     if (!SessionInterface->JoinSession(LocalUserNumber, NAME_GameSession, SearchResult))
     {
         SessionInterface->ClearOnJoinSessionCompleteDelegate_Handle(JoinSessionCompleteDelegateHandle);
         JoinSessionCompleteDelegateHandle.Reset();
         PendingJoinLobbyLevelName = NAME_None;
-        const FString ErrorMessage(TEXT("JoinSession request failed."));
-        UE_LOG(LogTemp, Warning, TEXT("[Online] %s"), *ErrorMessage);
-        OnJoinSessionCompleted.Broadcast(false, ErrorMessage);
+        OnJoinSessionCompleted.Broadcast(false, TEXT("JoinSession request failed."));
     }
 }
 
@@ -669,58 +577,4 @@ FName UPTOnlineSubsystem::ConsumePendingLocalUILevelName()
     }
 
     return UILevelName;
-}
-
-bool UPTOnlineSubsystem::TravelToPendingSessionJoin(APlayerController* PlayerController)
-{
-    if (PlayerController == nullptr || PendingSessionConnectString.IsEmpty())
-    {
-        return false;
-    }
-
-    const FString ConnectInfo = MoveTemp(PendingSessionConnectString);
-    const FName LobbyUILevelName = PendingSessionConnectLobbyLevelName.IsNone()
-        ? FName(TEXT("L_Lobby"))
-        : PendingSessionConnectLobbyLevelName;
-    PendingSessionConnectString.Reset();
-    PendingSessionConnectLobbyLevelName = NAME_None;
-
-    UE_LOG(LogTemp, Log, TEXT("[Online] Continuing deferred session travel."));
-    TravelToResolvedSession(PlayerController, ConnectInfo, LobbyUILevelName);
-    return true;
-}
-
-void UPTOnlineSubsystem::TravelToResolvedSession(
-    APlayerController* PlayerController,
-    const FString& ConnectInfo,
-    FName LobbyUILevelName)
-{
-    if (PlayerController == nullptr || ConnectInfo.IsEmpty())
-    {
-        return;
-    }
-
-    PendingLocalUILevelName = LobbyUILevelName;
-    UE_LOG(LogTemp, Log, TEXT("[Online] Starting session ClientTravel. ConnectInfo=%s LobbyUI=%s"),
-        *ConnectInfo, *LobbyUILevelName.ToString());
-    PlayerController->ClientTravel(ConnectInfo, ETravelType::TRAVEL_Absolute);
-}
-
-void UPTOnlineSubsystem::ReturnToMainMenu()
-{
-    UWorld* World = GetWorld();
-    if (World == nullptr)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[Online] Cannot return to main menu. World is null."));
-        return;
-    }
-
-    PendingLocalUILevelName = PendingReturnUILevelName.IsNone()
-        ? DefaultMainMenuUILevelName
-        : PendingReturnUILevelName;
-    PendingReturnUILevelName = NAME_None;
-
-    UE_LOG(LogTemp, Log, TEXT("[Online] Returning to frontend. World=%s UI=%s"),
-        *FrontendWorldLevelName.ToString(), *PendingLocalUILevelName.ToString());
-    UGameplayStatics::OpenLevel(World, FrontendWorldLevelName);
 }

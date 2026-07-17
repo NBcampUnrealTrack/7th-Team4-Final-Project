@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
@@ -49,4 +49,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MainMenu")
     int32 MaxLobbyPlayers = 4;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MainMenu")
+    bool bShowSteamInviteUIAfterHost = false;
 };
