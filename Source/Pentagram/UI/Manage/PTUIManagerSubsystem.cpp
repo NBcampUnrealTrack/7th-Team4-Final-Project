@@ -137,6 +137,10 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     {
         CloseAllGameplayUI();
     }
+    else
+    {
+        TryShowStartGuideOnce();
+    }
 
     // 이전 스트림 언로드
     if (!CurrentStreamLevelName.IsNone() && CurrentStreamLevelName != LevelName)
@@ -426,6 +430,24 @@ void UPTUIManagerSubsystem::ToggleCharacterSheet(TSubclassOf<UCommonActivatableW
     }
 
     CharacterSheetInstance = PushWidget(CharacterSheetClass, EPTUILayer::GameMenu);
+}
+
+void UPTUIManagerSubsystem::TryShowStartGuideOnce()
+{
+    UPTUISettings* Settings = GetMutableDefault<UPTUISettings>();
+    if (!Settings || Settings->bStartGuideShown)
+    {
+        return;
+    }
+
+    UClass* GuideClass = Settings->StartGuideWidgetClass.LoadSynchronous();
+    if (!GuideClass)
+    {
+        return;
+    }
+
+    PushWidget(GuideClass, EPTUILayer::Modal);
+    Settings->bStartGuideShown = true;
 }
 
 bool UPTUIManagerSubsystem::IsScreenPositionOverGameplayUI(const FVector2D& ScreenPosition) const

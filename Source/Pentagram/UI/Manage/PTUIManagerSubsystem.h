@@ -105,11 +105,9 @@ private:
 
     // 게임플레이 UI오픈 가능 여부 체크
     bool CanOpenGameplayUI() const { return bAllowGameplayUI; }
-
     // 게임플레이 UI를 전부 닫음.
-
     void CloseAllGameplayUI();
-
+    void TryShowStartGuideOnce();
     UPROPERTY(Transient)
     TWeakObjectPtr<UPTPrimaryLayout> PrimaryLayout;
 
