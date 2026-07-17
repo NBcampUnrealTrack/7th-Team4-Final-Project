@@ -134,9 +134,15 @@ void APTPlayerController::BeginPlay()
                     // 표시할 스트리밍 UI(L_Lobby)가 다르므로 서브시스템의 예약값을 우선한다.
                     FName UILevelName(*UGameplayStatics::GetCurrentLevelName(this, true));
                     UGameInstance* CurrentGameInstance = GetGameInstance();
-                    if (UPTOnlineSubsystem* OnlineSubsystem = CurrentGameInstance != nullptr
+                    UPTOnlineSubsystem* OnlineSubsystem = CurrentGameInstance != nullptr
                         ? CurrentGameInstance->GetSubsystem<UPTOnlineSubsystem>()
-                        : nullptr)
+                        : nullptr;
+                    if (OnlineSubsystem != nullptr && OnlineSubsystem->TravelToPendingSessionJoin(this))
+                    {
+                        return;
+                    }
+
+                    if (OnlineSubsystem != nullptr)
                     {
                         const FName PendingUILevelName = OnlineSubsystem->ConsumePendingLocalUILevelName();
                         if (!PendingUILevelName.IsNone())
