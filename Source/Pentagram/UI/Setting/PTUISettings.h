@@ -67,4 +67,10 @@ public:
 
     UPROPERTY(Config, EditAnywhere, Category = "PT|Loading", meta = (ClampMin = "0"))
     int32 LoadingWidgetZOrder = 10000;
+
+    UPROPERTY(EditDefaultsOnly, Config, Category = "PT|UI|Guide")
+    TSoftClassPtr<UCommonActivatableWidget> StartGuideWidgetClass;
+
+    UPROPERTY(Transient)
+    bool bStartGuideShown = false;
 };
