@@ -1,4 +1,4 @@
-﻿#include "PTLobbyWidget.h"
+#include "PTLobbyWidget.h"
 #include "PTLobbySlotWidget.h"
 #include "PTLobbyPreviewActor.h"
 #include "Core/PTGameState.h"
@@ -14,7 +14,6 @@
 #include "TimerManager.h"
 #include "Materials/MaterialInterface.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "UI/Manage/PTUIManagerSubsystem.h"
 
 void UPTLobbyWidget::NativeConstruct()
 {
@@ -211,29 +210,18 @@ void UPTLobbyWidget::OnInviteClicked()
 
 void UPTLobbyWidget::OnLeaveClicked()
 {
-    // 방법 1) 네트워크 세션에서 완전히 나가기 (서버 접속 해제 후 로컬 MainMenu로)
-    // 나중에 로비가 실제 서버 세션이라 접속 해제가 필요해지면 아래로 교체
-    //
-    // if (APlayerController* PC = GetOwningPlayer())
-    // {
-    //     PC->ClientTravel(TEXT("/Game/Maps/L_Intro"), ETravelType::TRAVEL_Absolute);
-    // }
-
     if (APTPlayerController* PTController = Cast<APTPlayerController>(GetOwningPlayer()))
     {
-        // 나가면서 준비 상태 초기화
         bLocalReady = false;
         PTController->Server_SetReady(false);
     }
 
-    ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
-    if (LocalPlayer == nullptr)
+    UWorld* World = GetWorld();
+    UGameInstance* GameInstance = World != nullptr ? World->GetGameInstance() : nullptr;
+    if (UPTOnlineSubsystem* OnlineSubsystem = GameInstance != nullptr
+        ? GameInstance->GetSubsystem<UPTOnlineSubsystem>()
+        : nullptr)
     {
-        return;
-    }
-
-    if (UPTUIManagerSubsystem* UIManager = LocalPlayer->GetSubsystem<UPTUIManagerSubsystem>())
-    {
-        UIManager->OpenUILevel(FName("L_MainMenu"));
+        OnlineSubsystem->LeaveSteamSession();
     }
 }

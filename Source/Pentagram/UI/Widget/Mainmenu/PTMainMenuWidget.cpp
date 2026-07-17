@@ -62,7 +62,7 @@ void UPTMainMenuWidget::HandleGameStartClicked()
         GameInstance != nullptr ? GameInstance->GetSubsystem<UPTOnlineSubsystem>() : nullptr;
     if (OnlineSubsystem != nullptr)
     {
-        OnlineSubsystem->HostSteamSession(LobbyLevelName, MaxLobbyPlayers, bShowSteamInviteUIAfterHost);
+        OnlineSubsystem->HostSteamSession(LobbyLevelName, MaxLobbyPlayers, false);
         return;
     }
 
