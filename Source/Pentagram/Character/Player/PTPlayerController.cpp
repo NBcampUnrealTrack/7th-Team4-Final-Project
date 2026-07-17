@@ -1395,7 +1395,7 @@ void APTPlayerController::Server_RequestRespawn_Implementation()
             PlayerCharacter->Destroy();
         }
 
-        // 세이브포인트가 있다면 위치를 명시해서 게임모드에 리스폰을 요청하고, 
+        // 세이브포인트가 있다면 위치를 명시해서 게임모드에 리스폰을 요청하고,
         // 없다면 일반 리스폰(Default 플레이어 스타트)을 요청합니다.
         if (bHasSavedLocation)
         {
@@ -1551,6 +1551,13 @@ void APTPlayerController::HandleSkillPressed(int32 SlotIndex)
         UE_LOG(LogTemp, Warning, TEXT("[Ch] PC/SkillComp 없음")); return;
     }
 
+    // 이미 스킬 사용 중이면 입력 무시
+    if (PC->bIsUsingSkill)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[Ch] 이미 스킬 사용 중 - 입력 무시"));
+        return;
+    }
+
     const FName SkillID = PC->SkillComp->GetSkillAtSlot(SlotIndex);
     if (SkillID.IsNone())
     {
@@ -1695,9 +1702,6 @@ void APTPlayerController::UpdateSkillAim()
         break;
     }
 
-    // 캐릭터가 조준 방향 바라보게 (로컬만; 서버는 확정 시)
-    PC->SetActorRotation(Dir.Rotation());
-
     if (Row->TargetingMode == ESkillTargetingMode::Targeted)
         CachedTarget = FindTargetUnderCursor(Row->CastRange);
 }
@@ -1717,6 +1721,7 @@ void APTPlayerController::ConfirmSkillAim()
 
     AActor* Target = (Row->TargetingMode == ESkillTargetingMode::Targeted) ? CachedTarget : nullptr;
 
+    PC->SetActorRotation(Dir.Rotation());
     Server_SetActorRotation(Dir.Rotation());
     PC->Server_UseSkill(AimingSkillID, Point, Dir, Target);
     CancelSkillAim();

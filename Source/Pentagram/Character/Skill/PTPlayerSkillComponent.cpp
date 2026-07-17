@@ -29,6 +29,16 @@ void UPTPlayerSkillComponent::TryActivateSkill(const FPTSkillActivationRequest& 
         return;
     }
 
+    // 이미 스킬/채널 사용 중이면 거부 (연타·중복 방지)
+    if (const APTPlayerCharacter* GuardPC = Cast<APTPlayerCharacter>(OwnerActor))
+    {
+        if (GuardPC->bIsUsingSkill || bIsChanneling)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("[Skill] 이미 스킬 사용 중 - 무시"));
+            return;
+        }
+    }
+
     // DT에서 스킬 데이터 조회
     const FPTSkillRow* SkillData = FindSkillRowFromRequest(Request);
     if (!SkillData)
