@@ -175,6 +175,9 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
     FDataTableRowHandle ItemRowHandle;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Drop")
+    TArray<FDataTableRowHandle> ItemDropPool;
+
     TSet<TWeakObjectPtr<APTBasePlayerState>> ExpContributors;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
