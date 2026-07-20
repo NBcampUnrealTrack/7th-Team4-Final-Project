@@ -37,6 +37,8 @@ void UPTBossPatternComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
         ActiveLaserAudioComp = nullptr;
     }
 
+    StopSafeZoneFXLocal();
+
     UWorld* World = GetWorld();
     if (IsValid(World))
     {
@@ -104,6 +106,7 @@ void UPTBossPatternComponent::PreloadAllSkills()
             Row->AreaImpactEffect.LoadSynchronous();
             Row->SafeZoneEffect.LoadSynchronous();
             Row->LaserEffect.LoadSynchronous();
+            Row->LaserLoopSound.LoadSynchronous();
         };
 
     for (const FName& RowName : Phase0SkillRowNames)
@@ -396,18 +399,16 @@ void UPTBossPatternComponent::MulticastSpawnAreaFX_Implementation(FVector CastLo
         UE_LOG(LogTemp, Warning, TEXT("[SafeZone] SafeZoneRadius: %.1f"), SafeZoneRadius);
 #endif
 
-        UNiagaraComponent* SafeZoneComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, SafeZoneFX, SafeZoneCenter, FRotator::ZeroRotator, FVector::OneVector, false);
-        if (IsValid(SafeZoneComp))
+        StopSafeZoneFXLocal();
+
+        ActiveSafeZoneComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(World, SafeZoneFX, SafeZoneCenter, FRotator::ZeroRotator, FVector::OneVector, false);
+        if (IsValid(ActiveSafeZoneComp))
         {
             FTimerHandle& SafeZoneTimer = AreaAttackTimers.AddDefaulted_GetRef();
             World->GetTimerManager().SetTimer(
-                SafeZoneTimer, FTimerDelegate::CreateWeakLambda(this, [SafeZoneComp]()
+                SafeZoneTimer, FTimerDelegate::CreateWeakLambda(this, [this]()
                     {
-                        if (IsValid(SafeZoneComp))
-                        {
-                            SafeZoneComp->Deactivate();
-                            SafeZoneComp->DestroyComponent();
-                        }
+                        StopSafeZoneFXLocal();
                     }),
                 AreaAttackDelay, false);
         }
@@ -420,6 +421,11 @@ void UPTBossPatternComponent::MulticastPlayLaunchSound_Implementation(FVector Lo
     {
         UGameplayStatics::SpawnSoundAtLocation(GetWorld(), Sound, Location);
     }
+}
+
+void UPTBossPatternComponent::MulticastStopSafeZoneFX_Implementation()
+{
+    StopSafeZoneFXLocal();
 }
 
 void UPTBossPatternComponent::ClearLaserTimers()
@@ -829,6 +835,7 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
                     if (bIsLast)
                     {
                         bAreaAttackInProgress = false;
+                        MulticastStopSafeZoneFX();
 
                         if (Snapshot.bHoldMontageUntilDelay)
                         {
@@ -906,7 +913,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
         InitialWallHit, LaserStart, InitialMaxEnd, ECC_Visibility, InitialParams);
     const FVector InitialEnd = bInitialWallHit ? InitialWallHit.ImpactPoint : InitialMaxEnd;
     const float InitialDist = FVector::Dist(LaserStart, InitialEnd);
-    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.SkillSound.Get(), RowSnapshot.LaserSoundDelay);
+    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.LaserLoopSound.Get(), RowSnapshot.LaserSoundDelay);
 
     World->GetTimerManager().SetTimer(
         LaserTickTimerHandle,
@@ -1001,6 +1008,16 @@ void UPTBossPatternComponent::MulticastResumeMontage_Implementation()
         {
             AnimInstance->Montage_Resume(nullptr);
         }
+    }
+}
+
+void UPTBossPatternComponent::StopSafeZoneFXLocal()
+{
+    if (IsValid(ActiveSafeZoneComp))
+    {
+        ActiveSafeZoneComp->DeactivateImmediate();
+        ActiveSafeZoneComp->DestroyComponent();
+        ActiveSafeZoneComp = nullptr;
     }
 }
 
