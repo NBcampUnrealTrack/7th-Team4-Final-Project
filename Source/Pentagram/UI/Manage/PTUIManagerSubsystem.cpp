@@ -97,31 +97,23 @@ void UPTUIManagerSubsystem::CloseAllGameplayUI()
 
 void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
 {
-    // 진입 로그
-    UE_LOG(LogTemp, Warning, TEXT("[OpenUILevel] In=[%s]"), *LevelName.ToString());
 
     // 표 조회
     const UPTUISettings* Settings = GetDefault<UPTUISettings>();
     if (!Settings)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. PTUISettings is null. Level=%s"),
-            *LevelName.ToString());
         return;
     }
 
     const FPTUILevelEntry* Entry = Settings->LevelUITable.Find(LevelName);
     if (!Entry)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. LevelUITable has no entry for %s."),
-            *LevelName.ToString());
         return;
     }
 
     UWorld* World = GetLocalPlayer() ? GetLocalPlayer()->GetWorld() : nullptr;
     if (!World)
     {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. World is null. Level=%s"),
-            *LevelName.ToString());
         return;
     }
 
@@ -170,17 +162,7 @@ void UPTUIManagerSubsystem::OpenUILevel(FName LevelName)
     if (WidgetClass)
     {
         CurrentUIWidget = PushWidget(WidgetClass, Entry->Layer);
-        if (CurrentUIWidget == nullptr)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed to push widget. Level=%s Widget=%s Layer=%d"),
-                *LevelName.ToString(), *GetNameSafe(WidgetClass), static_cast<int32>(Entry->Layer));
-        }
-    }
-    else
-    {
-        UE_LOG(LogTemp, Warning, TEXT("[UI] Failed to load widget class for level %s."), *LevelName.ToString());
-        UE_LOG(LogTemp, Warning, TEXT("[UI] OpenUILevel failed. WidgetClass is null. Level=%s Path=%s"),
-            *LevelName.ToString(), *Entry->WidgetClass.ToSoftObjectPath().ToString());
+
     }
 
     SetupNotifyWidgetForLevel(*Entry);

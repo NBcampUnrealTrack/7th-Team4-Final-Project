@@ -757,6 +757,14 @@ void APTPlayerController::Server_RequestUnequipItem_Implementation(EItemType Equ
     RequestUnequipItem(EquipType, 0);
 }
 
+void APTPlayerController::Server_ReturnToMainMenu_Implementation()
+{
+    if (UWorld* World = GetWorld())
+    {
+        World->ServerTravel(TEXT("/Game/Pentagram/Level/L_MainMenu"));
+    }
+}
+
 void APTPlayerController::RefreshInventoryUI()
 {
 }
