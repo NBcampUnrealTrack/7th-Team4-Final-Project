@@ -138,6 +138,9 @@ public:
     UFUNCTION(Server, Reliable)
     void Server_RequestUnequipItem(EItemType EquipType);
 
+    UFUNCTION(Server, Reliable)
+    void Server_ReturnToMainMenu();
+
     UFUNCTION()
     void RefreshInventoryUI();
 
