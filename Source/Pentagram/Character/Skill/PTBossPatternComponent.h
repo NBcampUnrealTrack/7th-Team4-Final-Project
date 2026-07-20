@@ -93,7 +93,7 @@ private:
     void MulticastResumeMontage();
 
     UFUNCTION(NetMulticast, Reliable)
-    void MulticastStartLaserFX(FVector FireDirection, float InitialDist, UNiagaraSystem* LaserFX, FName SocketName, USoundBase* LaserSound);
+    void MulticastStartLaserFX(FVector FireDirection, float InitialDist, UNiagaraSystem* LaserFX, FName SocketName, USoundBase* LaserSound, float SoundDelay);
 
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastUpdateLaserFX(float EffectiveDist);
@@ -128,9 +128,10 @@ private:
 
     FTimerHandle LaserTickTimerHandle;
     FTimerHandle LaserEndTimerHandle;
+    FTimerHandle LaserSoundDelayHandle;
 
     FVector LaserFireDirection = FVector::ForwardVector;
-    // 근접 보스 Niagara는 "User.BeamEnd"(월드좌표), 원거리는 "beamEnd"(로컬오프셋) — 소켓 유무로 구분
+   
     bool bUseMeleeBeamVar = false;
 
     UPROPERTY()

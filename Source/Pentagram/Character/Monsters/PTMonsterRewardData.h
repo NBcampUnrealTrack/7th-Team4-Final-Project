@@ -23,7 +23,7 @@ struct FPTMonsterRewardData
     int32 GoldDropMax = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Reward")
-    float EquipDropRate = 0.f;
+    float ItemDropRate = 0.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Reward")
     TSubclassOf<APTGoldPickup> GoldPickupClass;
@@ -33,4 +33,7 @@ struct FPTMonsterRewardData
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Reward")
     FDataTableRowHandle ItemRowHandle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Reward")
+    TArray<FDataTableRowHandle> ItemDropPool;
 };
