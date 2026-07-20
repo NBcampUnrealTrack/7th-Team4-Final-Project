@@ -60,9 +60,9 @@ void APTLevelTrigger::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor
         TravelURL += FString::Printf(TEXT("?PlayerActorTag=%s"), *TargetActorTag.ToString());
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[Save] Zone travel routing via ClientTravel. Target=%s"), *TravelURL);
+    UE_LOG(LogTemp, Log, TEXT("[Save] Zone travel routing via ServerTravel. Target=%s"), *TravelURL);
 
-    PC->ClientTravel(TravelURL, TRAVEL_Relative, false);
+    World->ServerTravel(TravelURL, false);
 }
 
 void APTLevelTrigger::Tick(float DeltaTime)
