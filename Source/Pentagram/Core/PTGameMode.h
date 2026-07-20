@@ -23,7 +23,10 @@ public:
     virtual void PostSeamlessTravel() override;
     virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 
-    virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override; // [레벨트리거] 태그 기반 스폰 위치 선택 
+    virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override; // [레벨트리거] 태그 기반 스폰 위치 선택
+
+    UFUNCTION(BlueprintCallable, Category = "PT|Level")
+    void RequestLevelTransition(FName LevelName);
 
     void SetGamePhase(EGamePhase NewPhase);
     void StartGame();

@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "PTDelegates.generated.h"
 
+class APTMonsterCharacter;
+
 USTRUCT(BlueprintType)
 struct FPTDelegateDummy
 {
@@ -51,3 +53,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnSkillSlotAssigned, int32, Slot
 
 // 로비 채팅
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnChatMessageReceived, FString, SenderName, FString, Message);
+
+// 몬스터 사망
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnMonsterDied, APTMonsterCharacter*, DeadMonster);
