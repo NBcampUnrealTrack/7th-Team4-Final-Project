@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "PTAnimNotify_SpawnMeteor.generated.h"
+
+class UNiagaraSystem;
 
 UCLASS()
 class PENTAGRAM_API UPTAnimNotify_SpawnMeteor : public UAnimNotify

@@ -58,6 +58,5 @@ void UPTAnimNotify_SpawnMeteor::Notify(USkeletalMeshComponent* MeshComp, UAnimSe
         SkillData->SkillRadius, SkillData->DamageMultiplier,
         Owner->HasAuthority(),            // 서버만 데미지
         ImpactVFX, ImpactSound,
-        SkillData->MakeHitInfo(Owner),
-        bDrawDebug);
+        SkillData->MakeHitInfo(Owner));
 }

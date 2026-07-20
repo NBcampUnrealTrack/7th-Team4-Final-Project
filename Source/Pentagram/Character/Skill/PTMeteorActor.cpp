@@ -4,7 +4,6 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
-#include "DrawDebugHelpers.h"
 
 APTMeteorActor::APTMeteorActor()
 {
@@ -17,7 +16,7 @@ APTMeteorActor::APTMeteorActor()
 
 void APTMeteorActor::InitMeteor(APTPlayerCharacter* InAttacker, const FVector& InTargetGround, float InFallHeight,
     float InFallSpeed, float InDamageRadius, float InDamageMultiplier, bool bInApplyDamage, UNiagaraSystem* InImpactVFX,
-    USoundBase* InImpactSound, const FPTHitInfo& InHitTemplate, bool bInDrawDebug)
+    USoundBase* InImpactSound, const FPTHitInfo& InHitTemplate)
 {
     Attacker         = InAttacker;
     TargetGround     = InTargetGround;
@@ -28,7 +27,6 @@ void APTMeteorActor::InitMeteor(APTPlayerCharacter* InAttacker, const FVector& I
     ImpactVFX        = InImpactVFX;
     ImpactSound      = InImpactSound;
     HitTemplate      = InHitTemplate;
-    bDrawDebug       = bInDrawDebug;
 
     // 착지점 위 하늘에서 시작
     SetActorLocation(TargetGround + FVector(0.f, 0.f, InFallHeight));
@@ -63,11 +61,6 @@ void APTMeteorActor::OnImpact()
         UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ImpactVFX, TargetGround, FRotator::ZeroRotator);
     if (ImpactSound)
         UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, TargetGround);
-
-#if WITH_EDITOR
-    if (bDrawDebug)
-        DrawDebugSphere(GetWorld(), TargetGround, DamageRadius, 16, FColor::Orange, false, 1.f);
-#endif
 
     // 데미지는 서버만
     if (bApplyDamage)
