@@ -906,7 +906,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
         InitialWallHit, LaserStart, InitialMaxEnd, ECC_Visibility, InitialParams);
     const FVector InitialEnd = bInitialWallHit ? InitialWallHit.ImpactPoint : InitialMaxEnd;
     const float InitialDist = FVector::Dist(LaserStart, InitialEnd);
-    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.SkillSound.Get());
+    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.SkillSound.Get(), RowSnapshot.LaserSoundDelay);
 
     World->GetTimerManager().SetTimer(
         LaserTickTimerHandle,
@@ -1006,15 +1006,26 @@ void UPTBossPatternComponent::MulticastResumeMontage_Implementation()
 
 void UPTBossPatternComponent::StopLaserFXLocal()
 {
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(LaserSoundDelayHandle);
+    }
+
     if (IsValid(ActiveLaserComponent))
     {
         ActiveLaserComponent->Deactivate();
         ActiveLaserComponent->DestroyComponent();
         ActiveLaserComponent = nullptr;
     }
+
+    if (IsValid(ActiveLaserAudioComp))
+    {
+        ActiveLaserAudioComp->Stop();
+        ActiveLaserAudioComp = nullptr;
+    }
 }
 
-void UPTBossPatternComponent::MulticastStartLaserFX_Implementation(FVector FireDirection, float InitialDist, UNiagaraSystem* LaserFX, FName SocketName, USoundBase* LaserSound)
+void UPTBossPatternComponent::MulticastStartLaserFX_Implementation(FVector FireDirection, float InitialDist, UNiagaraSystem* LaserFX, FName SocketName, USoundBase* LaserSound, float SoundDelay)
 {
     StopLaserFXLocal();
 
@@ -1056,12 +1067,34 @@ void UPTBossPatternComponent::MulticastStartLaserFX_Implementation(FVector FireD
         ActiveLaserComponent->SetNiagaraVariableVec3(TEXT("beamEnd"), FireDirection * InitialDist);
     }
 
-    if (IsValid(Boss) && IsValid(LaserSound))
+    if (!IsValid(Boss) || !IsValid(LaserSound))
+    {
+        return;
+    }
+
+    if (SoundDelay <= 0.f)
     {
         ActiveLaserAudioComp = UGameplayStatics::SpawnSoundAttached(
             LaserSound, Boss->GetRootComponent(), NAME_None,
             FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true
         );
+    }
+    else
+    {
+        TWeakObjectPtr<UPTBossPatternComponent> WeakThis(this);
+        USoundBase* CapturedSound = LaserSound;
+        USceneComponent* CapturedRoot = Boss->GetRootComponent();
+        World->GetTimerManager().SetTimer(LaserSoundDelayHandle, [WeakThis, CapturedSound, CapturedRoot]()
+            {
+                if (!WeakThis.IsValid() || !IsValid(CapturedSound) || !IsValid(CapturedRoot))
+                {
+                    return;
+                }
+
+                WeakThis->ActiveLaserAudioComp = UGameplayStatics::SpawnSoundAttached(
+                    CapturedSound, CapturedRoot, NAME_None,
+                    FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true);
+            }, SoundDelay, false);
     }
 }
 

@@ -123,12 +123,38 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
 
             GoldActor->SetGoldAmount(Amount);
             GoldActor->FinishSpawning(FTransform(DropLocation));
-
-            UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 골드 픽업 스폰 — %d골드"), Amount);
         }
     }
 
-    if (RewardData.EquipmentDropClass && FMath::FRand() <= RewardData.EquipDropRate)
+    if (!RewardData.EquipmentDropClass || RewardData.ItemDropPool.IsEmpty())
+    {
+        return;
+    }
+
+    if (FMath::FRand() > RewardData.ItemDropRate)
+    {
+        return;
+    }
+
+    const FDataTableRowHandle& SelectedHandle = RewardData.ItemDropPool[FMath::RandRange(0, RewardData.ItemDropPool.Num() - 1)];
+    const FItemData* ItemRow = SelectedHandle.GetRow<FItemData>(TEXT("SpawnDeathDrops"));
+    if (!ItemRow)
+    {
+        return;
+    }
+
+    APTDropItemActorBase* DropActor = World->SpawnActorDeferred<APTDropItemActorBase>(RewardData.EquipmentDropClass, FTransform(DropLocation));
+    if (!DropActor)
+    {
+        return;
+    }
+
+    DropActor->InitializeDroppedItem(*ItemRow, 1);
+    DropActor->FinishSpawning(FTransform(DropLocation));
+
+    UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 아이템 드랍: %s"), *ItemRow->Item_Name.ToString());
+
+    /*if (RewardData.EquipmentDropClass && FMath::FRand() <= RewardData.EquipDropRate)
     {
         World->SpawnActor<AActor>(
             RewardData.EquipmentDropClass,
@@ -137,7 +163,7 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
         );
 
         UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 장비 드랍 스폰"));
-    }
+    } */
 }
 
 bool UPTRewardSubsystem::HasServerAuthority() const

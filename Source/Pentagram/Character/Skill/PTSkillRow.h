@@ -314,4 +314,7 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
     FName LaserSocketName = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
+    float LaserSoundDelay = 0.f;
 };
