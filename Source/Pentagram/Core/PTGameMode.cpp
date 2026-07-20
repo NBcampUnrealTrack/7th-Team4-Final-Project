@@ -430,7 +430,7 @@ void APTGameMode::HandleTravelPreloadComplete()
             *TargetGameMapPath);
     }
 
-    World->ServerTravel(TargetGameMapPath);
+    World->ServerTravel(TargetGameMapPath + TEXT("?listen"));
 }
 
 FString APTGameMode::ResolveGameMapPath() const
@@ -614,8 +614,10 @@ void APTGameMode::RequestLevelTransition(FName LevelName)
     }
 
     bIsTraveling = true;
-    GetWorld()->ServerTravel(LevelName.ToString(), /*bAbsolute=*/false, /*bShouldSkipGameNotify=*/false);
+    FString TravelURL = LevelName.ToString() + TEXT("?listen");
+    GetWorld()->ServerTravel(TravelURL, false, false);
 }
+
 
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)
 {
