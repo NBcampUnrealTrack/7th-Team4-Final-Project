@@ -1,6 +1,7 @@
 #include "Character/Monsters/Projectile/PTBossProjectile.h"
 #include "Character/PTBaseCharacter.h"
 #include "Components/SphereComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/AudioComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h" 
@@ -28,6 +29,10 @@ APTBossProjectile::APTBossProjectile()
 
     NiagaraComp = CreateDefaultSubobject<UNiagaraComponent>(TEXT("NiagaraComp"));
     NiagaraComp->SetupAttachment(RootComponent);
+
+    MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("MeshComp"));
+    MeshComp->SetupAttachment(RootComponent);
+    MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
 void APTBossProjectile::Launch(const FVector& Direction, float InDamage, float InSpeed, const FPTHitInfo& InHitInfo, float InHomingStrength, AActor* InHomingTarget)

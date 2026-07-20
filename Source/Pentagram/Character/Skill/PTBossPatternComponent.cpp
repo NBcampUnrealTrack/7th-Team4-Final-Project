@@ -15,7 +15,6 @@
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraComponent.h"
 #include "Character/Monsters/Skill/PTAreaWarning.h"
-#include "DrawDebugHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 
@@ -731,19 +730,6 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
 
         SafeZoneCenter = BossLocation + SafeDirection * RowSnapshot.SafeZoneDistance;
 
-#if !UE_BUILD_SHIPPING
-        DrawDebugSphere(World, SafeZoneCenter, RowSnapshot.SafeZoneRadius,
-            16, FColor::Green, false, RowSnapshot.AreaAttackDelay + 1.f);
-#endif
-    }
-
-    for (const FVector& DropPos : DropLocations)
-    {
-#if !UE_BUILD_SHIPPING
-        UE_LOG(LogTemp, Warning, TEXT("[Impact] AreaAttackRadius: %.1f"), RowSnapshot.AreaAttackRadius);
-        DrawDebugSphere(World, DropPos, RowSnapshot.AreaAttackRadius,
-            16, FColor::Red, false, RowSnapshot.AreaAttackDelay + 1.f);
-#endif
     }
 
     {
@@ -843,6 +829,17 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
                     if (bIsLast)
                     {
                         bAreaAttackInProgress = false;
+
+                        if (Snapshot.bHoldMontageUntilDelay)
+                        {
+                            if (USkeletalMeshComponent* BossMesh = Boss->GetMesh())
+                            {
+                                if (UAnimInstance* AnimInstance = BossMesh->GetAnimInstance())
+                                {
+                                    AnimInstance->Montage_Resume(nullptr);
+                                }
+                            }
+                        }
                     }
                 }),
             Delay, false);
