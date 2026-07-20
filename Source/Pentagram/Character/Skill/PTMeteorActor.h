@@ -27,8 +27,7 @@ public:
         bool  bInApplyDamage,            // 서버만 true
         UNiagaraSystem* InImpactVFX,
         USoundBase* InImpactSound,
-        const FPTHitInfo& InHitTemplate,
-        bool  bInDrawDebug);
+        const FPTHitInfo& InHitTemplate);
 
 protected:
     virtual void Tick(float DeltaTime) override;
@@ -47,6 +46,5 @@ protected:
     UPROPERTY() UNiagaraSystem* ImpactVFX = nullptr;
     UPROPERTY() USoundBase* ImpactSound = nullptr;
     FPTHitInfo HitTemplate;
-    bool  bDrawDebug = false;
     bool  bImpacted = false;
 };

@@ -36,6 +36,9 @@ protected:
     TSoftObjectPtr<UMaterialInterface> ShieldMaterial;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
+    float ShieldMeshBaseRadius = 50.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")
     TSoftObjectPtr<UNiagaraSystem> HitImpactEffect;
 
     UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")

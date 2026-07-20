@@ -11,6 +11,7 @@ class UProjectileMovementComponent;
 class UNiagaraComponent;
 class UAudioComponent;
 class USoundBase;
+class UStaticMeshComponent;
 
 UCLASS()
 class PENTAGRAM_API APTBossProjectile : public AActor
@@ -26,7 +27,6 @@ public:
 protected:
 	virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
-
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
     UFUNCTION()
@@ -43,6 +43,9 @@ protected:
 
     UPROPERTY(VisibleAnywhere, Category = "PT|Projectile")
     TObjectPtr<UNiagaraComponent> NiagaraComp;
+
+    UPROPERTY(VisibleAnywhere, Category = "PT|Projectile")
+    TObjectPtr<UStaticMeshComponent> MeshComp;
 
     UPROPERTY(VisibleAnywhere, Category = "PT|Sound")
     TObjectPtr<UAudioComponent> FlightAudioComp;

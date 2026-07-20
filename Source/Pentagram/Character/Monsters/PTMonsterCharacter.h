@@ -59,10 +59,6 @@ public:
     UFUNCTION(NetMulticast, Unreliable)
     void Multicast_PlayAttackMontage(UAnimMontage* MontageToPlay);
 
-    /**
-     * 몬스터의 보상 데이터를 스냅샷으로 반환합니다.
-     * Destroy 후에도 안전하게 참조할 수 있습니다.
-     */
     FPTMonsterRewardData GetRewardData() const;
 
     void ClearExpContributors();

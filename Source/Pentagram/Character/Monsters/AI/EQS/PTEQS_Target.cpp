@@ -19,24 +19,20 @@ void UPTEQS_Target::ProvideContext(FEnvQueryInstance& QueryInstance, FEnvQueryCo
 
     if (!IsValid(AIC))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[PTEQS_Target] AIC null. Owner=%s"), *GetNameSafe(QueryInstance.Owner.Get()));
         return;
     }
 
     UBlackboardComponent* BB = AIC->GetBlackboardComponent();
     if (!IsValid(BB))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[PTEQS_Target] BB null"));
         return;
     }
 
     AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
     if (!IsValid(Target))
     {
-        UE_LOG(LogTemp, Warning, TEXT("[PTEQS_Target] TargetActor null"));
         return;
     }
 
-    UE_LOG(LogTemp, Log, TEXT("[PTEQS_Target] OK Target=%s"), *GetNameSafe(Target));
     UEnvQueryItemType_Actor::SetContextHelper(ContextData, Target);
 }

@@ -49,7 +49,7 @@ void APTBossShield::InitShield(APTBossMonsterCharacter* InOwningBoss, float InMa
 
     if (IsValid(ShieldMeshComp))
     {
-        const float MeshScale = ShieldRadius / 50.f;
+        const float MeshScale = ShieldRadius / FMath::Max(ShieldMeshBaseRadius, 1.f);
         ShieldMeshComp->SetWorldScale3D(FVector(MeshScale));
 
         if (UMaterialInterface* Material = ShieldMaterial.LoadSynchronous())

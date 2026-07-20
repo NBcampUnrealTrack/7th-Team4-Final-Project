@@ -12,7 +12,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "CollisionShape.h"
-#include "DrawDebugHelpers.h"
 #include "Character/Player/PTPlayerController.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
@@ -224,9 +223,6 @@ void APTMonsterCharacter::PerformAttack()
         FCollisionShape::MakeSphere(AttackRadius), Params
     );
 
-#if !UE_BUILD_SHIPPING
-    DrawDebugSphere(World, TraceStart, AttackRadius, 16, bHit ? FColor::Green : FColor::Red, false, 1.f);
-#endif
 
     for (const FHitResult& Hit : HitResults)
     {
@@ -445,6 +441,13 @@ void APTMonsterCharacter::OnDeath()
     SetMonsterState(EMonsterState::Dead);
 
     StopAttack();
+
+    if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+    {
+        MoveComp->bOrientRotationToMovement     = false;
+        MoveComp->bUseControllerDesiredRotation = false;
+    }
+
     const float MontageLength = PlayDeathMontage();
     const float ActualDelay   = MontageLength > 0.f ? MontageLength + DestroyDelayAfterMontage : DestroyDelay;
 
@@ -525,6 +528,8 @@ void APTMonsterCharacter::RestartBTAfterStagger(float Duration)
         return;
     }
 
+    AIC->BrainComponent->PauseLogic(TEXT("Stagger"));
+
     GetWorldTimerManager().ClearTimer(StaggerResumeTimerHandle);
     GetWorldTimerManager().SetTimer(
         StaggerResumeTimerHandle,
@@ -540,20 +545,13 @@ void APTMonsterCharacter::OnStaggerEnd()
         return;
     }
 
-#if !UE_BUILD_SHIPPING
-    if (UCharacterMovementComponent* Movement = GetCharacterMovement())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("After Stagger MaxWalkSpeed: %f"),
-            Movement->MaxWalkSpeed);
-    }
-#endif
-
     AAIController* AIC = Cast<AAIController>(GetController());
     if (!IsValid(AIC) || !IsValid(AIC->BrainComponent))
     {
         return;
     }
 
+    AIC->BrainComponent->ResumeLogic(TEXT("Stagger"));
     AIC->StopMovement();
     AIC->BrainComponent->RestartLogic();
 }
