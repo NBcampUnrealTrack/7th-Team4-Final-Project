@@ -186,6 +186,7 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
     float DestroyDelayAfterMontage = 1.5f;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
     bool bHasSuperArmor = false;
     bool bSavedOrientRotationToMovement = true;
     bool bAppliedMovementLock = false;
