@@ -53,6 +53,11 @@ void UPTBTService_MonsterSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uin
         BB->ClearValue(PTMonsterBlackboardKeys::TargetActor);
         BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
         Target = nullptr;
+
+        if (UAIPerceptionComponent* PerceptionComp = AIC->GetPerceptionComponent())
+        {
+            PerceptionComp->ForgetActor(CurrentTarget);
+        }
     }
 
     if (!IsValid(Target))
