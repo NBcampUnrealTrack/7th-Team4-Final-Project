@@ -163,6 +163,8 @@ public:
     UPROPERTY(BlueprintReadOnly, Category = "Combat")
     bool bIsTransitioningToCombat = false;
 
+    bool bPendingAnimLayerRefresh = false;
+
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     float DodgeLaunchSpeed = 1200.f;
 

@@ -9,6 +9,7 @@
 #include "Engine/GameInstance.h"
 #include "GameFramework/Pawn.h"
 #include "Net/UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
 
 UPTInventoryComponent::UPTInventoryComponent()
 {
@@ -224,33 +225,42 @@ bool UPTInventoryComponent::TryAddItem(const FItemData& NewItemData, int32 Count
     // 유효하지 않은 데이터나 수량 방어 코드
     if (NewItemData.Item_ID.IsNone() || Count <= 0) return false;
 
-    // 소비 아이템인 경우 기존에 같은 아이템이 있는지 먼저 확인
+    // 소비 아이템(포션)은 스택하지 않고 1개당 빈 칸 1개를 차지한다.
     if (NewItemData.Item_Category == EItemCategory::Consumable)
     {
-        int32 TargetIndex = FindSameItemSlot(NewItemData.Item_ID);
-        if (TargetIndex != INDEX_NONE)
+        // 빈 칸이 Count개 이상인지 먼저 검사 (부분 획득 방지)
+        if (!CanAddItem(NewItemData, Count))
         {
-            // 기존 슬롯을 찾았다면 수량만 증가 (스택 규칙 적용)
-            InventorySlots[TargetIndex].Quantity += Count;
-
-            UE_LOG(LogTemp, Log, TEXT("[인벤토리] 기존 슬롯에 수량 추가: %s (+%d개, 총 %d개)"),
-                *NewItemData.Item_Name.ToString(), Count, InventorySlots[TargetIndex].Quantity);
-
-            BroadcastInventoryChanged();
-            PrintInventoryLog();
-            NotifyQuestItemCollected(NewItemData, Count);
-            SaveOwnerPlayerState();
-            return true;
+            UE_LOG(LogTemp, Warning, TEXT("[인벤토리] 빈 칸 부족: %s (%d칸 필요)"),
+                *NewItemData.Item_Name.ToString(), Count);
+            return false;
         }
+
+        for (int32 n = 0; n < Count; ++n)
+        {
+            const int32 EmptyIndex = FindEmptySlot(); // 위에서 검증됨 -> 항상 유효
+            InventorySlots[EmptyIndex].ItemData      = NewItemData;
+            InventorySlots[EmptyIndex].Quantity      = 1;
+            InventorySlots[EmptyIndex].ItemIconAsset = NewItemData.Item_Icon;
+        }
+
+        UE_LOG(LogTemp, Log, TEXT("[인벤토리] 소비 아이템 %d칸 등록: %s"),
+            Count, *NewItemData.Item_Name.ToString());
+
+        BroadcastInventoryChanged();
+        PrintInventoryLog();
+        NotifyQuestItemCollected(NewItemData, Count);
+        SaveOwnerPlayerState();
+        return true;
     }
 
-    // 장비 아이템이거나 기존에 쌓인 소비 아이템 슬롯이 없다면 빈 슬롯을 탐색
+    // 장비 아이템은 기존대로 빈 슬롯 하나에 등록
     int32 EmptyIndex = FindEmptySlot();
     if (EmptyIndex != INDEX_NONE)
     {
         InventorySlots[EmptyIndex].ItemData = NewItemData;
         InventorySlots[EmptyIndex].Quantity = Count;
-        InventorySlots[EmptyIndex].ItemIconAsset = NewItemData.Item_Icon; //이이콘 추가
+        InventorySlots[EmptyIndex].ItemIconAsset = NewItemData.Item_Icon;
 
         UE_LOG(LogTemp, Log, TEXT("[인벤토리] 새 슬롯(%d번)에 아이템 등록: %s (%d개)"),
             EmptyIndex, *NewItemData.Item_Name.ToString(), Count);
@@ -274,10 +284,18 @@ bool UPTInventoryComponent::CanAddItem(const FItemData& NewItemData, int32 Count
         return false;
     }
 
-    if (NewItemData.Item_Category == EItemCategory::Consumable &&
-        FindSameItemSlot(NewItemData.Item_ID) != INDEX_NONE)
+    // 소비 아이템은 스택하지 않으므로 Count개만큼의 빈 칸이 필요하다.
+    if (NewItemData.Item_Category == EItemCategory::Consumable)
     {
-        return true;
+        int32 EmptyCount = 0;
+        for (const FInventorySlot& Slot : InventorySlots)
+        {
+            if (Slot.IsEmpty() && ++EmptyCount >= Count)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     return FindEmptySlot() != INDEX_NONE;
@@ -421,6 +439,12 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
         return false;
     }
 
+    // 로컬만 포션 사운드 재생
+    if (USoundBase* UseSound = InventorySlots[SlotIndex].ItemData.UseSound.LoadSynchronous())
+    {
+        UGameplayStatics::PlaySound2D(this, UseSound);
+    }
+
     if (!Owner->HasAuthority())
     {
         // 클라이언트가 서버에게 안전하게 "나 몇 번 슬롯 물약 쓰겠다" 라고 무전(RPC)을 보내고 리턴.
@@ -431,6 +455,7 @@ bool UPTInventoryComponent::UsePotion(int32 SlotIndex) // 소모아이템(포션
     // 소비 아이템 개수 차감
     const FText UsedItemName = InventorySlots[SlotIndex].ItemData.Item_Name;
     InventorySlots[SlotIndex].Quantity--;
+
 
     // 수량이 0 이하가 되었다면 완전히 빈 슬롯으로 초기화
     if (InventorySlots[SlotIndex].Quantity <= 0)

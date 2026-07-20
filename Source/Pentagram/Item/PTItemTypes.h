@@ -114,6 +114,9 @@ struct FItemData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     TSoftObjectPtr<UTexture2D> Item_Icon;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Sound")
+    TSoftObjectPtr<class USoundBase> UseSound;
+
     // 기본 성능 (무기/장갑: STR, 갑옷/신발: DEF, 모자: HP 등으로 장비 컴포넌트에서 매칭)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
     int32 Item_Base_Stat = 0;
