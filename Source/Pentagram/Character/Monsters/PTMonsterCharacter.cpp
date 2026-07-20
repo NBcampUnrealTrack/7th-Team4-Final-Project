@@ -421,6 +421,11 @@ void APTMonsterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 void APTMonsterCharacter::OnDeath()
 {
+    if (HasAuthority())
+    {
+        OnMonsterDied.Broadcast(this);
+    }
+
     if (IsDead())
     {
         return;

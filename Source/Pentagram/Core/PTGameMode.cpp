@@ -13,7 +13,7 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 
-// [레벨트리거] 태그 검색 및 옵션 추출을 위함 
+// [레벨트리거] 태그 검색 및 옵션 추출을 위함
 #include "EngineUtils.h"
 #include "GameFramework/PlayerStart.h"
 #include "Kismet/GameplayStatics.h"
@@ -599,6 +599,22 @@ AActor* APTGameMode::ChoosePlayerStart_Implementation(AController* Player)
     }
 
     return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+void APTGameMode::RequestLevelTransition(FName LevelName)
+{
+    if (!HasAuthority() || bIsTraveling)
+    {
+        return;
+    }
+
+    if (LevelName.IsNone())
+    {
+        return;
+    }
+
+    bIsTraveling = true;
+    GetWorld()->ServerTravel(LevelName.ToString(), /*bAbsolute=*/false, /*bShouldSkipGameNotify=*/false);
 }
 
 void APTGameMode::RestartPlayerAtTransform(AController* PlayerController, const FTransform& SpawnTransform)

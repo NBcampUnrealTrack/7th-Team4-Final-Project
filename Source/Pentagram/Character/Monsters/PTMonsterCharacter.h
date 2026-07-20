@@ -75,6 +75,8 @@ public:
 
     void SetSuperArmor(bool bEnable) { bHasSuperArmor = bEnable; }
 
+    UPROPERTY(BlueprintAssignable, Category = "PT|Monster|Delegates")
+    FPTOnMonsterDied OnMonsterDied;
 protected:
     UFUNCTION()
     void OnRep_CurrentState();
