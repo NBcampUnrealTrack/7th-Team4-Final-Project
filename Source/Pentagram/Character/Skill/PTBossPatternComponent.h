@@ -85,6 +85,7 @@ private:
     void SpawnLaser(const FPTBossSkillRow& RowSnapshot);
 
     void StopLaserFXLocal();
+    void StopSafeZoneFXLocal();
 
     UFUNCTION(NetMulticast, Reliable)
     void MulticastPauseMontage();
@@ -100,6 +101,9 @@ private:
 
     UFUNCTION(NetMulticast, Reliable)
     void MulticastStopLaserFX();
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastStopSafeZoneFX();
 
     UFUNCTION(NetMulticast, Unreliable)
     void MulticastPlayLaunchSound(FVector Location, USoundBase* Sound);
@@ -139,6 +143,9 @@ private:
 
     UPROPERTY()
     TObjectPtr<UAudioComponent> ActiveLaserAudioComp;
+
+    UPROPERTY()
+    TObjectPtr<UNiagaraComponent> ActiveSafeZoneComp;
 
     float SavedMaxWalkSpeed = 500.f;
 };

@@ -317,4 +317,7 @@ struct FPTBossSkillRow : public FPTSkillRow
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
     float LaserSoundDelay = 0.f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Skill|Laser")
+    TSoftObjectPtr<USoundBase> LaserLoopSound;
 };

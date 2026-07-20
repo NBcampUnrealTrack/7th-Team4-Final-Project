@@ -344,10 +344,11 @@ FPTMonsterRewardData APTMonsterCharacter::GetRewardData() const
     Data.RewardExp          = RewardExp;
     Data.GoldDropMin        = GoldDropMin;
     Data.GoldDropMax        = GoldDropMax;
-    Data.ItemDropRate      = EquipDropRate;
+    Data.ItemDropRate       = EquipDropRate;
     Data.GoldPickupClass    = GoldPickupClass;
     Data.EquipmentDropClass = EquipmentDropClass;
     Data.ItemRowHandle      = ItemRowHandle;
+    Data.ItemDropPool       = ItemDropPool;
 
     return Data;
 }
