@@ -211,6 +211,7 @@ void UPTNPCDialogueWidget::ClearQuestText()
     if (Txt_Objective != nullptr)
     {
         Txt_Objective->SetText(FText::GetEmpty());
+        Txt_Objective->SetVisibility(ESlateVisibility::Collapsed);
     }
 }
 
@@ -250,39 +251,45 @@ void UPTNPCDialogueWidget::RefreshQuestText()
         const FPTQuestProgress* QuestProgress =
             QuestSubsystem->GetQuestProgress(PlayerState, SelectedQuestID);
 
-        for (int32 ConditionIndex = 0; ConditionIndex < QuestData->Conditions.Num(); ++ConditionIndex)
+        if (QuestProgress != nullptr)
         {
-            const FPTQuestCondition& Condition = QuestData->Conditions[ConditionIndex];
-            if (Condition.ObjectiveText.IsEmpty())
+            for (int32 ConditionIndex = 0; ConditionIndex < QuestData->Conditions.Num(); ++ConditionIndex)
             {
-                continue;
-            }
+                const FPTQuestCondition& Condition = QuestData->Conditions[ConditionIndex];
+                if (Condition.ObjectiveText.IsEmpty())
+                {
+                    continue;
+                }
 
-            const int32 RequiredCount = FMath::Max(Condition.RequiredCount, 1);
-            const int32 CurrentCount =
-                QuestProgress != nullptr && QuestProgress->Conditions.IsValidIndex(ConditionIndex)
+                const int32 RequiredCount = FMath::Max(Condition.RequiredCount, 1);
+                const int32 CurrentCount = QuestProgress->Conditions.IsValidIndex(ConditionIndex)
                     ? QuestProgress->Conditions[ConditionIndex].CurrentCount
                     : 0;
-            const FText ConditionText = FText::Format(
-                NSLOCTEXT("PTQuest", "ObjectiveProgress", "{0} ({1}/{2})"),
-                Condition.ObjectiveText,
-                FText::AsNumber(CurrentCount),
-                FText::AsNumber(RequiredCount));
+                const FText ConditionText = FText::Format(
+                    NSLOCTEXT("PTQuest", "ObjectiveProgress", "{0} ({1}/{2})"),
+                    Condition.ObjectiveText,
+                    FText::AsNumber(CurrentCount),
+                    FText::AsNumber(RequiredCount));
 
-            if (!ObjectiveText.IsEmpty())
-            {
-                ObjectiveText = FText::Format(
-                    NSLOCTEXT("PTQuest", "ObjectiveList", "{0}\n{1}"),
-                    ObjectiveText,
-                    ConditionText);
-            }
-            else
-            {
-                ObjectiveText = ConditionText;
+                if (!ObjectiveText.IsEmpty())
+                {
+                    ObjectiveText = FText::Format(
+                        NSLOCTEXT("PTQuest", "ObjectiveList", "{0}\n{1}"),
+                        ObjectiveText,
+                        ConditionText);
+                }
+                else
+                {
+                    ObjectiveText = ConditionText;
+                }
             }
         }
 
         Txt_Objective->SetText(ObjectiveText);
+        Txt_Objective->SetVisibility(
+            ObjectiveText.IsEmpty()
+                ? ESlateVisibility::Collapsed
+                : ESlateVisibility::HitTestInvisible);
     }
 }
 
