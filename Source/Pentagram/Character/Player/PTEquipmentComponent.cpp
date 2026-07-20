@@ -387,22 +387,19 @@ void UPTEquipmentComponent::UpdateTotalBonusStats()
 
 void UPTEquipmentComponent::OnRep_EquippedWeapon()
 {
-    // 리플리케이션을 통해 무기 데이터가 서버로부터 클라이언트에게 도착하면 실행됩니다.
     APTPlayerCharacter* OwnerCharacter = Cast<APTPlayerCharacter>(GetOwner());
     if (OwnerCharacter)
     {
         if (EquippedWeapon.bIsEquipped)
         {
-            // 장착 중이라면 복제되어 온 MountedItem의 메시를 손에 쥐여줍니다.
             OwnerCharacter->UpdateWeaponVisual(EquippedWeapon.MountedItem.ItemMeshAsset, EquippedWeapon.MountedItem);
         }
+
         else
         {
-            // 해제 상태라면 손을 비웁니다.
             OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
         }
     }
-
     OnEquipmentChanged.Broadcast();
 }
 

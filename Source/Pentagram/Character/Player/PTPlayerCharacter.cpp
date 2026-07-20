@@ -635,7 +635,21 @@ void APTPlayerCharacter::ApplyWeaponAnimLayer(EWeaponType NewWeaponType)
     if (!MeshComp) return;
 
     UAnimInstance* AnimInst = MeshComp->GetAnimInstance();
-    if (!AnimInst) return;
+    if (!AnimInst)
+    {
+        // AnimInstance 준비 전(재접속 초기화 레이스) → 다음 틱 재시도
+        if (!bPendingAnimLayerRefresh)
+        {
+            bPendingAnimLayerRefresh = true;
+            GetWorldTimerManager().SetTimerForNextTick(
+                FTimerDelegate::CreateWeakLambda(this, [this, NewWeaponType]()
+                {
+                    bPendingAnimLayerRefresh = false;
+                    ApplyWeaponAnimLayer(NewWeaponType);   // 재귀 재시도
+                }));
+        }
+        return;
+    }
 
     TSubclassOf<UAnimInstance> LayerClass = nullptr;
     switch (NewWeaponType)
