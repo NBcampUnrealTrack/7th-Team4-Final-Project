@@ -53,6 +53,9 @@ protected:
 private:
     void PushActorOut(AActor* TargetActor);
 
+    UFUNCTION(NetMulticast, Reliable)
+    void MulticastInitShieldVisual(float InRadius);
+
     UPROPERTY(VisibleAnywhere, Category = "PT|Boss|Shield")
     TObjectPtr<UStaticMeshComponent> ShieldMeshComp;
 

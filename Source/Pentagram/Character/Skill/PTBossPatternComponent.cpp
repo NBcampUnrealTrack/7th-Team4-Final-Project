@@ -339,25 +339,52 @@ void UPTBossPatternComponent::StopLaser()
         ActiveLaserAudioComp = nullptr;
     }
 
-    if (APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner()))
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    if (!IsValid(Boss))
     {
-        if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
-        {
-            MoveComp->MaxWalkSpeed = SavedMaxWalkSpeed;
-            MoveComp->bOrientRotationToMovement = true;
-            MoveComp->bUseControllerDesiredRotation = true;
-        }
+        MulticastResumeMontage();
+        return;
+    }
 
-        if (AAIController* AIC = Cast<AAIController>(Boss->GetController()))
+    if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
+    {
+        MoveComp->MaxWalkSpeed = SavedMaxWalkSpeed;
+    }
+
+    UAnimInstance* AnimInst = Boss->GetMesh() ? Boss->GetMesh()->GetAnimInstance() : nullptr;
+    UAnimMontage* ActiveMontage = AnimInst ? AnimInst->GetCurrentActiveMontage() : nullptr;
+
+    if (!IsValid(AnimInst) || !IsValid(ActiveMontage))
+    {
+        bLaserPhaseActive = false;
+    }
+    else
+    {
+        FOnMontageEnded EndDelegate;
+        TWeakObjectPtr<APTBossMonsterCharacter> WeakBoss(Boss);
+        EndDelegate.BindWeakLambda(this, [this, WeakBoss](UAnimMontage*, bool)
         {
-            if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+            bLaserPhaseActive = false;
+
+            if (!WeakBoss.IsValid()) return;
+
+            if (UCharacterMovementComponent* MC = WeakBoss->GetCharacterMovement())
             {
-                if (AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor)))
+                MC->bOrientRotationToMovement = true;
+                MC->bUseControllerDesiredRotation = true;
+            }
+            if (AAIController* AIC = Cast<AAIController>(WeakBoss->GetController()))
+            {
+                if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
                 {
-                    AIC->SetFocus(Target, EAIFocusPriority::Gameplay);
+                    if (AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor)))
+                    {
+                        AIC->SetFocus(Target, EAIFocusPriority::Gameplay);
+                    }
                 }
             }
-        }
+        });
+        AnimInst->Montage_SetEndDelegate(EndDelegate, ActiveMontage);
     }
 
     MulticastResumeMontage();
@@ -897,6 +924,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
     StopLaserFXLocal();
 
     bIsLaserActive = true;
+    bLaserPhaseActive = true;
 
     if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
     {
