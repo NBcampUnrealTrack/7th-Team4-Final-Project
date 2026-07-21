@@ -100,6 +100,8 @@ public:
 
     void OnCombatTransitionFinished();
 
+    void ScheduleWeaponAnimLayerRelink();
+
     // 카메라를 가렸을 시 구조물 Alpha 처리
     UFUNCTION(BlueprintImplementableEvent, Category = "PT | CameraObscure")
     void OnStructureHidden(AActor* HidingActor);
@@ -161,8 +163,8 @@ public:
     UPROPERTY(VisibleAnywhere, Category = "Dodge")
     bool bIsDodging = false;
 
-    UPROPERTY(Replicated, BlueprintReadOnly, Category = "Combat")
-    bool bIsInCombat = false;
+    UPROPERTY(ReplicatedUsing = OnRep_IsInCombat, BlueprintReadOnly)
+    bool bIsInCombat;
 
     UPROPERTY(BlueprintReadOnly, Category = "Combat")
     bool bIsTransitioningToCombat = false;
@@ -187,6 +189,11 @@ public:
     FName GetHolsterSocket(EWeaponType Type)const;
 
     FName GetHandSocket(EWeaponType Type) const;
+
+    UFUNCTION()
+    void OnRep_IsInCombat();
+
+    void ForceRelinkWeaponAnimLayer();
 
     UPROPERTY()
     TSubclassOf<UAnimInstance> CurrentLinkedAnimLayerClass;
@@ -218,6 +225,8 @@ public:
     FTimerHandle CombatExitTimerHandle;
 
     FTimerHandle CombatTransitionTimerHandle;
+
+    FTimerHandle RelinkTimerHandle;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPlayerDied);
 

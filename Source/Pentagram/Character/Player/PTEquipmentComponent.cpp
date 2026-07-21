@@ -399,6 +399,8 @@ void UPTEquipmentComponent::OnRep_EquippedWeapon()
         {
             OwnerCharacter->UpdateWeaponVisual(TSoftObjectPtr<UStaticMesh>());
         }
+
+        OwnerCharacter->ScheduleWeaponAnimLayerRelink();
     }
     OnEquipmentChanged.Broadcast();
 }
