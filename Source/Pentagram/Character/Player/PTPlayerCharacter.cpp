@@ -123,7 +123,15 @@ void APTPlayerCharacter::PossessedBy(AController* NewController)
 
         UE_LOG(LogTemp, Warning, TEXT("MaxHP: %f"), PS->MaxHP);
     }
+
+    if (HasAuthority())
+    {
+        if (UGameInstance* GI = GetGameInstance())
+            if (UPTSaveSubsystem* Save = GI->GetSubsystem<UPTSaveSubsystem>())
+                Save->ApplyPendingPlayerCharacterData(PS);
+    }
 }
+
 
 void APTPlayerCharacter::BeginPlay()
 {
@@ -789,6 +797,7 @@ void APTPlayerCharacter::PrewarmWeaponAnimLayers()
         }
     }
 
+    CurrentLinkedAnimLayerClass = nullptr;
     // 원래 무기 레이어로 복구
     ApplyWeaponAnimLayer(CurrentWeaponType);
 }
@@ -867,4 +876,31 @@ FName APTPlayerCharacter::GetHandSocket(EWeaponType Type) const
         case EWeaponType::Bow:   return TEXT("weapon_bow");
         default:                 return TEXT("weapon_r");
     }
+}
+
+void APTPlayerCharacter::OnRep_IsInCombat()
+{
+    // 전투상태 변화에 맞춰 손/홀스터 재부착.
+    AttachWeaponToSocket(bIsInCombat);
+}
+
+void APTPlayerCharacter::ForceRelinkWeaponAnimLayer()
+{
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp || !MeshComp->GetAnimInstance())
+    {
+        bPendingAnimLayerRefresh = true;
+        return;
+    }
+    CurrentLinkedAnimLayerClass = nullptr;   // 재장착과 동일하게 강제 재링크
+    ApplyWeaponAnimLayer(CurrentWeaponType);
+}
+
+void APTPlayerCharacter::ScheduleWeaponAnimLayerRelink()
+{
+    GetWorldTimerManager().SetTimer(
+        RelinkTimerHandle,   // ★ 멤버 핸들 (로컬 변수 X)
+        FTimerDelegate::CreateWeakLambda(this, [this]() { ForceRelinkWeaponAnimLayer(); }),
+        0.2f,
+        false);
 }
