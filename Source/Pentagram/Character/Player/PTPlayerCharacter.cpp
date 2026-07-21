@@ -7,6 +7,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/SpotLightComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -44,6 +45,12 @@ APTPlayerCharacter::APTPlayerCharacter()
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
     CameraComp->bUsePawnControlRotation = false;
 
+    // 던전의 어두운 구간에서도 캐릭터 실루엣과 장비가 부드럽게 읽히도록
+    // 카메라 방향에서 캐릭터만 비추는 약한 보조광을 제공한다.
+    CharacterFillLightComp = CreateDefaultSubobject<USpotLightComponent>(TEXT("CharacterFillLightComp"));
+    CharacterFillLightComp->SetupAttachment(SpringArmComp);
+    CharacterFillLightComp->SetMobility(EComponentMobility::Movable);
+
     SkillComp          = CreateDefaultSubobject<UPTPlayerSkillComponent>(TEXT("Skill"));
     InventoryComponent = CreateDefaultSubobject<UPTInventoryComponent>(TEXT("InventoryComponent"));
     EquipmentComponent = CreateDefaultSubobject<UPTEquipmentComponent>(TEXT("EquipmentComponent"));
@@ -73,6 +80,32 @@ APTPlayerCharacter::APTPlayerCharacter()
     ArmorChestMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("ArmorChestMesh"));
     ArmorChestMesh->SetupAttachment(GetMesh());
     ArmorChestMesh->SetAnimationMode(EAnimationMode::AnimationCustomMode);
+
+    ConfigureCharacterFillLighting();
+}
+
+void APTPlayerCharacter::ConfigureCharacterFillLighting()
+{
+    if (!CharacterFillLightComp)
+    {
+        return;
+    }
+
+    CharacterFillLightComp->SetRelativeLocation(FVector(-100.f, 0.f, 0.f));
+    CharacterFillLightComp->SetRelativeRotation(FRotator::ZeroRotator);
+    CharacterFillLightComp->SetLightingChannels(false, false, true);
+    CharacterFillLightComp->SetIntensity(1200.f);
+    CharacterFillLightComp->SetAttenuationRadius(400.f);
+    CharacterFillLightComp->SetInnerConeAngle(45.f);
+    CharacterFillLightComp->SetOuterConeAngle(80.f);
+    CharacterFillLightComp->SetLightColor(FLinearColor(0.9f, 0.95f, 1.f));
+    CharacterFillLightComp->SetInverseExposureBlend(1.f);
+    CharacterFillLightComp->SetCastShadows(false);
+
+    GetMesh()->SetLightingChannels(true, false, true);
+    WeaponMeshComp->SetLightingChannels(true, false, true);
+    HelmetMeshComp->SetLightingChannels(true, false, true);
+    ArmorChestMesh->SetLightingChannels(true, false, true);
 }
 
 void APTPlayerCharacter::PossessedBy(AController* NewController)
@@ -96,6 +129,9 @@ void APTPlayerCharacter::BeginPlay()
 {
     Super::BeginPlay();
     UE_LOG(LogTemp, Warning, TEXT("PlayerCharacter BeginPlay Called"));
+
+    // 블루프린트 기본값이 네이티브 컴포넌트 설정을 덮어써도 런타임에는 동일한 보조광을 보장한다.
+    ConfigureCharacterFillLighting();
 
     ArmorChestMesh->SetLeaderPoseComponent(GetMesh());
 

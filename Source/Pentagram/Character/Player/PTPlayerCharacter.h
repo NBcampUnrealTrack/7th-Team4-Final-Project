@@ -9,6 +9,7 @@
 
 class UPTInventoryComponent;
 class UPTEquipmentComponent;
+class USpotLightComponent;
 
 UCLASS()
 class PENTAGRAM_API APTPlayerCharacter : public APTBaseCharacter
@@ -125,6 +126,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
     TObjectPtr<class UCameraComponent> CameraComp;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "PT|Character|Lighting")
+    TObjectPtr<USpotLightComponent> CharacterFillLightComp;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Skill")
     TObjectPtr<class UPTPlayerSkillComponent> SkillComp;
 
@@ -234,6 +238,8 @@ protected:
     TObjectPtr<UStaticMeshComponent> ChestMeshComp;
 
 private:
+    void ConfigureCharacterFillLighting();
+
     // 직전 프레임에 캐릭터를 가리고 있던 장애물 저장
     UPROPERTY()
     TObjectPtr<AActor> LastHidingActor = nullptr;
