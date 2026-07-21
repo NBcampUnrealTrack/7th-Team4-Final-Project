@@ -894,13 +894,15 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
     }
 
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (!IsValid(PC) || !CanMove(PC)) return;
+    if (!PC) return;
+    if (!CanMove(PC)) return;
 
     if (PC->bIsDodging) return;
 
     if (PC->bIsTransitioningToCombat) return;
 
-    if (IsValid(PC->SkillComp) && PC->SkillComp->bIsAttacking)
+
+    if (PC->SkillComp && PC->SkillComp->bIsAttacking)   // SkillComp도 방어
     {
         PC->StopAnimMontage();
         PC->SkillComp->Server_StopBasicAttack();
