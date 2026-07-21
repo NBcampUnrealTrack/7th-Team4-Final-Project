@@ -55,6 +55,11 @@ void APTGameState::SetItemDataTable(UDataTable* InItemDataTable)
     ForceNetUpdate();
 }
 
+void APTGameState::Multicast_NotifyEndingTriggered_Implementation()
+{
+    OnEndingTriggered.Broadcast();
+}
+
 void APTGameState::OnRep_CurrentPhase()
 {
     OnGamePhaseChanged();

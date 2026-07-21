@@ -38,7 +38,9 @@
 #include "TimerManager.h"
 #include "Character/Skill/PTSkillIndicatorActor.h"
 #include "Materials/MaterialIREmitter.h"
+#include "UI/Widget/Ending/PTEndingWidget.h"
 #include "UObject/ConstructorHelpers.h"
+#include "Core/PTGameState.h"
 
 APTPlayerController::APTPlayerController()
 {
@@ -161,6 +163,11 @@ void APTPlayerController::BeginPlay()
     Super::BeginPlay();
     if (!IsLocalPlayerController()) return;
 
+    if (APTGameState* GS = GetWorld()->GetGameState<APTGameState>())
+    {
+        GS->OnEndingTriggered.AddDynamic(this, &APTPlayerController::HandleEndingTriggered);
+    }
+
     if (UGameInstance* GameInstance = GetGameInstance())
     {
         if (UPTControlSettingsSubsystem* ControlSettingsSubsystem = GameInstance->GetSubsystem<UPTControlSettingsSubsystem>())
@@ -205,9 +212,23 @@ void APTPlayerController::BeginPlay()
                     }
 
                     UIMgr->OpenUILevel(UILevelName);
+
                 }
             }
         }
+    }
+}
+
+void APTPlayerController::HandleEndingTriggered()
+{
+    if (EndingWidgetClass == nullptr)
+    {
+        return;
+    }
+
+    if (UPTUIManagerSubsystem* UIManager = GetLocalPlayer()->GetSubsystem<UPTUIManagerSubsystem>())
+    {
+        UIManager->PushWidget(EndingWidgetClass, EPTUILayer::GameMenu);
     }
 }
 
