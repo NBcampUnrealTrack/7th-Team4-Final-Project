@@ -183,13 +183,21 @@ void APTBossShield::PushActorOut(AActor* TargetActor)
         return;
     }
 
-    FVector Direction = TargetActor->GetActorLocation() - GetActorLocation();
+    const FVector BossLocation = OwningBoss.IsValid()
+        ? OwningBoss->GetActorLocation()
+        : GetActorLocation();
+
+    FVector Direction = TargetActor->GetActorLocation() - BossLocation;
     Direction.Z = 0.f;
     Direction = Direction.GetSafeNormal();
     if (Direction.IsNearlyZero())
     {
         Direction = TargetActor->GetActorForwardVector();
     }
+
+    FVector SafeLocation = BossLocation + Direction * (ShieldRadius + 100.f);
+    SafeLocation.Z = TargetActor->GetActorLocation().Z;
+    TargetActor->SetActorLocation(SafeLocation, true);
 
     TargetCharacter->LaunchCharacter(Direction * PushForce, true, false);
 }
