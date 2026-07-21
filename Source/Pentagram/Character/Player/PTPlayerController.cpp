@@ -55,8 +55,6 @@ APTPlayerController::APTPlayerController()
 
     static ConstructorHelpers::FClassFinder<APTDropItemActorBase> PotionDropBlueprint(
         TEXT("/Game/Pentagram/Item/BP_DropItem_Potion"));
-    static ConstructorHelpers::FClassFinder<APTDropItemActorBase> SkillBookDropBlueprint(
-        TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook"));
     static ConstructorHelpers::FClassFinder<APTDropItemActorBase> ChestDropBlueprint(
         TEXT("/Game/Pentagram/Item/BP_DropItem_Chest"));
     static ConstructorHelpers::FClassFinder<APTDropItemActorBase> HelmetDropBlueprint(
@@ -67,16 +65,71 @@ APTPlayerController::APTPlayerController()
         TEXT("/Game/Pentagram/Item/BP_DropItem_Shovel"));
 
     PotionDropActorClass = PotionDropBlueprint.Class;
-    SkillBookDropActorClass = SkillBookDropBlueprint.Class;
+    // 스킬북은 종류별 BP가 따로 있으므로 공용 액터에 아이템 데이터의 메시와 크기를 적용합니다.
+    SkillBookDropActorClass = InventoryDropActorClass;
     ChestDropActorClass = ChestDropBlueprint.Class;
     HelmetDropActorClass = HelmetDropBlueprint.Class;
     WandDropActorClass = WandDropBlueprint.Class;
     ShovelDropActorClass = ShovelDropBlueprint.Class;
+
+    if (InventoryDropActorClass != nullptr)
+    {
+        InventoryDropActorClassesByItemID.Add(TEXT("Weapon_1"), InventoryDropActorClass);
+    }
+    if (PotionDropActorClass != nullptr)
+    {
+        InventoryDropActorClassesByItemID.Add(TEXT("Potion"), PotionDropActorClass);
+    }
+    if (ChestDropActorClass != nullptr)
+    {
+        InventoryDropActorClassesByItemID.Add(TEXT("Chest_1"), ChestDropActorClass);
+    }
+    if (HelmetDropActorClass != nullptr)
+    {
+        InventoryDropActorClassesByItemID.Add(TEXT("Helmet_1"), HelmetDropActorClass);
+    }
+    if (WandDropActorClass != nullptr)
+    {
+        InventoryDropActorClassesByItemID.Add(TEXT("Wand_1"), WandDropActorClass);
+    }
+    if (ShovelDropActorClass != nullptr)
+    {
+        InventoryDropActorClassesByItemID.Add(TEXT("Weapon_4"), ShovelDropActorClass);
+    }
+
+    const auto RegisterInventoryDropClass = [this](const FName ItemID, const TCHAR* BlueprintPath)
+    {
+        ConstructorHelpers::FClassFinder<APTDropItemActorBase> DropBlueprint(BlueprintPath);
+        if (DropBlueprint.Succeeded())
+        {
+            InventoryDropActorClassesByItemID.Add(ItemID, DropBlueprint.Class);
+        }
+    };
+
+    RegisterInventoryDropClass(TEXT("Weapon_2"), TEXT("/Game/Pentagram/Item/BP_DropItem_CurseDestroyer"));
+    RegisterInventoryDropClass(TEXT("Weapon_3"), TEXT("/Game/Pentagram/Item/BP_DropItem_LongSword"));
+    RegisterInventoryDropClass(TEXT("Wand_2"), TEXT("/Game/Pentagram/Item/BP_DropItem_BoneStaff"));
+    RegisterInventoryDropClass(TEXT("Wand_3"), TEXT("/Game/Pentagram/Item/BP_DropItem_RedMageStaff"));
+    RegisterInventoryDropClass(TEXT("Chest_2"), TEXT("/Game/Pentagram/Item/BP_DropItem_Cloth1"));
+    RegisterInventoryDropClass(TEXT("SkillBook_1"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Piercing"));
+    RegisterInventoryDropClass(TEXT("SkillBook_2"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_FireBall"));
+    RegisterInventoryDropClass(TEXT("SkillBook_3"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_IceMisile"));
+    RegisterInventoryDropClass(TEXT("SkillBook_4"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_SacrificeShield"));
+    RegisterInventoryDropClass(TEXT("SkillBook_5"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Meteor"));
+    RegisterInventoryDropClass(TEXT("SkillBook_6"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Smash"));
+    RegisterInventoryDropClass(TEXT("SkillBook_7"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Slash"));
+    RegisterInventoryDropClass(TEXT("SkillBook_8"), TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Roar"));
 }
 
 TSubclassOf<APTDropItemActorBase> APTPlayerController::ResolveInventoryDropActorClass(
     const FItemData& ItemData) const
 {
+    if (const TSubclassOf<APTDropItemActorBase>* ExactDropClass =
+        InventoryDropActorClassesByItemID.Find(ItemData.Item_ID))
+    {
+        return *ExactDropClass;
+    }
+
     switch (ItemData.Item_Type)
     {
     case EItemType::Potion:
@@ -841,13 +894,13 @@ void APTPlayerController::OnRightClick(const FInputActionValue& Value)
     }
 
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetPawn());
-    if (PC && !CanMove(PC)) return;
+    if (!IsValid(PC) || !CanMove(PC)) return;
 
     if (PC->bIsDodging) return;
 
     if (PC->bIsTransitioningToCombat) return;
 
-    if (PC->SkillComp->bIsAttacking)
+    if (IsValid(PC->SkillComp) && PC->SkillComp->bIsAttacking)
     {
         PC->StopAnimMontage();
         PC->SkillComp->Server_StopBasicAttack();
@@ -1203,7 +1256,22 @@ void APTPlayerController::RequestDropInventoryItem(
         return;
     }
 
-    const FItemData DroppedItemData = Slot.ItemData;
+    FItemData DroppedItemData = Slot.ItemData;
+    if (DroppedItemData.DropMeshRelativeScale.Equals(FVector::OneVector))
+    {
+        UGameInstance* GameInstance = GetGameInstance();
+        UPTItemSubsystem* ItemSubsystem = GameInstance != nullptr
+            ? GameInstance->GetSubsystem<UPTItemSubsystem>()
+            : nullptr;
+        const FItemData* CanonicalItemData = ItemSubsystem != nullptr
+            ? ItemSubsystem->GetItemData(DroppedItemData.Item_ID)
+            : nullptr;
+        if (CanonicalItemData != nullptr)
+        {
+            // 새 필드가 없던 기존 저장 아이템도 현재 데이터 테이블의 드랍 크기로 보정합니다.
+            DroppedItemData.DropMeshRelativeScale = CanonicalItemData->DropMeshRelativeScale;
+        }
+    }
     const FVector Forward = PlayerCharacter->GetActorForwardVector().GetSafeNormal2D();
     const FVector DropSpawnLocation = PlayerCharacter->GetActorLocation() + Forward * 150.0f + FVector(0.0f, 0.0f, 30.0f);
     const FTransform SpawnTransform(FRotator::ZeroRotator, DropSpawnLocation);

@@ -71,8 +71,17 @@ void APTDropItemActorBase::InitializeDroppedItem(const FItemData& InItemData, in
 
     const bool bHadTemplateItem = !InstanceItemData.Item_ID.IsNone();
     const EItemType TemplateItemType = InstanceItemData.Item_Type;
+    const FVector TemplateMeshScale = ItemMesh != nullptr
+        ? ItemMesh->GetRelativeScale3D()
+        : FVector::OneVector;
 
     InstanceItemData = InItemData;
+    if (InstanceItemData.DropMeshRelativeScale.Equals(FVector::OneVector) &&
+        !TemplateMeshScale.Equals(FVector::OneVector))
+    {
+        // 새 필드가 없던 기존 저장 아이템은 현재 드랍 BP에 설정된 크기를 사용합니다.
+        InstanceItemData.DropMeshRelativeScale = TemplateMeshScale;
+    }
     DroppedQuantity = InQuantity;
     bPickupClaimed = false;
     if (InItemData.ItemMeshAsset.IsNull() && bHadTemplateItem && TemplateItemType != InItemData.Item_Type)
@@ -109,12 +118,17 @@ void APTDropItemActorBase::OnRep_InstanceItemData()
 
 void APTDropItemActorBase::ApplyItemVisual()
 {
-    if (ItemMesh != nullptr && !InstanceItemData.ItemMeshAsset.IsNull())
+    if (ItemMesh != nullptr)
     {
-        if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+        if (!InstanceItemData.ItemMeshAsset.IsNull())
         {
-            ItemMesh->SetStaticMesh(StaticMesh);
+            if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+            {
+                ItemMesh->SetStaticMesh(StaticMesh);
+            }
         }
+
+        ItemMesh->SetRelativeScale3D(InstanceItemData.DropMeshRelativeScale);
     }
 
     RefreshItemNameWidget();
@@ -171,7 +185,11 @@ void APTDropItemActorBase::InitializeItemData()
         FItemData* Data = ItemRowHandle.DataTable->FindRow<FItemData>(ItemRowHandle.RowName, TEXT("ItemInit"));
         if (Data)
         {
+            const FVector BlueprintMeshScale = ItemMesh != nullptr
+                ? ItemMesh->GetRelativeScale3D()
+                : FVector::OneVector;
             InstanceItemData = *Data;
+            InstanceItemData.DropMeshRelativeScale = BlueprintMeshScale;
             DroppedQuantity = 1;
             ApplyItemVisual();
             UE_LOG(LogTemp, Warning, TEXT("아이템 로드 완료: %s (등급: %d)"), *InstanceItemData.Item_Name.ToString(), (int32)InstanceItemData.Item_Grade);
