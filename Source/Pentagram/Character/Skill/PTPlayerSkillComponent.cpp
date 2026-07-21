@@ -246,6 +246,14 @@ void UPTPlayerSkillComponent::TryDodge()
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
     if (!PC) return;
 
+    const APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>();
+    if (PS && PS->CurrentMP < DodgeData->MPCost)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Dodge MP 부족(클라) - %.1f/%.1f"),
+            PS->CurrentMP, DodgeData->MPCost);
+        return;   // 몽타주/쿨다운 시작 전에 차단
+    }
+
     // 로컬에서 닷지 상태 체크
     if (PC->IsLocallyControlled())
     {
@@ -473,6 +481,20 @@ void UPTPlayerSkillComponent::Server_Dodge_Implementation()
 
     APTPlayerCharacter* PC = Cast<APTPlayerCharacter>(GetOwner());
     if (!PC) return;
+
+    if (PC->CurrentMP < DodgeData->MPCost)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Dodge MP 부족 - 현재: %.1f, 필요: %.1f"),
+            PC->CurrentMP, DodgeData->MPCost);
+        return;
+    }
+
+    PC->CurrentMP -= DodgeData->MPCost;
+
+    if (APTBasePlayerState* PS = PC->GetPlayerState<APTBasePlayerState>())
+    {
+        PS->CurrentMP = PC->CurrentMP;
+    }
 
     PC->bIsDodging = true;
 

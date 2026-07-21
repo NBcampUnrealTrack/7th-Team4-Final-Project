@@ -445,7 +445,7 @@ void APTPlayerCharacter::RegenHP()
 void APTPlayerCharacter::RegenMP()
 {
     if (!HasAuthority()) return;
-    float RegenAmount = MaxMP * 0.1f;
+    float RegenAmount = MaxMP * 0.20f;
     CurrentMP = FMath::Min(CurrentMP + RegenAmount, MaxMP);
 
     APTBasePlayerState* PS = GetPlayerState<APTBasePlayerState>();
