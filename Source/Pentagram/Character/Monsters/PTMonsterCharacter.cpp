@@ -19,6 +19,7 @@
 #include "Character/PTCombatTypes.h"
 #include "Character/Monsters/Projectile/PTBossProjectile.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 
 APTMonsterCharacter::APTMonsterCharacter()
 {
@@ -507,8 +508,6 @@ void APTMonsterCharacter::ApplyHit(const FPTHitInfo& HitInfo)
 {
     if (bHasSuperArmor)
     {
-        ApplyHitStop(HitInfo.HitStopDuration);
-
         if (APTBaseCharacter* AttackerChar = Cast<APTBaseCharacter>(HitInfo.Attacker))
         {
             AttackerChar->RequestHitStop(HitInfo.HitStopDuration * 0.5f);
@@ -554,6 +553,12 @@ void APTMonsterCharacter::OnStaggerEnd()
     if (!IsValid(AIC) || !IsValid(AIC->BrainComponent))
     {
         return;
+    }
+
+    if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+    {
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::CanAttack, true);
+        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsPatternActive, false);
     }
 
     AIC->BrainComponent->ResumeLogic(TEXT("Stagger"));

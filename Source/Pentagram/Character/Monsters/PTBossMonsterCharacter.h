@@ -64,6 +64,7 @@ protected:
     virtual float StartAttack() override;
     virtual void StopAttack() override;
     virtual float GetAttackDamage() const override;
+    virtual void ApplyHit(const FPTHitInfo& HitInfo) override;
 
 private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Boss|Shield")

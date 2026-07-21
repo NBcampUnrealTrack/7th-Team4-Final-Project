@@ -105,22 +105,4 @@ void APTBaseAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus S
         BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
         SetFocus(Actor, EAIFocusPriority::Gameplay);
     }
-    else
-    {
-        if (!IsValid(Actor))
-        {
-            return;
-        }
-
-        AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
-        if (CurrentTarget != Actor)
-        {
-            return;
-        }
-
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
-        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
-        BB->SetValueAsVector(PTMonsterBlackboardKeys::LastKnownLocation, Actor->GetActorLocation());
-        ClearFocus(EAIFocusPriority::Gameplay);
-    }
 }

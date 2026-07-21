@@ -1,4 +1,6 @@
 #include "Character/Monsters/PTBossMonsterCharacter.h"
+#include "Character/PTBaseCharacter.h"
+#include "Character/PTCombatTypes.h"
 #include "Animation/AnimInstance.h"
 #include "Character/Skill/PTBossPatternComponent.h"
 #include "Character/Skill/PTMonsterSkillComponent.h"
@@ -18,6 +20,7 @@ APTBossMonsterCharacter::APTBossMonsterCharacter()
 
     bIsRanged = true;
     OptimalRangeValue = 800.f;
+    bHasSuperArmor = true;
 }
 
 int32 APTBossMonsterCharacter::GetCurrentPhase() const
@@ -261,6 +264,8 @@ float APTBossMonsterCharacter::StartAttack()
 
             return SkillPlayLength;
         }
+
+        return 0.f;
     }
 
     UAnimMontage* Montage = GetAttackMontageForPhase(GetCurrentPhase());
@@ -270,7 +275,7 @@ float APTBossMonsterCharacter::StartAttack()
         return Montage->GetPlayLength();
     }
 
-    return 1.f;
+    return 0.f;
 }
 
 void APTBossMonsterCharacter::StopAttack()
@@ -306,6 +311,14 @@ void APTBossMonsterCharacter::StopAttack()
     else
     {
         Super::StopAttack();
+    }
+}
+
+void APTBossMonsterCharacter::ApplyHit(const FPTHitInfo& HitInfo)
+{
+    if (APTBaseCharacter* AttackerChar = Cast<APTBaseCharacter>(HitInfo.Attacker))
+    {
+        AttackerChar->RequestHitStop(HitInfo.HitStopDuration * 0.5f);
     }
 }
 
