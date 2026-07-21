@@ -159,8 +159,8 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
         return;
     }
 
-    // 아이템별 전용 BP에 설정된 메시와 트랜스폼을 데이터 테이블 값으로 덮어쓰지 않습니다.
-    DropActor->InitializeDroppedItem(*ItemRow, 1, true);
+    // 인벤토리 드랍과 동일하게 아이템 데이터의 메시와 드랍 크기를 적용합니다.
+    DropActor->InitializeDroppedItem(*ItemRow, 1);
     DropActor->FinishSpawning(FTransform(DropLocation));
 
     UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 아이템 드랍: %s (BP=%s)"),
