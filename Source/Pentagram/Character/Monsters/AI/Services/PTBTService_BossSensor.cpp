@@ -40,6 +40,17 @@ void UPTBTService_BossSensor::TickNode(UBehaviorTreeComponent& OwnerComp, uint8*
         return;
     }
 
+    if (APTBaseCharacter* TargetChar = Cast<APTBaseCharacter>(Target))
+    {
+        if (TargetChar->IsDead())
+        {
+            BB->SetValueAsBool(PTMonsterBlackboardKeys::IsInAttackRange, false);
+            BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, false);
+            BB->ClearValue(PTMonsterBlackboardKeys::TargetActor);
+            return;
+        }
+    }
+
     const float DistSq = FVector::DistSquared(Boss->GetActorLocation(), Target->GetActorLocation());
     const float AttackRangeSq = FMath::Square(Boss->GetAttackRange());
     const bool bInRange = (DistSq <= AttackRangeSq);
