@@ -126,7 +126,7 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
         }
     }
 
-    if (!RewardData.EquipmentDropClass || RewardData.ItemDropPool.IsEmpty())
+    if (RewardData.ItemDropPool.IsEmpty())
     {
         return;
     }
@@ -143,16 +143,28 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
         return;
     }
 
-    APTDropItemActorBase* DropActor = World->SpawnActorDeferred<APTDropItemActorBase>(RewardData.EquipmentDropClass, FTransform(DropLocation));
+    const TSubclassOf<APTDropItemActorBase> DropClass =
+        ResolveItemDropClass(*ItemRow, RewardData.EquipmentDropClass);
+    if (!DropClass)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[RewardSubsystem] 드랍 BP를 찾지 못했습니다. ItemID=%s"),
+            *ItemRow->Item_ID.ToString());
+        return;
+    }
+
+    APTDropItemActorBase* DropActor =
+        World->SpawnActorDeferred<APTDropItemActorBase>(DropClass, FTransform(DropLocation));
     if (!DropActor)
     {
         return;
     }
 
-    DropActor->InitializeDroppedItem(*ItemRow, 1);
+    // 아이템별 전용 BP에 설정된 메시와 트랜스폼을 데이터 테이블 값으로 덮어쓰지 않습니다.
+    DropActor->InitializeDroppedItem(*ItemRow, 1, true);
     DropActor->FinishSpawning(FTransform(DropLocation));
 
-    UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 아이템 드랍: %s"), *ItemRow->Item_Name.ToString());
+    UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 아이템 드랍: %s (BP=%s)"),
+        *ItemRow->Item_Name.ToString(), *GetNameSafe(DropClass));
 
     /*if (RewardData.EquipmentDropClass && FMath::FRand() <= RewardData.EquipDropRate)
     {
@@ -164,6 +176,50 @@ void UPTRewardSubsystem::SpawnDeathDrops(APTMonsterCharacter* DeadMonster)
 
         UE_LOG(LogTemp, Log, TEXT("[RewardSubsystem] 장비 드랍 스폰"));
     } */
+}
+
+TSubclassOf<APTDropItemActorBase> UPTRewardSubsystem::ResolveItemDropClass(
+    const FItemData& ItemData,
+    TSubclassOf<APTDropItemActorBase> FallbackClass) const
+{
+    static const TMap<FName, FSoftClassPath> DropClassPaths =
+    {
+        { TEXT("Weapon_1"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem.BP_DropItem_C")) },
+        { TEXT("Weapon_2"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_CurseDestroyer.BP_DropItem_CurseDestroyer_C")) },
+        { TEXT("Weapon_3"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_LongSword.BP_DropItem_LongSword_C")) },
+        { TEXT("Weapon_4"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_Shovel.BP_DropItem_Shovel_C")) },
+        { TEXT("Wand_1"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_Wand.BP_DropItem_Wand_C")) },
+        { TEXT("Wand_2"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_BoneStaff.BP_DropItem_BoneStaff_C")) },
+        { TEXT("Wand_3"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_RedMageStaff.BP_DropItem_RedMageStaff_C")) },
+        { TEXT("Chest_1"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_Chest.BP_DropItem_Chest_C")) },
+        { TEXT("Chest_2"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_Cloth1.BP_DropItem_Cloth1_C")) },
+        { TEXT("Helmet_1"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_Helmet.BP_DropItem_Helmet_C")) },
+        { TEXT("Potion"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_Potion.BP_DropItem_Potion_C")) },
+        { TEXT("SkillBook_1"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Piercing.BP_DropItem_SkillBook_Piercing_C")) },
+        { TEXT("SkillBook_2"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_FireBall.BP_DropItem_SkillBook_FireBall_C")) },
+        { TEXT("SkillBook_3"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_IceMisile.BP_DropItem_SkillBook_IceMisile_C")) },
+        { TEXT("SkillBook_4"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_SacrificeShield.BP_DropItem_SkillBook_SacrificeShield_C")) },
+        { TEXT("SkillBook_5"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Meteor.BP_DropItem_SkillBook_Meteor_C")) },
+        { TEXT("SkillBook_6"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Smash.BP_DropItem_SkillBook_Smash_C")) },
+        { TEXT("SkillBook_7"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Slash.BP_DropItem_SkillBook_Slash_C")) },
+        { TEXT("SkillBook_8"), FSoftClassPath(TEXT("/Game/Pentagram/Item/BP_DropItem_SkillBook_Roar.BP_DropItem_SkillBook_Roar_C")) },
+    };
+
+    const FSoftClassPath* DropClassPath = DropClassPaths.Find(ItemData.Item_ID);
+    if (DropClassPath == nullptr)
+    {
+        return FallbackClass;
+    }
+
+    UClass* LoadedClass = DropClassPath->TryLoadClass<APTDropItemActorBase>();
+    if (LoadedClass == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[RewardSubsystem] 전용 드랍 BP 로드 실패. ItemID=%s Path=%s"),
+            *ItemData.Item_ID.ToString(), *DropClassPath->ToString());
+        return FallbackClass;
+    }
+
+    return LoadedClass;
 }
 
 bool UPTRewardSubsystem::HasServerAuthority() const

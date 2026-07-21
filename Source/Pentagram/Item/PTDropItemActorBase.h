@@ -30,7 +30,10 @@ public:
     FORCEINLINE int32 GetDroppedQuantity() const { return DroppedQuantity; }
 
     /** 인벤토리에서 버린 아이템의 런타임 데이터와 수량을 서버에서 설정합니다. */
-    void InitializeDroppedItem(const FItemData& InItemData, int32 InQuantity);
+    void InitializeDroppedItem(
+        const FItemData& InItemData,
+        int32 InQuantity,
+        bool bInUseBlueprintVisual = false);
 
     /** 같은 드랍 액터를 두 플레이어가 동시에 줍는 것을 막습니다. */
     bool TryClaimPickup();
@@ -61,11 +64,18 @@ protected:
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Item Data")
     int32 DroppedQuantity = 1;
 
+    /** 전용 드랍 BP가 가진 메시 트랜스폼을 런타임 아이템 데이터보다 우선합니다. */
+    UPROPERTY(ReplicatedUsing = OnRep_UseBlueprintVisual)
+    bool bUseBlueprintVisual = false;
+
     // 데이터 테이블로부터 초기화하는 함수
     void InitializeItemData();
 
     UFUNCTION()
     void OnRep_InstanceItemData();
+
+    UFUNCTION()
+    void OnRep_UseBlueprintVisual();
 
     void ApplyItemVisual();
     void RefreshItemNameWidget();

@@ -6,6 +6,8 @@
 
 class APTMonsterCharacter;
 class APTBasePlayerState;
+class APTDropItemActorBase;
+struct FItemData;
 
 UCLASS()
 class PENTAGRAM_API UPTRewardSubsystem : public UWorldSubsystem
@@ -24,6 +26,10 @@ private:
     void UpdateKillMonsterQuestProgress(APTMonsterCharacter* DeadMonster);
 
     void SpawnDeathDrops(APTMonsterCharacter* DeadMonster);
+
+    TSubclassOf<APTDropItemActorBase> ResolveItemDropClass(
+        const FItemData& ItemData,
+        TSubclassOf<APTDropItemActorBase> FallbackClass) const;
 
     bool HasServerAuthority() const;
 };
