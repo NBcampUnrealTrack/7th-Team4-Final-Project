@@ -1,5 +1,7 @@
 #include "Character/Monsters/AI/Tasks/PTBTTask_TurnToTarget.h"
 #include "Character/Monsters/PTMonsterCharacter.h"
+#include "Character/Monsters/PTBossMonsterCharacter.h"
+#include "Character/Skill/PTBossPatternComponent.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
@@ -27,6 +29,15 @@ EBTNodeResult::Type UPTBTTask_TurnToTarget::ExecuteTask(UBehaviorTreeComponent& 
     if (!IsValid(BB))
     {
         return EBTNodeResult::Failed;
+    }
+
+    if (APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(Monster))
+    {
+        UPTBossPatternComponent* Pattern = Boss->GetBossPatternComponent();
+        if (IsValid(Pattern) && Pattern->IsLaserPhaseActive())
+        {
+            return EBTNodeResult::Failed;
+        }
     }
 
     AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
