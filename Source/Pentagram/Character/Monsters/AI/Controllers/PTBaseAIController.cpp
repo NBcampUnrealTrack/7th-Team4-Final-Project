@@ -1,6 +1,7 @@
 #include "Character/Monsters/AI/Controllers/PTBaseAIController.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
+#include "Perception/AISense_Sight.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Character/Monsters/AI/PTMonsterBlackboardKeys.h"
@@ -93,10 +94,27 @@ void APTBaseAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus S
             return;
         }
 
-        BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
-        BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
-        BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
-        SetFocus(Actor, EAIFocusPriority::Gameplay);
+        AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor));
+        if (!IsValid(CurrentTarget))
+        {
+            BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
+            BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Actor);
+            BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
+            SetFocus(Actor, EAIFocusPriority::Gameplay);
+            return;
+        }
+
+        if (TargetSwitchDelay <= 0.f)
+        {
+            SwitchToClosestPerceivedPlayer();
+        }
+        else if (!GetWorldTimerManager().IsTimerActive(TargetSwitchTimerHandle))
+        {
+            GetWorldTimerManager().SetTimer(
+                TargetSwitchTimerHandle,
+                this, &APTBaseAIController::SwitchToClosestPerceivedPlayer,
+                TargetSwitchDelay, false);
+        }
     }
     else
     {
@@ -109,5 +127,51 @@ void APTBaseAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus S
         BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, nullptr);
         BB->SetValueAsVector(PTMonsterBlackboardKeys::LastKnownLocation, Actor->GetActorLocation());
         ClearFocus(EAIFocusPriority::Gameplay);
+
+        GetWorldTimerManager().ClearTimer(TargetSwitchTimerHandle);
     }
+}
+
+void APTBaseAIController::SwitchToClosestPerceivedPlayer()
+{
+    UBlackboardComponent* BB = GetBlackboardComponent();
+    UAIPerceptionComponent* Perception = GetPerceptionComponent();
+    APawn* OwnerPawn = GetPawn();
+    if (!IsValid(BB) || !IsValid(Perception) || !IsValid(OwnerPawn))
+    {
+        return;
+    }
+
+    TArray<AActor*> PerceivedActors;
+    Perception->GetCurrentlyPerceivedActors(UAISense_Sight::StaticClass(), PerceivedActors);
+
+    APTPlayerCharacter* Closest = nullptr;
+    float ClosestDistSq = FLT_MAX;
+    const FVector MyLocation = OwnerPawn->GetActorLocation();
+
+    for (AActor* PerceivedActor : PerceivedActors)
+    {
+        APTPlayerCharacter* Player = Cast<APTPlayerCharacter>(PerceivedActor);
+        if (!IsValid(Player) || Player->IsDead())
+        {
+            continue;
+        }
+
+        const float DistSq = FVector::DistSquared(MyLocation, Player->GetActorLocation());
+        if (DistSq < ClosestDistSq)
+        {
+            ClosestDistSq = DistSq;
+            Closest = Player;
+        }
+    }
+
+    if (!IsValid(Closest))
+    {
+        return;
+    }
+
+    BB->SetValueAsBool(PTMonsterBlackboardKeys::IsTargetDetected, true);
+    BB->SetValueAsObject(PTMonsterBlackboardKeys::TargetActor, Closest);
+    BB->ClearValue(PTMonsterBlackboardKeys::LastKnownLocation);
+    SetFocus(Closest, EAIFocusPriority::Gameplay);
 }
