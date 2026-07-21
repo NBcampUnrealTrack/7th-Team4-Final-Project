@@ -693,7 +693,7 @@ void UPTBossPatternComponent::SpawnProjectile(const FPTBossSkillRow& RowSnapshot
 
             Projectile->Launch(Direction, FinalDamage, RowSnapshot.ProjectileSpeed, HitInfo, RowSnapshot.HomingStrength, Target);
 
-            if (USoundBase* LaunchSound = RowSnapshot.SkillSound.Get())
+            if (USoundBase* LaunchSound = RowSnapshot.SkillSound.LoadSynchronous())
             {
                 MulticastPlayLaunchSound(SpawnLocation, LaunchSound);
             }
@@ -805,8 +805,8 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
 
         MulticastSpawnAreaFX(
             CastLoc, RowSnapshot.bHasDirectionalSafeZone,
-            SafeZoneCenter, RowSnapshot.AreaCastEffect.Get(),
-            RowSnapshot.SafeZoneEffect.Get(),
+            SafeZoneCenter, RowSnapshot.AreaCastEffect.LoadSynchronous(),
+            RowSnapshot.SafeZoneEffect.LoadSynchronous(),
             RowSnapshot.SafeZoneRadius,
             RowSnapshot.AreaAttackDelay
         );
@@ -823,8 +823,8 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
         DropLocations,
         Snapshot.AreaAttackDelay,
         Snapshot.AreaAttackInterval,
-        Snapshot.AreaFallEffect.Get(),
-        Snapshot.AreaImpactEffect.Get(),
+        Snapshot.AreaFallEffect.LoadSynchronous(),
+        Snapshot.AreaImpactEffect.LoadSynchronous(),
         Snapshot.AreaStartHeight,
         Snapshot.AreaWarningClass,
         Snapshot.AreaAttackRadius,
@@ -971,7 +971,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
 
     LaserFireDirection = Boss->GetActorForwardVector();
 
-    UNiagaraSystem* LaserFX = RowSnapshot.LaserEffect.Get();
+    UNiagaraSystem* LaserFX = RowSnapshot.LaserEffect.LoadSynchronous();
 
     const float TotalTicks = FMath::Max(1.f, RowSnapshot.LaserDuration / FMath::Max(0.05f, RowSnapshot.LaserTickInterval));
     const float BaseDamage = Boss->GetBaseAtk() * RowSnapshot.DamageMultiplier * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
@@ -986,7 +986,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
         InitialWallHit, LaserStart, InitialMaxEnd, ECC_Visibility, InitialParams);
     const FVector InitialEnd = bInitialWallHit ? InitialWallHit.ImpactPoint : InitialMaxEnd;
     const float InitialDist = FVector::Dist(LaserStart, InitialEnd);
-    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.LaserLoopSound.Get(), RowSnapshot.LaserSoundDelay);
+    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.LaserLoopSound.LoadSynchronous(), RowSnapshot.LaserSoundDelay);
 
     World->GetTimerManager().SetTimer(
         LaserTickTimerHandle,
