@@ -47,6 +47,8 @@ public:
 
     void StopLaser();
 
+    bool IsLaserPhaseActive() const { return bLaserPhaseActive; }
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PT|Boss|Pattern")
 	TObjectPtr<UDataTable> BossSkillDataTable;
 
@@ -129,6 +131,7 @@ private:
     TArray<FTimerHandle> ProjectileTimers;
 
     bool bIsLaserActive = false;
+    bool bLaserPhaseActive = false;
 
     FTimerHandle LaserTickTimerHandle;
     FTimerHandle LaserEndTimerHandle;

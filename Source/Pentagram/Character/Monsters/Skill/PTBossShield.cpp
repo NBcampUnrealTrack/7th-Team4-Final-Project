@@ -47,17 +47,7 @@ void APTBossShield::InitShield(APTBossMonsterCharacter* InOwningBoss, float InMa
         Movement->SetMovementMode(MOVE_None);
     }
 
-    if (IsValid(ShieldMeshComp))
-    {
-        const float MeshScale = ShieldRadius / FMath::Max(ShieldMeshBaseRadius, 1.f);
-        ShieldMeshComp->SetWorldScale3D(FVector(MeshScale));
-
-        if (UMaterialInterface* Material = ShieldMaterial.LoadSynchronous())
-        {
-            ShieldMID = UMaterialInstanceDynamic::Create(Material, this);
-            ShieldMeshComp->SetMaterial(0, ShieldMID);
-        }
-    }
+    MulticastInitShieldVisual(ShieldRadius);
 
     UWorld* World = GetWorld();
     if (!IsValid(World))
@@ -82,6 +72,23 @@ void APTBossShield::InitShield(APTBossMonsterCharacter* InOwningBoss, float InMa
     for (const FOverlapResult& Overlap : Overlaps)
     {
         PushActorOut(Overlap.GetActor());
+    }
+}
+
+void APTBossShield::MulticastInitShieldVisual_Implementation(float InRadius)
+{
+    if (!IsValid(ShieldMeshComp))
+    {
+        return;
+    }
+
+    const float MeshScale = InRadius / FMath::Max(ShieldMeshBaseRadius, 1.f);
+    ShieldMeshComp->SetWorldScale3D(FVector(MeshScale));
+
+    if (UMaterialInterface* Material = ShieldMaterial.LoadSynchronous())
+    {
+        ShieldMID = UMaterialInstanceDynamic::Create(Material, this);
+        ShieldMeshComp->SetMaterial(0, ShieldMID);
     }
 }
 
