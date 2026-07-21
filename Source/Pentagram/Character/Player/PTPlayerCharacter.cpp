@@ -316,9 +316,6 @@ void APTPlayerCharacter::TryInteract()
     // 2. ECC_Visibility 채널 충돌 스캔
     bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLoc, EndLoc, ECC_Visibility, QueryParams);
 
-    // 디버그용 붉은 레이저 그리기
-    DrawDebugLine(GetWorld(), StartLoc, EndLoc, FColor::Red, false, 2.0f, 0, 2.0f);
-
     if (bHit && HitResult.GetActor())
     {
         AActor* HitActor = HitResult.GetActor();
