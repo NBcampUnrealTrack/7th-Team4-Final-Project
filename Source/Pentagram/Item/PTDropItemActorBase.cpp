@@ -60,9 +60,13 @@ void APTDropItemActorBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&
 
     DOREPLIFETIME(APTDropItemActorBase, InstanceItemData);
     DOREPLIFETIME(APTDropItemActorBase, DroppedQuantity);
+    DOREPLIFETIME(APTDropItemActorBase, bUseBlueprintVisual);
 }
 
-void APTDropItemActorBase::InitializeDroppedItem(const FItemData& InItemData, int32 InQuantity)
+void APTDropItemActorBase::InitializeDroppedItem(
+    const FItemData& InItemData,
+    int32 InQuantity,
+    bool bInUseBlueprintVisual)
 {
     if (!HasAuthority() || InItemData.Item_ID.IsNone() || InQuantity <= 0)
     {
@@ -76,6 +80,7 @@ void APTDropItemActorBase::InitializeDroppedItem(const FItemData& InItemData, in
         : FVector::OneVector;
 
     InstanceItemData = InItemData;
+    bUseBlueprintVisual = bInUseBlueprintVisual;
     if (InstanceItemData.DropMeshRelativeScale.Equals(FVector::OneVector) &&
         !TemplateMeshScale.Equals(FVector::OneVector))
     {
@@ -116,19 +121,37 @@ void APTDropItemActorBase::OnRep_InstanceItemData()
     ApplyItemVisual();
 }
 
+void APTDropItemActorBase::OnRep_UseBlueprintVisual()
+{
+    ApplyItemVisual();
+}
+
 void APTDropItemActorBase::ApplyItemVisual()
 {
     if (ItemMesh != nullptr)
     {
-        if (!InstanceItemData.ItemMeshAsset.IsNull())
+        if (bUseBlueprintVisual)
         {
-            if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+            const APTDropItemActorBase* BlueprintDefault =
+                GetClass()->GetDefaultObject<APTDropItemActorBase>();
+            if (BlueprintDefault != nullptr && BlueprintDefault->ItemMesh != nullptr)
             {
-                ItemMesh->SetStaticMesh(StaticMesh);
+                ItemMesh->SetStaticMesh(BlueprintDefault->ItemMesh->GetStaticMesh());
+                ItemMesh->SetRelativeTransform(BlueprintDefault->ItemMesh->GetRelativeTransform());
             }
         }
+        else
+        {
+            if (!InstanceItemData.ItemMeshAsset.IsNull())
+            {
+                if (UStaticMesh* StaticMesh = InstanceItemData.ItemMeshAsset.LoadSynchronous())
+                {
+                    ItemMesh->SetStaticMesh(StaticMesh);
+                }
+            }
 
-        ItemMesh->SetRelativeScale3D(InstanceItemData.DropMeshRelativeScale);
+            ItemMesh->SetRelativeScale3D(InstanceItemData.DropMeshRelativeScale);
+        }
     }
 
     RefreshItemNameWidget();
