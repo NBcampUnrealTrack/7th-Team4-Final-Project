@@ -56,3 +56,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPTOnChatMessageReceived, FString, 
 
 // 몬스터 사망
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPTOnMonsterDied, APTMonsterCharacter*, DeadMonster);
+
+// 엔딩 트리거
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPTOnEndingTriggered);

@@ -20,6 +20,7 @@ class APTInteractionActor;
 class APTQuestNPCCharacter;
 class APTShopNPCCharacter;
 class UPTShopWidget;
+class UPTEndingWidget;
 struct FItemData;
 
 UCLASS()
@@ -31,6 +32,10 @@ public:
     APTPlayerController();
 
     virtual void BeginPlay() override;
+
+    UFUNCTION()
+    void HandleEndingTriggered();
+
     bool CanMove(APTPlayerCharacter* PC) const;
     virtual void Tick(float DeltaTime) override;
     virtual void SetupInputComponent() override;
@@ -168,8 +173,11 @@ public:
 
     AActor* FindTargetUnderCursor(float MaxRange) const;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Ending")
+    TSubclassOf<UPTEndingWidget> EndingWidgetClass;
 protected:
     void PlayAttackMontage();
+
 
 private:
     void RotateTowardsMouse();

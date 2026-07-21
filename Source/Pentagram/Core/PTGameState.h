@@ -63,6 +63,8 @@ public:
     UFUNCTION(NetMulticast, Reliable)
     void Multicast_ChatMessage(const FString& SenderName, const FString& Message);
 
+    UFUNCTION(NetMulticast, Reliable)
+    void Multicast_NotifyEndingTriggered();
 protected:
     UFUNCTION()
     void OnRep_CurrentPhase();
@@ -94,6 +96,9 @@ public:
     // 로비 갱신 신호 로비 추가
     UPROPERTY(BlueprintAssignable, Category = "PT|Lobby")
     FPTOnLobbyUpdated OnLobbyUpdated;
+
+    UPROPERTY(BlueprintAssignable, Category = "PT|Ending")
+    FPTOnEndingTriggered OnEndingTriggered;
 
     // 로비 채팅 추가
     UPROPERTY(BlueprintAssignable, Category = "PT|Lobby")
