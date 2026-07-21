@@ -111,6 +111,7 @@ private:
     void MulticastPlayLaunchSound(FVector Location, USoundBase* Sound);
 
     void ClearLaserTimers();
+    void RestoreBossMovementAfterLaser();
 
     void SpawnMeleeAttack(const FPTBossSkillRow& RowSnapshot);
 
