@@ -693,7 +693,7 @@ void UPTBossPatternComponent::SpawnProjectile(const FPTBossSkillRow& RowSnapshot
 
             Projectile->Launch(Direction, FinalDamage, RowSnapshot.ProjectileSpeed, HitInfo, RowSnapshot.HomingStrength, Target);
 
-            if (USoundBase* LaunchSound = RowSnapshot.SkillSound.Get())
+            if (USoundBase* LaunchSound = RowSnapshot.SkillSound.LoadSynchronous())
             {
                 MulticastPlayLaunchSound(SpawnLocation, LaunchSound);
             }
@@ -986,7 +986,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
         InitialWallHit, LaserStart, InitialMaxEnd, ECC_Visibility, InitialParams);
     const FVector InitialEnd = bInitialWallHit ? InitialWallHit.ImpactPoint : InitialMaxEnd;
     const float InitialDist = FVector::Dist(LaserStart, InitialEnd);
-    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.LaserLoopSound.Get(), RowSnapshot.LaserSoundDelay);
+    MulticastStartLaserFX(LaserFireDirection, InitialDist, LaserFX, RowSnapshot.LaserSocketName, RowSnapshot.LaserLoopSound.LoadSynchronous(), RowSnapshot.LaserSoundDelay);
 
     World->GetTimerManager().SetTimer(
         LaserTickTimerHandle,
