@@ -655,6 +655,7 @@ float APTMonsterCharacter::PlayDeathMontage()
         return 0.f;
     }
 
+    AnimInstance->StopAllMontages(0.1f);
     const float PlayResult = AnimInstance->Montage_Play(DeathMontage);
 
     FAnimMontageInstance* MontageInstance = AnimInstance->GetActiveMontageInstance();
