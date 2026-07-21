@@ -805,8 +805,8 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
 
         MulticastSpawnAreaFX(
             CastLoc, RowSnapshot.bHasDirectionalSafeZone,
-            SafeZoneCenter, RowSnapshot.AreaCastEffect.Get(),
-            RowSnapshot.SafeZoneEffect.Get(),
+            SafeZoneCenter, RowSnapshot.AreaCastEffect.LoadSynchronous(),
+            RowSnapshot.SafeZoneEffect.LoadSynchronous(),
             RowSnapshot.SafeZoneRadius,
             RowSnapshot.AreaAttackDelay
         );
@@ -823,8 +823,8 @@ void UPTBossPatternComponent::SpawnAreaAttack(const FPTBossSkillRow& RowSnapshot
         DropLocations,
         Snapshot.AreaAttackDelay,
         Snapshot.AreaAttackInterval,
-        Snapshot.AreaFallEffect.Get(),
-        Snapshot.AreaImpactEffect.Get(),
+        Snapshot.AreaFallEffect.LoadSynchronous(),
+        Snapshot.AreaImpactEffect.LoadSynchronous(),
         Snapshot.AreaStartHeight,
         Snapshot.AreaWarningClass,
         Snapshot.AreaAttackRadius,
@@ -971,7 +971,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
 
     LaserFireDirection = Boss->GetActorForwardVector();
 
-    UNiagaraSystem* LaserFX = RowSnapshot.LaserEffect.Get();
+    UNiagaraSystem* LaserFX = RowSnapshot.LaserEffect.LoadSynchronous();
 
     const float TotalTicks = FMath::Max(1.f, RowSnapshot.LaserDuration / FMath::Max(0.05f, RowSnapshot.LaserTickInterval));
     const float BaseDamage = Boss->GetBaseAtk() * RowSnapshot.DamageMultiplier * Boss->GetDamageMultiplierForPhase(Boss->GetCurrentPhase());
