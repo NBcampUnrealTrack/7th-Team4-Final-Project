@@ -929,8 +929,7 @@ int32 UPTPlayerSkillComponent::GetOwnerLevel() const
     {
         if (const APTBasePlayerState* PS = P->GetPlayerState<APTBasePlayerState>())
         {
-            // TODO: PlayerState의 실제 레벨 필드/게터에 맞춰 교체
-            // return PS->CurrentLevel;
+            // 추후 추가
         }
     }
     return 1;
