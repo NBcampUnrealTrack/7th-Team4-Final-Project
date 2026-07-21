@@ -126,10 +126,14 @@ void APTMonsterCharacter::InitializeMonster()
 
     SetMonsterState(EMonsterState::Idle);
 
-    if (APTMonsterAIController* AIC = Cast<APTMonsterAIController>(GetController()))
+    if (APTBaseAIController* AIC = Cast<APTBaseAIController>(GetController()))
     {
         AIC->UpdateSightConfig(SightRange, ChaseRange, SightAngle);
-        AIC->UpdateMonsterBlackboard(this);
+
+        if (APTMonsterAIController* MonsterAIC = Cast<APTMonsterAIController>(AIC))
+        {
+            MonsterAIC->UpdateMonsterBlackboard(this);
+        }
     }
 }
 
