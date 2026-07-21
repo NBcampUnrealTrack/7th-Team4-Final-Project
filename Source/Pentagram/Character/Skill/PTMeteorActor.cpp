@@ -56,14 +56,12 @@ void APTMeteorActor::OnImpact()
     if (bImpacted) return;
     bImpacted = true;
 
-    // 연출은 모든 머신에서
-    if (ImpactVFX)
+    if (IsValid(ImpactVFX))
         UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), ImpactVFX, TargetGround, FRotator::ZeroRotator);
-    if (ImpactSound)
+    if (IsValid(ImpactSound))
         UGameplayStatics::PlaySoundAtLocation(GetWorld(), ImpactSound, TargetGround);
 
-    // 데미지는 서버만
-    if (bApplyDamage)
+    if (bApplyDamage && HasAuthority())
     {
         APTPlayerCharacter* AttackerPtr = Attacker.Get();
         if (AttackerPtr)
