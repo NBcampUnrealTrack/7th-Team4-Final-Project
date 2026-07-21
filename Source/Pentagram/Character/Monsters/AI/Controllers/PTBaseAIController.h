@@ -31,7 +31,14 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "PT|AI|BehaviorTree")
     TObjectPtr<UBehaviorTree> BehaviorTree;
 
+    UPROPERTY(EditDefaultsOnly, Category = "PT|AI|Perception")
+    float TargetSwitchDelay = 0.f;
+
 private:
+    void SwitchToClosestPerceivedPlayer();
+
+    FTimerHandle TargetSwitchTimerHandle;
+
     UPROPERTY(VisibleAnywhere, Category = "PT|AI|Perception")
     TObjectPtr<UAISenseConfig_Sight> SightConfig;
 };
