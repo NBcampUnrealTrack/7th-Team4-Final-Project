@@ -19,7 +19,6 @@ void UPTAnimNotifyState_IceSkillProjectile::NotifyBegin(USkeletalMeshComponent* 
         ? SkillComp->GetSkillData(SkillComp->GetCurrentSkillID())
         : nullptr;
 
-    // 투사체 VFX - 모든 클라이언트에서 스폰
     if (SkillData)
     {
         if (UNiagaraSystem* Effect = SkillData->ProjectileEffect.LoadSynchronous())
@@ -29,12 +28,22 @@ void UPTAnimNotifyState_IceSkillProjectile::NotifyBegin(USkeletalMeshComponent* 
                 + Owner->GetActorRightVector()   * SkillData->SkillOffset.Y
                 + FVector(0.f, 0.f,               SkillData->SkillOffset.Z);
 
-            UNiagaraFunctionLibrary::SpawnSystemAtLocation(
-                Owner->GetWorld(), Effect, SpawnPos, Owner->GetActorRotation());
+            FVector ForwardDir = Owner->GetActorForwardVector();
+            ForwardDir.Z = 0.f;
+            ForwardDir.Normalize();
+
+            for (int32 i = 0; i < ProjectileCount; i++)
+            {
+                float Alpha    = (ProjectileCount == 1) ? 0.f : (float)i / (ProjectileCount - 1);
+                float AngleDeg = FMath::Lerp(-SpreadAngleDegrees * 0.5f, SpreadAngleDegrees * 0.5f, Alpha);
+                FVector Dir    = ForwardDir.RotateAngleAxis(AngleDeg, FVector::UpVector);
+
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                    Owner->GetWorld(), Effect, SpawnPos, Dir.Rotation());
+            }
         }
     }
 
-    // 투사체 판정 초기화 -서버
     if (!Owner->HasAuthority()) return;
 
     FVector Offset = FVector::ZeroVector;
@@ -130,7 +139,7 @@ void UPTAnimNotifyState_IceSkillProjectile::NotifyTick(USkeletalMeshComponent* M
                 Owner->SkillComp->Multicast_PlayHitSound(HitSound, Target->GetActorLocation());
             }
 
-            if (!SkillData->bPenetrate) // DT 관통 여부
+            if (!SkillData->bPenetrate)
             {
                 Proj.bExpired = true;
                 break;
@@ -150,5 +159,5 @@ void UPTAnimNotifyState_IceSkillProjectile::NotifyEnd(USkeletalMeshComponent* Me
 {
     Super::NotifyEnd(MeshComp, Animation, EventReference);
 
-    Projectiles.Empty(); // 메모리 정리
+    Projectiles.Empty();
 }

@@ -74,6 +74,9 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "PT|Monster|Delegates")
     FPTOnMonsterDied OnMonsterDied;
 protected:
+    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
+    bool bHasSuperArmor = false;
+
     UFUNCTION()
     void OnRep_CurrentState();
 
@@ -186,8 +189,6 @@ private:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Monster")
     float DestroyDelayAfterMontage = 1.5f;
 
-    UPROPERTY(EditDefaultsOnly, Category = "PT|Monster|Combat")
-    bool bHasSuperArmor = false;
     bool bSavedOrientRotationToMovement = true;
     bool bAppliedMovementLock = false;
 

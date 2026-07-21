@@ -199,7 +199,7 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
         UWorld* World = GetWorld();
         if (IsValid(World))
         {
-            PatternCooldownFlags.Add(RowName, true);
+            PatternCooldownFlags.FindOrAdd(RowName) = true;
             FTimerHandle& Timer = PatternCooldownTimers.FindOrAdd(RowName);
 
 #if !UE_BUILD_SHIPPING
@@ -208,13 +208,13 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 #endif
             World->GetTimerManager().ClearTimer(Timer);
             World->GetTimerManager().SetTimer(Timer,
-                [this, RowName]()
+                FTimerDelegate::CreateWeakLambda(this, [this, RowName]()
                 {
-                    PatternCooldownFlags.Add(RowName, false);
+                    PatternCooldownFlags.FindOrAdd(RowName) = false;
 #if !UE_BUILD_SHIPPING
                     UE_LOG(LogTemp, Log, TEXT("[BossPattern] PatternCooldown 종료 — %s"), *RowName.ToString());
 #endif
-                },
+                }),
                 Row->PatternCooldown, false);
         }
     }
@@ -232,6 +232,22 @@ float UPTBossPatternComponent::ExecuteSkillForPhase(int32 Phase)
 
     if (Row->SkillType == EBossSkillType::Laser)
     {
+        if (APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner()))
+        {
+            if (UCharacterMovementComponent* MoveComp = Boss->GetCharacterMovement())
+            {
+                if (MoveComp->MaxWalkSpeed > 0.f)
+                {
+                    SavedMaxWalkSpeed = MoveComp->MaxWalkSpeed;
+                }
+                MoveComp->MaxWalkSpeed = 0.f;
+                MoveComp->bOrientRotationToMovement = false;
+            }
+            if (AAIController* AIC = Cast<AAIController>(Boss->GetController()))
+            {
+                AIC->StopMovement();
+            }
+        }
         return Row->LaserDuration;
     }
 
@@ -332,6 +348,16 @@ void UPTBossPatternComponent::StopLaser()
             MoveComp->bUseControllerDesiredRotation = true;
         }
 
+        if (AAIController* AIC = Cast<AAIController>(Boss->GetController()))
+        {
+            if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+            {
+                if (AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor)))
+                {
+                    AIC->SetFocus(Target, EAIFocusPriority::Gameplay);
+                }
+            }
+        }
     }
 
     MulticastResumeMontage();
@@ -887,6 +913,7 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
     if (AAIController* AIC = Cast<AAIController>(Boss->GetController()))
     {
         AIC->StopMovement();
+        AIC->ClearFocus(EAIFocusPriority::Gameplay);
     }
 
     MulticastPauseMontage();
