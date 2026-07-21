@@ -92,6 +92,6 @@ void UPTMainMenuWidget::HandleJoinClicked()
     APlayerController* PC = GetOwningPlayer();
     if (PC)
     {
-        PC->ClientTravel(TEXT("pentagram.r-e.kr"), ETravelType::TRAVEL_Absolute);
+       // PC->ClientTravel(TEXT("pentagram.r-e.kr"), ETravelType::TRAVEL_Absolute);
     }
 }
