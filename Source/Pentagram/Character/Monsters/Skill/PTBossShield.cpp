@@ -22,7 +22,10 @@ APTBossShield::APTBossShield()
     if (UCapsuleComponent* Capsule = GetCapsuleComponent())
     {
         Capsule->SetCollisionProfileName(TEXT("Pawn"));
-        Capsule->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+        Capsule->SetCollisionResponseToChannel(ECC_Pawn,         ECR_Overlap);
+        // 프로젝타일(ECC_WorldDynamic)이 Overlap 이벤트를 발생시키도록 설정.
+        // "Pawn" 프로필 기본값은 WorldDynamic=Block이라 OnProjectileOverlap이 트리거되지 않음.
+        Capsule->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
         Capsule->SetGenerateOverlapEvents(true);
     }
 }
