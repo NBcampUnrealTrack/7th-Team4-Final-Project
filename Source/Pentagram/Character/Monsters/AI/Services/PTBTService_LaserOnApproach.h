@@ -20,5 +20,5 @@ protected:
     virtual void OnCeaseRelevant(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
 
     UPROPERTY(EditAnywhere, Category = "PT|Boss")
-    float LaserFireMinDistance = 350.f;
+    float LaserFireMaxDistance = 1500.f;
 };

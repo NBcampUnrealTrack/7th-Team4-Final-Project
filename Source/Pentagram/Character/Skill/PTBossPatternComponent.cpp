@@ -356,33 +356,14 @@ void UPTBossPatternComponent::StopLaser()
 
     if (!IsValid(AnimInst) || !IsValid(ActiveMontage))
     {
-        bLaserPhaseActive = false;
+        RestoreBossMovementAfterLaser();
     }
     else
     {
         FOnMontageEnded EndDelegate;
-        TWeakObjectPtr<APTBossMonsterCharacter> WeakBoss(Boss);
-        EndDelegate.BindWeakLambda(this, [this, WeakBoss](UAnimMontage*, bool)
+        EndDelegate.BindWeakLambda(this, [this](UAnimMontage*, bool)
         {
-            bLaserPhaseActive = false;
-
-            if (!WeakBoss.IsValid()) return;
-
-            if (UCharacterMovementComponent* MC = WeakBoss->GetCharacterMovement())
-            {
-                MC->bOrientRotationToMovement = true;
-                MC->bUseControllerDesiredRotation = true;
-            }
-            if (AAIController* AIC = Cast<AAIController>(WeakBoss->GetController()))
-            {
-                if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
-                {
-                    if (AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor)))
-                    {
-                        AIC->SetFocus(Target, EAIFocusPriority::Gameplay);
-                    }
-                }
-            }
+            RestoreBossMovementAfterLaser();
         });
         AnimInst->Montage_SetEndDelegate(EndDelegate, ActiveMontage);
     }
@@ -488,6 +469,31 @@ void UPTBossPatternComponent::ClearLaserTimers()
     {
         World->GetTimerManager().ClearTimer(LaserTickTimerHandle);
         World->GetTimerManager().ClearTimer(LaserEndTimerHandle);
+    }
+}
+
+void UPTBossPatternComponent::RestoreBossMovementAfterLaser()
+{
+    bLaserPhaseActive = false;
+
+    APTBossMonsterCharacter* Boss = Cast<APTBossMonsterCharacter>(GetOwner());
+    if (!IsValid(Boss)) return;
+
+    if (UCharacterMovementComponent* MC = Boss->GetCharacterMovement())
+    {
+        MC->bOrientRotationToMovement        = true;
+        MC->bUseControllerDesiredRotation    = true;
+    }
+
+    if (AAIController* AIC = Cast<AAIController>(Boss->GetController()))
+    {
+        if (UBlackboardComponent* BB = AIC->GetBlackboardComponent())
+        {
+            if (AActor* Target = Cast<AActor>(BB->GetValueAsObject(PTMonsterBlackboardKeys::TargetActor)))
+            {
+                AIC->SetFocus(Target, EAIFocusPriority::Gameplay);
+            }
+        }
     }
 }
 
@@ -947,6 +953,18 @@ void UPTBossPatternComponent::SpawnLaser(const FPTBossSkillRow& RowSnapshot)
     MulticastPauseMontage();
 
     AActor* Target = GetTargetActor();
+
+    if (IsValid(Target))
+    {
+        FVector ToTarget = Target->GetActorLocation() - Boss->GetActorLocation();
+        ToTarget.Z = 0.f;
+        ToTarget = ToTarget.GetSafeNormal();
+        if (!ToTarget.IsNearlyZero())
+        {
+            Boss->SetActorRotation(FRotationMatrix::MakeFromX(ToTarget).Rotator());
+        }
+    }
+
     const FVector LaserStart = Boss->GetActorLocation()
         + Boss->GetActorForwardVector() * 120.f
         + FVector(0.f, 0.f, 50.f);

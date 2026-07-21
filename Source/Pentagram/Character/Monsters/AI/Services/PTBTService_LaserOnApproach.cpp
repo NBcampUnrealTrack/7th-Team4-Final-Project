@@ -64,7 +64,7 @@ void UPTBTService_LaserOnApproach::TickNode(UBehaviorTreeComponent& OwnerComp, u
     }
 
     const float Dist = FVector::Dist(Monster->GetActorLocation(), Target->GetActorLocation());
-    if (Dist <= LaserFireMinDistance)
+    if (Dist > LaserFireMaxDistance)
     {
         return;
     }
