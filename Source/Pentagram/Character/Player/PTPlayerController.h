@@ -272,6 +272,10 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "PT|Inventory|Drop")
     TSubclassOf<APTDropItemActorBase> ShovelDropActorClass;
 
+    /** 상점 구매와 기존 세이브 아이템도 원래 아이템별 드랍 BP를 사용하도록 연결합니다. */
+    UPROPERTY(VisibleDefaultsOnly, Transient, Category = "PT|Inventory|Drop")
+    TMap<FName, TSubclassOf<APTDropItemActorBase>> InventoryDropActorClassesByItemID;
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UCommonActivatableWidget> SkillWindowClass;
 

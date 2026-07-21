@@ -152,6 +152,10 @@ struct FItemData : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<UStaticMesh> ItemMeshAsset;
 
+    // 월드에 드랍되었을 때 사용할 메시 크기입니다. 드랍 BP의 실제 크기를 아이템과 함께 보존합니다.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
+    FVector DropMeshRelativeScale = FVector(1.f, 1.f, 1.f);
+
     // 방어구 외형용 — 캐릭터 스켈레톤 공유, 리더 포즈로 구동
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item | Visual")
     TSoftObjectPtr<USkeletalMesh> ArmorChestMeshAsset;
