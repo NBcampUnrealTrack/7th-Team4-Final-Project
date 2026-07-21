@@ -157,7 +157,7 @@ void APTAreaWarning::OnLanded()
         BorderMesh->SetVisibility(false);
     }
 
-    if (PendingImpactEffect)
+    if (IsValid(PendingImpactEffect))
     {
         UNiagaraComponent* ImpactComp = UNiagaraFunctionLibrary::SpawnSystemAtLocation(
             GetWorld(), PendingImpactEffect, TargetLocation,
